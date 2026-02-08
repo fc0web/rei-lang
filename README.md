@@ -240,7 +240,11 @@ This repository uses a **dual licensing** structure:
 
 **Theory documents** — Free for non-commercial use with attribution. Commercial use (educational materials, certification programs, paid courses) requires written permission from the author.
 
+**Derivative works:** Any system, course, certification, or publication that reproduces the core structures, definitions, axioms, or evaluation methods of Rei / D-FUMT — regardless of naming — is considered a derivative work subject to these license terms.
+
 Copyright 2024-2026 Nobuki Fujimoto (藤本伸樹)
+
+> ⚠️ **Certification Notice:** As of 2026, there are **NO** authorized third-party paid certifications based on Rei or D-FUMT. Only certification programs explicitly designated as "Official Rei / D-FUMT Certification" by Nobuki Fujimoto represent the authentic framework.
 
 ## Citation
 

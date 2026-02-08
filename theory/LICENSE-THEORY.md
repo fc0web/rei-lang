@@ -44,6 +44,10 @@ This license applies to ALL files within the `/theory` directory, including but 
 
 These theoretical documents describe an **original intellectual framework** created by Nobuki Fujimoto. The author does not endorse modified versions presented as the original theory. Any derivative work must clearly state that it is a modification and not the original D-FUMT/Rei theory.
 
+**Derivative Works Definition:** Rei / D-FUMT is a unified theoretical framework. Any system, course, certification, or publication that reproduces its core structures, definitions, axioms, or evaluation methods — regardless of naming — is considered a derivative work and is subject to the terms of this license (CC BY-NC-SA 4.0). Renaming the concepts does not exempt derivative works from these terms.
+
+**Certification:** As of 2026, there are NO authorized third-party paid certifications based on Rei, D-FUMT, GFT, or any component of this theoretical framework. Only certification programs explicitly designated as "Official Rei / D-FUMT Certification" by Nobuki Fujimoto represent the authentic framework.
+
 ## Commercial Licensing
 
 For commercial use of the theoretical framework (educational institutions, corporate training, certification programs, etc.), please contact the author for a separate commercial license agreement.
