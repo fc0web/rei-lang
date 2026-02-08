@@ -75,38 +75,83 @@ console.log(t.witness.payload.cs);         // { satisfied: true, indicator: ...,
 
 ## Test Suite
 
-92 specification tests covering:
+151 specification tests across 2 test files:
 
-- Phase progression & ordering
-- Firewall Rule (skip/backward/self blocking)
-- phaseDelta monotonicity primitive
-- Witness attachment, kind, threshold, progress
-- CS assumption (normal + 3 violation patterns)
-- Theorem S₀/S₁ with CS verification
-- Monotonicity (including tampered history detection)
-- Witness integrity (hash & kind tampering)
-- Hash reproducibility (same params → same hash, different params → different hash)
-- Single physics update (FIX-2 guarantee)
-- computeProgress correctness per phase
-- Full audit across 6 energy levels
+**GA-v2 (92 tests):** Phase progression, firewall rule, phaseDelta, witness system, CS assumption, S₀/S₁ theorems, monotonicity, witness integrity, hash reproducibility, single physics update, computeProgress, full audit across 6 energy levels.
+
+**ISL (59 tests):** Invariant system (inv_ast/inv_witness/inv_phase), Φ_normalize (preservation, mark generation, multi-application), Ψ_commit (sealing, proof structure, enforcement), Ω_compact (compression, phase progression, CS recording), mark chain verification (parent chain, monotonic ticks), proof verification (seal & compact), transform ordering enforcement, full pipeline integration, edge cases.
 
 ```bash
 npm test
-# ✓ tests/genesis-v2.test.ts (92 tests) — all pass
+# ✓ tests/genesis-v2.test.ts (92 tests)
+# ✓ tests/irreversible-syntax.test.ts (59 tests)
+# Tests: 151 passed
 ```
 
 ## Architecture
 
 ```
-genesis-axioms-v2.ts
+genesis-axioms-v2.ts          ← GA-v2: 生成公理系（Foundation）
 ├── Types: GenesisPhase, GenesisState, GenesisTransition, Witness, CSAssumption
 ├── Constants: CURVATURE_THRESHOLD, ENTROPY_DECAY, STRUCTURE_GROWTH
 ├── Phase utilities: phaseIndex, phaseDelta, firewallCheck
 ├── Physics: computeProgress, evaluateCS
-├── Axioms: G-E₁, G-S₀, G-S₁, G-N₁ (return intent, not state)
-├── Core: evolve (single-step), runFullGenesis, createGenesis
+├── Axioms: G-E₁, G-S₀, G-S₁, G-N₁
+├── Core: evolve, runFullGenesis, createGenesis
 ├── Witness: fnv1a32, witnessKindForPhase, enrichTransition
 └── Verification: verifyTheoremS0/S1, verifyMonotonicity, verifyAllWitnesses
+
+irreversible-syntax.ts        ← ISL: 不可逆構文レイヤ（Built on GA-v2）
+├── Mark System: 不可逆タグ（焼き付けの最小単位）
+├── Invariants: inv_ast (位相), inv_witness (意味), inv_phase (進行)
+├── Φ_normalize: 構造保存変換（形は変わるが証拠は壊せない）
+├── Ψ_commit: 封印（以後のΦを構文的に禁止）
+├── Ω_compact: 履歴合成（中間を捨てて証明に圧縮・不可逆）
+├── Proof System: SealProof, CompactProof
+├── Mark Chain Verification: 連鎖・単調性検証
+└── Full Pipeline: executeFullPipeline (Φ → Ψ → Ω)
+```
+
+## Irreversible Syntax Layer (ISL) — 不可逆構文
+
+The ISL provides three transform primitives that make Rei's "code = proof" paradigm concrete:
+
+**Φ (Phi) — Structure-Preserving Transform**
+Changes representation while preserving three invariants: AST structure (topology), witness integrity (evidence), and phase monotonicity (time). Example: `Φ_normalize` rounds floating-point values to fixed precision without altering the mathematical meaning.
+
+**Ψ (Psi) — Irreversible Seal**
+Permanently restricts the transformation freedom. After `Ψ_commit`, no further Φ transforms are syntactically permitted. This is enforced at the language level, not by convention. The seal generates a `SealProof` recording the invariant state and CS assumption at seal time.
+
+**Ω (Omega) — History Composition**
+Compresses the entire transform chain into a single `CompactProof`. Individual intermediate states are discarded (irreversible), but the proof remains verifiable. The compact proof records: original/final state hashes, mark chain, seal proof, phase progression (`void→・→0₀→0→ℕ`), and CS status.
+
+**Transform ordering is enforced:**
+```
+Φ* → Ψ → Ω
+(optional)  (required)  (final)
+```
+- Φ after Ψ → error
+- Ψ after Ψ → error  
+- Ω without Ψ → error
+- Ω after Ω → error
+
+**Φ（構造保存変換）** — 形を変えるが、3つの不変量（AST構造・witness整合性・phase単調性）は壊せない。
+
+**Ψ（封印）** — 変換の自由度を不可逆的に制限する。commit後はΦが構文レベルで禁止される。言語が強制する — 規約ではない。
+
+**Ω（履歴合成）** — 変換列を1つの証明に圧縮する。中間状態は捨てられる（不可逆）が、検証は可能。
+
+```typescript
+import { createPipeline, phiNormalize, psiCommit, omegaCompact } from './irreversible-syntax';
+
+const pipeline = createPipeline(genesisState);
+const normalized = phiNormalize(pipeline);     // Φ: 正規化
+const sealed = psiCommit(normalized);           // Ψ: 封印
+const proof = omegaCompact(sealed);             // Ω: 圧縮証明
+
+// proof.phaseProgression === 'void→・→0₀→0→ℕ'
+// proof.allCSHeld === true
+// verifyCompactProof(proof).valid === true
 ```
 
 ## License
