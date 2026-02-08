@@ -1,0 +1,82 @@
+{
+  "name": "rei-lang",
+  "version": "1.0.0",
+  "description": "Rei (0₀式 / れいしき) — A mathematical computation system and programming language based on D-FUMT. Multi-dimensional numbers, Genesis Axiom System, and Graphic Formula Theory.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.mjs",
+      "require": "./dist/core/index.js"
+    },
+    "./gft": {
+      "types": "./dist/gft/index.d.ts",
+      "import": "./dist/gft/index.mjs",
+      "require": "./dist/gft/index.js"
+    },
+    "./lang": {
+      "types": "./dist/lang/index.d.ts",
+      "import": "./dist/lang/index.mjs",
+      "require": "./dist/lang/index.js"
+    },
+    "./genesis": {
+      "types": "./dist/genesis/index.d.ts",
+      "import": "./dist/genesis/index.mjs",
+      "require": "./dist/genesis/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CITATION.cff"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test",
+    "repl": "ts-node src/lang/repl.ts"
+  },
+  "keywords": [
+    "rei",
+    "0₀式",
+    "d-fumt",
+    "multi-dimensional-numbers",
+    "mathematical-computation",
+    "graphic-formula-theory",
+    "gft",
+    "genesis-axiom-system",
+    "programming-language",
+    "zero-extension",
+    "nobuki-fujimoto"
+  ],
+  "author": "Nobuki Fujimoto <nobuki.fujimoto@example.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nobuki-fujimoto/rei-lang"
+  },
+  "homepage": "https://github.com/nobuki-fujimoto/rei-lang#readme",
+  "bugs": {
+    "url": "https://github.com/nobuki-fujimoto/rei-lang/issues"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0",
+    "ts-node": "^10.9.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

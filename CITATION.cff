@@ -1,0 +1,48 @@
+cff-version: 1.2.0
+message: "If you use this software or theory, please cite it as below."
+title: "Rei (0₀式) — Mathematical Computation System based on D-FUMT"
+type: software
+authors:
+  - family-names: "Fujimoto"
+    given-names: "Nobuki"
+    alias: "藤本伸樹"
+abstract: >-
+  Rei (0₀式 / れいしき) is a mathematical computation system and
+  programming language based on D-FUMT (Dimensional Fujimoto Universal
+  Mathematical Theory). It introduces multi-dimensional numbers with
+  center-neighbor structure, four computation modes (weighted,
+  multiplicative, harmonic, exponential), notation equivalence axioms,
+  Genesis Axiom System for pre-zero axiomatization, and Graphic Formula
+  Theory (GFT) for mathematical graph visualization. Benchmarks demonstrate
+  average 74% code reduction vs conventional approaches across image kernel
+  computation (4×), multi-dimensional data aggregation (3.7×), and graph
+  structure transformation (3.7×).
+keywords:
+  - multi-dimensional numbers
+  - mathematical computation
+  - D-FUMT
+  - zero extension
+  - graphic formula theory
+  - genesis axiom system
+  - programming language
+  - notation equivalence
+license: Apache-2.0
+version: "1.0.0"
+date-released: "2026-02-08"
+repository-code: "https://github.com/nobuki-fujimoto/rei-lang"
+references:
+  - type: article
+    title: "D-FUMT: Dimensional Fujimoto Universal Mathematical Theory"
+    authors:
+      - family-names: "Fujimoto"
+        given-names: "Nobuki"
+  - type: article
+    title: "0₀式 (Rei): Zero Extension Computation System"
+    authors:
+      - family-names: "Fujimoto"
+        given-names: "Nobuki"
+  - type: article
+    title: "GFT: Graphic Formula Theory"
+    authors:
+      - family-names: "Fujimoto"
+        given-names: "Nobuki"
