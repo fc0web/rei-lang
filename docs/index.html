@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei (0₀式) — Interactive Tools</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a14;
+  color: #d8d4cc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+.container {
+  text-align: center;
+  max-width: 600px;
+  padding: 2rem;
+}
+h1 {
+  font-size: 2.5rem;
+  color: #c4a265;
+  margin-bottom: 0.5rem;
+}
+.sub { color: #8a867e; font-size: 0.9rem; margin-bottom: 2rem; }
+a.tool-link {
+  display: block;
+  padding: 1.2rem;
+  margin: 1rem 0;
+  background: #111122;
+  border: 1px solid rgba(196,162,101,0.15);
+  border-radius: 8px;
+  color: #c4a265;
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+a.tool-link:hover {
+  border-color: rgba(196,162,101,0.4);
+  background: #181830;
+  transform: translateY(-2px);
+}
+a.tool-link .desc {
+  display: block;
+  font-size: 0.8rem;
+  color: #8a867e;
+  margin-top: 0.3rem;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Rei (0₀式)</h1>
+  <p class="sub">D-FUMT Mathematical Computation System — Interactive Tools</p>
+  <a class="tool-link" href="gft-pipeline-tracer.html">
+    GFT Pipeline Tracer
+    <span class="desc">ISL Debug & Education Tool — Pipeline visualization, Genesis viewer, Attack replay, Quiz</span>
+  </a>
+  <p style="margin-top:2rem;font-size:0.8rem;color:#5a5670;">
+    <a href="https://github.com/fc0web/rei-lang" style="color:#5a8fc5;">GitHub Repository</a>
+    &nbsp;│&nbsp; Author: Nobuki Fujimoto
+    &nbsp;│&nbsp; License: Apache 2.0
+  </p>
+</div>
+</body>
+</html>
