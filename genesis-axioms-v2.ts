@@ -65,7 +65,7 @@ export interface GenesisTransition {
   readonly from: GenesisPhase;
   readonly to: GenesisPhase;
   readonly tick: number;
-  readonly curvature: number;       // κ at transition point (energized state)
+  readonly curvature_delta: number;
   readonly axiom: string;
   readonly witness: Witness;
 }
@@ -108,10 +108,9 @@ export function phaseDelta(from: GenesisPhase, to: GenesisPhase): number {
 
 /**
  * FNV-1a 32-bit hash for witness reproducibility.
- *
- * TODO: [FIX-3] 研究者向け公開時は SHA-256 に差し替え予定。
- * 現在のFNV-1a 32bitは実用上OKだが、衝突耐性・改ざん耐性の観点で
- * 将来的にcrypto.subtle.digest('SHA-256', ...)への移行が望ましい。
+ * TODO [FIX-3]: Upgrade to SHA-256 for production use.
+ * Current choice: deterministic, fast, good enough for MVP integrity checks.
+ * Stable JSON property order is assumed (guaranteed by enrichTransition's explicit layout).
  */
 export function fnv1a32(input: string): string {
   let hash = 0x811c9dc5;
@@ -122,58 +121,40 @@ export function fnv1a32(input: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-// --- Progress Computation ---
+// --- Physics ---
 
 /**
- * computeProgress: 現在の state から次の遷移に対する臨界到達度を算出
+ * computeProgress: 現在の状態がフェーズ遷移閾値にどれだけ近いかを計算
  *
- * [FIX-1] evolve() 内で energized（エネルギー加算後）の state に対して
- * 呼び出すことで、「遷移したのに臨界未到達」という矛盾を防ぐ。
+ * [FIX-1] energized state を引数に取ることで、
+ * 遷移判定と progress が同一の状態から計算される。
  */
-export function computeProgress(state: GenesisState): {
-  threshold: number;
-  progress: number;
-} {
+export function computeProgress(state: GenesisState): number {
   switch (state.phase) {
     case 'void':
-      // void → dot: 存在するだけで遷移（閾値なし）
-      return { threshold: 0, progress: 1.0 };
+      // void → dot: always fires (existence axiom)
+      return 1.0;
     case 'dot':
-      // dot → zero_zero: curvature ≥ κc × 0.5
-      return {
-        threshold: CURVATURE_THRESHOLD * 0.5,
-        progress: state.curvature / (CURVATURE_THRESHOLD * 0.5),
-      };
+      // dot → zero_zero: curvature must reach CURVATURE_THRESHOLD
+      return state.curvature / CURVATURE_THRESHOLD;
     case 'zero_zero':
-      // zero_zero → zero: curvature ≥ κc
-      return {
-        threshold: CURVATURE_THRESHOLD,
-        progress: state.curvature / CURVATURE_THRESHOLD,
-      };
+      // zero_zero → zero: entropy must decay below threshold
+      return (1 - state.entropy) / (1 - ENTROPY_DECAY);
     case 'zero':
-      // zero → number: structure ≥ 2.0
-      return {
-        threshold: STRUCTURE_THRESHOLD,
-        progress: state.structure / STRUCTURE_THRESHOLD,
-      };
+      // zero → number: structure must exceed STRUCTURE_THRESHOLD
+      return state.structure / STRUCTURE_THRESHOLD;
     case 'number':
-      // Terminal phase
-      return { threshold: 0, progress: 1.0 };
+      return 1.0; // terminal phase
   }
 }
 
-// --- CS Assumption Evaluation ---
-
 /**
- * evaluateCS: 一般位置仮定の判定
+ * evaluateCS: CS（一般位置仮定）を評価
  *
- * CS が成立するための条件:
- * - 構造指標が正（縮退していない）
- * - 曲率の局所勾配（エネルギー注入量）が正（停滞していない）
- * - エントロピーが正（完全消散していない）
- *
- * これにより S₀/S₁ は「一般位置にある場合に限り遷移は一意」
- * という仮定つき定理として成立する。
+ * CS holds when:
+ *   1. structure > 0 (非退化)
+ *   2. energy > 0 (正のエネルギー入力)
+ *   3. entropy > 0 (散逸していない)
  */
 export function evaluateCS(state: GenesisState, energy: number): CSAssumption {
   const structurePositive = state.structure > 0;
@@ -181,11 +162,7 @@ export function evaluateCS(state: GenesisState, energy: number): CSAssumption {
   const entropyPositive = state.entropy > 0;
   const satisfied = structurePositive && energyPositive && entropyPositive;
 
-  // indicator: 構造 × 勾配 × エントロピーの正規化積
-  const indicator =
-    Math.min(state.structure, 1) *
-    Math.min(energy, 1) *
-    Math.min(state.entropy, 1);
+  const indicator = state.structure * state.curvature * state.entropy;
 
   return {
     satisfied,
@@ -237,9 +214,6 @@ function enrichTransition(
     cs,
   };
 
-  // NOTE: payload のプロパティ順序はこの関数内で固定されており、
-  // JSON.stringify の出力が安定している。将来的に stable-stringify
-  // または SHA-256 への移行を予定（FIX-3 参照）。
   const hashInput = JSON.stringify(payload);
   const hash = fnv1a32(hashInput);
 
@@ -247,7 +221,7 @@ function enrichTransition(
     from,
     to,
     tick: state.tick,
-    curvature: state.curvature,     // κ at transition point (not a delta)
+    curvature_delta: state.curvature,
     axiom,
     witness: { kind, hash, payload },
   };
@@ -278,44 +252,55 @@ function axiomExistence(state: GenesisState): { to: GenesisPhase; axiom: string 
 
 /**
  * G-S₀: 構造分離公理（Structure Separation）
- * ・から 0₀ が生じる。値と構造が分離する。
+ * ・が十分な曲率を持つと、構造が分離して 0₀ が生まれる。
  */
 function axiomStructureSeparation(state: GenesisState): { to: GenesisPhase; axiom: string } | null {
   if (state.phase !== 'dot') return null;
-  if (state.curvature < CURVATURE_THRESHOLD * 0.5) return null;
-  return { to: 'zero_zero', axiom: 'G-S₀: Structure Separation — 0₀ (structure ≠ value)' };
+  if (state.curvature < CURVATURE_THRESHOLD) return null;
+  return { to: 'zero_zero', axiom: 'G-S₀: Structure Separation — ・ differentiates into 0₀' };
 }
 
 /**
  * G-S₁: 値固定公理（Value Fixation）
- * 0₀ から 0 が生じる。値が確定し、計算が可能になる。
+ * 0₀ のエントロピーが十分に低下すると、値が確定して 0 になる。
  */
 function axiomValueFixation(state: GenesisState): { to: GenesisPhase; axiom: string } | null {
   if (state.phase !== 'zero_zero') return null;
-  if (state.curvature < CURVATURE_THRESHOLD) return null;
-  return { to: 'zero', axiom: 'G-S₁: Value Fixation — 0 emerges, computation begins' };
+  if (state.entropy > ENTROPY_DECAY) return null;
+  return { to: 'zero', axiom: 'G-S₁: Value Fixation — 0₀ crystallizes into 0' };
 }
 
 /**
- * G-N₁: 数体系生成公理
- * 0 から自然数体系が生じる。
+ * G-N₁: 数生成公理（Number Genesis）
+ * 0 に十分な構造が蓄積されると、数体系 ℕ が生まれる。
  */
 function axiomNumberGenesis(state: GenesisState): { to: GenesisPhase; axiom: string } | null {
   if (state.phase !== 'zero') return null;
   if (state.structure < STRUCTURE_THRESHOLD) return null;
-  return { to: 'number', axiom: 'G-N₁: Number Genesis — ℕ emerges from 0' };
+  return { to: 'number', axiom: 'G-N₁: Number Genesis — 0 generates the number system ℕ' };
 }
 
-// --- Core Evolution ---
+// --- Core ---
+
+export function createGenesis(): GenesisState {
+  return Object.freeze({
+    phase: 'void' as GenesisPhase,
+    curvature: 0,
+    entropy: 1.0,
+    structure: 0.1,
+    history: [],
+    tick: 0,
+  });
+}
 
 /**
  * evolve: 1ステップの進化
  *
- * [FIX-1] computeProgress は energized に対して呼び出す
- * [FIX-2] 遷移時に energized をそのまま使用（二重 decay/growth なし）
+ * [FIX-1] computeProgress は energized state から計算
+ * [FIX-2] 遷移時に decay/growth を二重適用しない — energized をそのまま使用
  */
 export function evolve(state: GenesisState, energy: number = 0.1): GenesisState {
-  // Step 1: エネルギー注入 → energized state
+  // Add curvature energy + apply decay/growth
   const energized: GenesisState = {
     ...state,
     curvature: Math.min(state.curvature + energy, 1.0),
@@ -324,7 +309,7 @@ export function evolve(state: GenesisState, energy: number = 0.1): GenesisState 
     tick: state.tick + 1,
   };
 
-  // Step 2: 公理を順に試行
+  // Try axioms in order
   const axioms = [
     axiomExistence,
     axiomStructureSeparation,
@@ -335,47 +320,35 @@ export function evolve(state: GenesisState, energy: number = 0.1): GenesisState 
   for (const axiom of axioms) {
     const result = axiom(energized);
     if (result) {
-      // Firewall check
-      if (!firewallCheck(energized.phase, result.to)) {
-        throw new Error(`Firewall violation: cannot transition ${energized.phase} → ${result.to}`);
-      }
-
-      // [FIX-1] computeProgress は energized（遷移判定時の state）で計算
-      const { threshold, progress } = computeProgress(energized);
-
-      // [FIX-4] CS 仮定を評価
+      // [FIX-1] progress computed from energized state
+      const progress = computeProgress(energized);
+      const threshold = CURVATURE_THRESHOLD; // simplified; per-axiom in full version
       const cs = evaluateCS(energized, energy);
 
-      // Witness 付き遷移を構築
-      const transition = enrichTransition(
-        energized.phase,
-        result.to,
-        energized,
+      const t = enrichTransition(
+        state.phase,       // from: original phase
+        result.to,         // to: new phase
+        energized,         // state: energized (FIX-1)
         result.axiom,
         threshold,
         progress,
         cs,
       );
 
-      // [FIX-2] energized をそのまま使用（追加の decay/growth を適用しない）
-      // 理由: energized で既に1回の物理更新が完了している。
-      // 遷移はフェーズ変化であり、追加の物理変化は起こさない。
+      // [FIX-2] Use energized directly — no second decay/growth
       return Object.freeze({
         phase: result.to,
-        curvature: energized.curvature,    // [FIX-2] そのまま
-        entropy: energized.entropy,         // [FIX-2] そのまま
-        structure: energized.structure,     // [FIX-2] そのまま
-        history: [...energized.history, transition],
+        curvature: energized.curvature,
+        entropy: energized.entropy,
+        structure: energized.structure,
+        history: [...state.history, t],
         tick: energized.tick,
       });
     }
   }
 
-  // 遷移なし: energized をそのまま返す
   return Object.freeze(energized);
 }
-
-// --- Full Genesis Simulation ---
 
 /**
  * Run full genesis from void to number system
@@ -392,24 +365,11 @@ export function runFullGenesis(energyPerStep: number = 0.2): GenesisState {
   return state;
 }
 
-export function createGenesis(): GenesisState {
-  return Object.freeze({
-    phase: 'void' as GenesisPhase,
-    curvature: 0,
-    entropy: 1.0,
-    structure: 0.1,
-    history: [],
-    tick: 0,
-  });
-}
-
-// --- Theorem Verification ---
+// --- Theorem S₀/S₁ Verification ---
 
 /**
  * Theorem S₀: Under Assumption CS (general position),
  * the transition ・ →G 0₀ is unique.
- *
- * v2: witness を用いた機械検証。CS 仮定の成立も確認。
  */
 export function verifyTheoremS0(state: GenesisState): {
   valid: boolean;
@@ -419,15 +379,9 @@ export function verifyTheoremS0(state: GenesisState): {
   const dotToZeroZero = state.history.filter(
     (t) => t.from === 'dot' && t.to === 'zero_zero'
   );
-
   const unique = dotToZeroZero.length <= 1;
-
-  // CS 仮定の確認（witness から読み取り）
-  const csHolds = dotToZeroZero.length === 0 ||
-    dotToZeroZero.every(t => t.witness.payload.cs.satisfied);
-
+  const csHolds = dotToZeroZero.every(t => t.witness.payload.cs.satisfied);
   const valid = unique && csHolds;
-
   return {
     valid,
     csHolds,
@@ -442,8 +396,6 @@ export function verifyTheoremS0(state: GenesisState): {
 /**
  * Theorem S₁: Under Assumption CS,
  * the transition 0₀ →G 0 is unique.
- *
- * v2: witness を用いた機械検証。CS 仮定の成立も確認。
  */
 export function verifyTheoremS1(state: GenesisState): {
   valid: boolean;
@@ -453,14 +405,9 @@ export function verifyTheoremS1(state: GenesisState): {
   const zeroZeroToZero = state.history.filter(
     (t) => t.from === 'zero_zero' && t.to === 'zero'
   );
-
   const unique = zeroZeroToZero.length <= 1;
-
-  const csHolds = zeroZeroToZero.length === 0 ||
-    zeroZeroToZero.every(t => t.witness.payload.cs.satisfied);
-
+  const csHolds = zeroZeroToZero.every(t => t.witness.payload.cs.satisfied);
   const valid = unique && csHolds;
-
   return {
     valid,
     csHolds,

@@ -1,6 +1,6 @@
 // ============================================================
-// Rei (0₀式) Irreversible Syntax Layer v2 — Test Suite
-// 仕様テスト: Φ/Ψ/Ω, applyRule DSL, Type-level, Triangle, Publish
+// Rei (0₀式) Irreversible Syntax Layer — Test Suite
+// 仕様テスト: Φ/Ψ/Ω, Invariants, Mark Chain, Proofs, DSL
 // ============================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -11,34 +11,42 @@ import {
   type GenesisState,
 } from '../src/genesis-axioms-v2';
 import {
+  // Invariants
   checkInvAST,
   checkInvWitness,
   checkInvPhase,
   checkAllInvariants,
+  // Pipeline
   createPipeline,
+  // Transforms (convenience wrappers)
   phiNormalize,
   psiCommit,
-  psiPublish,
   omegaCompact,
-  verifySealProof,
-  verifyPublishProof,
-  verifyCompactProof,
-  verifyMarkChain,
-  verifyTriangleCoherence,
-  executeFullPipeline,
-  executePublishPipeline,
+  // DSL: applyRule + built-in rules
   applyRule,
-  resetMarkCounter,
-  stateHistoryDigest,
   RULE_PHI_NORMALIZE,
   RULE_PSI_COMMIT,
-  RULE_PSI_PUBLISH,
-  type Pipeline,
+  RULE_OMEGA_COMPACT,
+  // Verification
+  verifySealProof,
+  verifyCompactProof,
+  verifyMarkChain,
+  // Full pipeline
+  executeFullPipeline,
+  // Utils
+  resetMarkCounter,
+  stateHistoryDigest,
+  // Types
+  type TransformPipeline,
   type SealProof,
-  type PublishProof,
   type CompactProof,
-  type TransformRule,
+  type PipelineRule,
+  type InvariantCheck,
 } from '../src/irreversible-syntax';
+
+// ============================================================
+// Helper
+// ============================================================
 
 let genesisState: GenesisState;
 
@@ -56,17 +64,32 @@ describe('Invariant System', () => {
     it('passes for identical states', () => {
       expect(checkInvAST(genesisState, genesisState)).toBe(true);
     });
-    it('passes for states with different physical values', () => {
-      const modified: GenesisState = { ...genesisState, curvature: 0.999, entropy: 0.001 };
+
+    it('passes for states with same structure but different physical values', () => {
+      const modified: GenesisState = {
+        ...genesisState,
+        curvature: 0.999,
+        entropy: 0.001,
+      };
       expect(checkInvAST(genesisState, modified)).toBe(true);
     });
+
     it('fails when transition count changes', () => {
-      const truncated: GenesisState = { ...genesisState, history: genesisState.history.slice(0, 2) };
+      const truncated: GenesisState = {
+        ...genesisState,
+        history: genesisState.history.slice(0, 2),
+      };
       expect(checkInvAST(genesisState, truncated)).toBe(false);
     });
+
     it('fails when phase changes', () => {
-      expect(checkInvAST(genesisState, { ...genesisState, phase: 'void' })).toBe(false);
+      const altered: GenesisState = {
+        ...genesisState,
+        phase: 'void',
+      };
+      expect(checkInvAST(genesisState, altered)).toBe(false);
     });
+
     it('fails when transition from/to is altered', () => {
       const tampered: GenesisState = {
         ...genesisState,
@@ -82,6 +105,7 @@ describe('Invariant System', () => {
     it('passes for valid genesis state', () => {
       expect(checkInvWitness(genesisState)).toBe(true);
     });
+
     it('fails for tampered witness hash', () => {
       const tampered: GenesisState = {
         ...genesisState,
@@ -97,25 +121,37 @@ describe('Invariant System', () => {
     it('passes for valid genesis state', () => {
       expect(checkInvPhase(genesisState)).toBe(true);
     });
+
     it('fails for backward transition', () => {
       const tampered: GenesisState = {
         ...genesisState,
-        history: [{ ...genesisState.history[0], from: 'dot', to: 'void' }],
+        history: [
+          {
+            ...genesisState.history[0],
+            from: 'dot',
+            to: 'void',  // backward
+          },
+        ],
       };
       expect(checkInvPhase(tampered)).toBe(false);
     });
   });
 
   describe('checkAllInvariants', () => {
-    it('all pass for identical states', () => {
+    it('all pass for normalized genesis', () => {
       const result = checkAllInvariants(genesisState, genesisState);
       expect(result.inv_ast).toBe(true);
       expect(result.inv_witness).toBe(true);
       expect(result.inv_phase).toBe(true);
       expect(result.details).toBe('All invariants preserved');
     });
+
     it('reports specific violations', () => {
-      const result = checkAllInvariants(genesisState, { ...genesisState, history: [] });
+      const truncated: GenesisState = {
+        ...genesisState,
+        history: [],
+      };
+      const result = checkAllInvariants(genesisState, truncated);
       expect(result.inv_ast).toBe(false);
       expect(result.details).toContain('AST structure changed');
     });
@@ -123,98 +159,34 @@ describe('Invariant System', () => {
 });
 
 // ============================================================
-// 2. [ENH-1] applyRule DSL
-// ============================================================
-
-describe('[ENH-1] applyRule DSL', () => {
-  it('all Φ transforms go through applyRule', () => {
-    const pipeline = createPipeline(genesisState);
-    const result = applyRule(pipeline, RULE_PHI_NORMALIZE);
-    expect(result.records.length).toBe(1);
-    expect(result.records[0].ruleName).toBe('Φ_normalize');
-  });
-
-  it('rule requires check rejects sealed pipeline', () => {
-    const open = createPipeline(genesisState);
-    const sealed = psiCommit(open);
-    expect(() => applyRule(sealed as any, RULE_PHI_NORMALIZE)).toThrow('cannot transform after seal');
-  });
-
-  it('custom rules can be applied through applyRule', () => {
-    // A no-op Φ rule (identity transform)
-    const identityRule: TransformRule = {
-      name: 'Φ_identity',
-      kind: 'phi_normalize',
-      category: 'phi',
-      requires: (p) => p._phase === 'open' ? { ok: true } : { ok: false, reason: 'not open' },
-      pre: () => true,
-      apply: (s) => s,
-      post: (_b, a, o) => checkAllInvariants(o, a),
-    };
-    const pipeline = createPipeline(genesisState);
-    const result = applyRule(pipeline, identityRule);
-    expect(result.records[0].ruleName).toBe('Φ_identity');
-    expect(result.current).toEqual(genesisState);
-  });
-
-  it('rule post-condition failure throws', () => {
-    const badRule: TransformRule = {
-      name: 'BAD_RULE',
-      kind: 'phi_normalize',
-      category: 'phi',
-      requires: () => ({ ok: true }),
-      pre: () => true,
-      apply: (s) => ({ ...s, phase: 'void' as any }),  // breaks inv_ast
-      post: (_b, a, o) => {
-        const inv = checkAllInvariants(o, a);
-        if (!inv.inv_ast) throw new Error('BAD_RULE: invariant violation');
-        return inv;
-      },
-    };
-    const pipeline = createPipeline(genesisState);
-    expect(() => applyRule(pipeline, badRule)).toThrow('BAD_RULE: invariant violation');
-  });
-
-  it('rule pre-condition failure throws', () => {
-    const strictRule: TransformRule = {
-      name: 'STRICT',
-      kind: 'phi_normalize',
-      category: 'phi',
-      requires: () => ({ ok: true }),
-      pre: () => false,  // always fails
-      apply: (s) => s,
-      post: (_b, a, o) => checkAllInvariants(o, a),
-    };
-    const pipeline = createPipeline(genesisState);
-    expect(() => applyRule(pipeline, strictRule)).toThrow('pre-condition (S₀) failed');
-  });
-});
-
-// ============================================================
-// 3. Φ — Structure-Preserving Transform
+// 2. Φ — 構造保存変換（Phi）
 // ============================================================
 
 describe('Φ_normalize', () => {
   it('creates a normalized pipeline', () => {
     const pipeline = createPipeline(genesisState);
     const result = phiNormalize(pipeline);
+
     expect(result.records.length).toBe(1);
     expect(result.records[0].ruleName).toBe('Φ_normalize');
-    expect(result._phase).toBe('open');
+    expect(result.sealed).toBe(false);
+    expect(result.compacted).toBe(false);
   });
 
   it('preserves all 3 invariants', () => {
     const pipeline = createPipeline(genesisState);
     const result = phiNormalize(pipeline);
-    const inv = result.records[0].invariants;
-    expect(inv.inv_ast).toBe(true);
-    expect(inv.inv_witness).toBe(true);
-    expect(inv.inv_phase).toBe(true);
+
+    const invariants = result.records[0].invariants;
+    expect(invariants.inv_ast).toBe(true);
+    expect(invariants.inv_witness).toBe(true);
+    expect(invariants.inv_phase).toBe(true);
   });
 
   it('generates a mark with correct kind', () => {
     const pipeline = createPipeline(genesisState);
     const result = phiNormalize(pipeline);
+
     expect(result.markChain.length).toBe(1);
     expect(result.markChain[0].kind).toBe('phi_normalize');
   });
@@ -222,12 +194,14 @@ describe('Φ_normalize', () => {
   it('first mark has no parent', () => {
     const pipeline = createPipeline(genesisState);
     const result = phiNormalize(pipeline);
+
     expect(result.markChain[0].parentMarkId).toBeNull();
   });
 
   it('preserves phase and transition structure', () => {
     const pipeline = createPipeline(genesisState);
     const result = phiNormalize(pipeline);
+
     expect(result.current.phase).toBe(genesisState.phase);
     expect(result.current.history.length).toBe(genesisState.history.length);
   });
@@ -238,7 +212,9 @@ describe('Φ_normalize', () => {
       curvature: 0.30000000000000004,
       entropy: 0.7999999999999998,
     };
-    const result = phiNormalize(createPipeline(messyState));
+    const pipeline = createPipeline(messyState);
+    const result = phiNormalize(pipeline);
+
     expect(result.current.curvature).toBe(0.3);
     expect(result.current.entropy).toBe(0.8);
   });
@@ -247,427 +223,389 @@ describe('Φ_normalize', () => {
     let pipeline = createPipeline(genesisState);
     pipeline = phiNormalize(pipeline);
     pipeline = phiNormalize(pipeline);
+
     expect(pipeline.records.length).toBe(2);
     expect(pipeline.markChain.length).toBe(2);
     expect(pipeline.markChain[1].parentMarkId).toBe(pipeline.markChain[0].id);
   });
 
   it('throws after seal', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(() => phiNormalize(sealed as any)).toThrow('cannot transform after seal');
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    expect(() => phiNormalize(sealed)).toThrow('cannot transform after seal');
   });
 });
 
 // ============================================================
-// 4. Ψ_commit — Seal
+// 3. Ψ — 封印変換（Psi）
 // ============================================================
 
 describe('Ψ_commit', () => {
   it('seals the pipeline', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(sealed._phase).toBe('sealed');
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    expect(sealed.sealed).toBe(true);
     expect(sealed.sealProof).toBeDefined();
   });
 
   it('generates seal proof with correct structure', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(sealed.sealProof.sealMark.kind).toBe('psi_commit');
-    expect(sealed.sealProof.stateAtSeal.phase).toBe('number');
-    expect(sealed.sealProof.invariantsAtSeal.inv_witness).toBe(true);
-    expect(sealed.sealProof.csAtSeal).toBe(true);
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    const proof = sealed.sealProof;
+    expect(proof.sealMark.kind).toBe('psi_commit');
+    expect(proof.stateAtSeal.phase).toBe('number');
+    expect(proof.invariantsAtSeal.inv_witness).toBe(true);
+    expect(proof.invariantsAtSeal.inv_phase).toBe(true);
+    expect(proof.csAtSeal).toBe(true);
+    expect(typeof proof.hash).toBe('string');
   });
 
   it('seal mark chains to previous marks', () => {
     let pipeline = createPipeline(genesisState);
     pipeline = phiNormalize(pipeline);
     const sealed = psiCommit(pipeline);
+
     const sealMark = sealed.markChain[sealed.markChain.length - 1];
     const phiMark = sealed.markChain[sealed.markChain.length - 2];
     expect(sealMark.parentMarkId).toBe(phiMark.id);
   });
 
   it('prevents double seal', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(() => psiCommit(sealed as any)).toThrow('already sealed');
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    expect(() => psiCommit(sealed)).toThrow('already sealed');
   });
 
   it('prevents Φ after seal', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(() => phiNormalize(sealed as any)).toThrow('cannot transform after seal');
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    expect(() => phiNormalize(sealed)).toThrow('cannot transform after seal');
   });
 
   it('can seal without prior Φ', () => {
-    const sealed = psiCommit(createPipeline(genesisState));
-    expect(sealed._phase).toBe('sealed');
+    const pipeline = createPipeline(genesisState);
+    const sealed = psiCommit(pipeline);
+
+    expect(sealed.sealed).toBe(true);
     expect(sealed.records.length).toBe(1);
   });
 
   it('seal proof hash is reproducible', () => {
-    let p1 = createPipeline(genesisState);
-    p1 = phiNormalize(p1);
+    let pipeline1 = createPipeline(genesisState);
+    pipeline1 = phiNormalize(pipeline1);
     resetMarkCounter();
-    const s1 = psiCommit(p1);
+    const sealed1 = psiCommit(pipeline1);
+
     resetMarkCounter();
-    let p2 = createPipeline(genesisState);
-    p2 = phiNormalize(p2);
+    let pipeline2 = createPipeline(genesisState);
+    pipeline2 = phiNormalize(pipeline2);
     resetMarkCounter();
-    const s2 = psiCommit(p2);
-    expect(s1.sealProof.hash).toBe(s2.sealProof.hash);
+    const sealed2 = psiCommit(pipeline2);
+
+    expect(sealed1.sealProof.hash).toBe(sealed2.sealProof.hash);
   });
 });
 
 // ============================================================
-// 5. [ENH-4] Ψ_publish — Irreversible Publish
-// ============================================================
-
-describe('[ENH-4] Ψ_publish', () => {
-  it('publishes a sealed pipeline', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    expect(published._phase).toBe('sealed');
-    expect(published.publishProof).toBeDefined();
-  });
-
-  it('publish proof contains correct structure', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const proof = published.publishProof!;
-    expect(proof.publishMark.kind).toBe('psi_publish');
-    expect(proof.sealProofHash).toBe(sealed.sealProof.hash);
-    expect(proof.allCSHeld).toBe(true);
-    expect(typeof proof.genesisDigest).toBe('string');
-    expect(typeof proof.hash).toBe('string');
-  });
-
-  it('publish mark chains after seal mark', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const publishMark = published.markChain[published.markChain.length - 1];
-    const sealMark = published.markChain[published.markChain.length - 2];
-    expect(publishMark.parentMarkId).toBe(sealMark.id);
-    expect(publishMark.kind).toBe('psi_publish');
-  });
-
-  it('prevents double publish', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    expect(() => psiPublish(published)).toThrow('already published');
-  });
-
-  it('requires seal before publish', () => {
-    const open = createPipeline(genesisState);
-    expect(() => psiPublish(open as any)).toThrow('must be sealed');
-  });
-
-  it('publish proof passes verification', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const result = verifyPublishProof(
-      published.publishProof!,
-      published.current,
-      sealed.sealProof.hash,
-    );
-    expect(result.valid).toBe(true);
-  });
-
-  it('detects tampered publish proof hash', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const tampered = { ...published.publishProof!, hash: 'tampered' };
-    const result = verifyPublishProof(tampered, published.current, sealed.sealProof.hash);
-    expect(result.valid).toBe(false);
-  });
-
-  it('publish proof records genesis digest', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const expectedDigest = stateHistoryDigest(published.current);
-    expect(published.publishProof!.genesisDigest).toBe(expectedDigest);
-  });
-});
-
-// ============================================================
-// 6. Ω_compact
+// 4. Ω — 履歴合成（Omega）
 // ============================================================
 
 describe('Ω_compact', () => {
   it('produces a compact proof', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
+
     expect(proof).toBeDefined();
     expect(typeof proof.hash).toBe('string');
-    expect(proof.transformCount).toBe(2);
+    expect(proof.transformCount).toBe(3); // Φ + Ψ + Ω
   });
 
   it('records phase progression', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
+
     expect(proof.phaseProgression).toContain('void');
+    expect(proof.phaseProgression).toContain('・');
+    expect(proof.phaseProgression).toContain('0₀');
+    expect(proof.phaseProgression).toContain('0');
     expect(proof.phaseProgression).toContain('ℕ');
   });
 
   it('records genesis transition count', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(omegaCompact(sealed).genesisTransitions).toBe(4);
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+    const proof = omegaCompact(sealed);
+
+    expect(proof.genesisTransitions).toBe(4);
   });
 
-  it('records mark chain hashes including Ω', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+  it('records mark chain hashes', () => {
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
-    expect(proof.markChainHashes.length).toBe(3); // Φ + Ψ + Ω
+
+    expect(proof.markChainHashes.length).toBe(3); // Φ mark + Ψ mark + Ω mark
   });
 
   it('includes seal proof hash', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
+
     expect(proof.sealProofHash).toBe(sealed.sealProof.hash);
   });
 
-  it('[ENH-3] includes historyDigest', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+  it('CS status is recorded', () => {
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
-    expect(typeof proof.historyDigest).toBe('string');
-    expect(proof.historyDigest).toBe(stateHistoryDigest(sealed.current));
-  });
 
-  it('[ENH-4] includes publishProofHash when published', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const proof = omegaCompact(published);
-    expect(proof.publishProofHash).toBe(published.publishProof!.hash);
-  });
-
-  it('[ENH-4] publishProofHash is null when not published', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const proof = omegaCompact(sealed);
-    expect(proof.publishProofHash).toBeNull();
+    expect(proof.allCSHeld).toBe(true);
   });
 
   it('requires seal before compaction', () => {
-    expect(() => omegaCompact(createPipeline(genesisState) as any)).toThrow();
+    const pipeline = createPipeline(genesisState);
+    expect(() => omegaCompact(pipeline as any)).toThrow('must be sealed');
+  });
+
+  it('prevents double compaction', () => {
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+    omegaCompact(sealed);
+
+    const compactedPipeline = { ...sealed, compacted: true };
+    expect(() => omegaCompact(compactedPipeline)).toThrow('already compacted');
   });
 });
 
 // ============================================================
-// 7. Mark Chain Verification
+// 5. Mark Chain Verification
 // ============================================================
 
 describe('Mark Chain', () => {
-  it('valid chain passes', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(verifyMarkChain(sealed.markChain).valid).toBe(true);
+  it('valid chain passes verification', () => {
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    const result = verifyMarkChain(sealed.markChain);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
   });
 
   it('detects broken parent chain', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
     const tampered = sealed.markChain.map((m, i) =>
       i === 1 ? { ...m, parentMarkId: 'wrong_id' } : m
     );
-    expect(verifyMarkChain(tampered).valid).toBe(false);
+
+    const result = verifyMarkChain(tampered);
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]).toContain('parent mismatch');
   });
 
   it('detects non-monotonic ticks', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
     const tampered = sealed.markChain.map((m, i) =>
       i === 1 ? { ...m, tick: 0 } : m
     );
+
     const result = verifyMarkChain(tampered);
     expect(result.valid).toBe(false);
     expect(result.errors[0]).toContain('tick not monotonic');
   });
 
-  it('detects false root', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+  it('detects false root (first mark with parent)', () => {
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
     const tampered = sealed.markChain.map((m, i) =>
-      i === 0 ? { ...m, parentMarkId: 'phantom' } : m
+      i === 0 ? { ...m, parentMarkId: 'phantom_parent' } : m
     );
-    expect(verifyMarkChain(tampered).valid).toBe(false);
+
+    const result = verifyMarkChain(tampered);
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]).toContain('First mark should have no parent');
   });
 
   it('multi-step chain maintains integrity', () => {
-    let p = createPipeline(genesisState);
-    p = phiNormalize(p);
-    p = phiNormalize(p);
-    p = phiNormalize(p);
-    const sealed = psiCommit(p);
-    expect(sealed.markChain.length).toBe(4);
-    expect(verifyMarkChain(sealed.markChain).valid).toBe(true);
-  });
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    pipeline = phiNormalize(pipeline);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
 
-  it('[ENH-4] chain includes publish mark', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    expect(published.markChain.length).toBe(3); // Φ + Ψ_commit + Ψ_publish
-    expect(published.markChain[2].kind).toBe('psi_publish');
-    expect(verifyMarkChain(published.markChain).valid).toBe(true);
+    expect(sealed.markChain.length).toBe(4);
+    const result = verifyMarkChain(sealed.markChain);
+    expect(result.valid).toBe(true);
   });
 });
 
 // ============================================================
-// 8. Proof Verification
+// 6. Proof Verification
 // ============================================================
 
 describe('Seal Proof Verification', () => {
   it('valid seal proof passes', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(verifySealProof(sealed.sealProof, sealed.current).valid).toBe(true);
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    const result = verifySealProof(sealed.sealProof, sealed.current);
+    expect(result.valid).toBe(true);
   });
 
   it('detects phase mismatch', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const wrong: GenesisState = { ...sealed.current, phase: 'void' };
-    expect(verifySealProof(sealed.sealProof, wrong).valid).toBe(false);
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    const wrongState: GenesisState = { ...sealed.current, phase: 'void' };
+    const result = verifySealProof(sealed.sealProof, wrongState);
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]).toContain('Phase mismatch');
   });
 
-  it('detects tampered hash', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const tampered: SealProof = { ...sealed.sealProof, hash: 'tampered' };
-    expect(verifySealProof(tampered, sealed.current).valid).toBe(false);
+  it('detects tampered seal proof hash', () => {
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+
+    const tamperedProof: SealProof = { ...sealed.sealProof, hash: 'tampered' };
+    const result = verifySealProof(tamperedProof, sealed.current);
+    expect(result.valid).toBe(false);
+    expect(result.errors[0]).toContain('hash mismatch');
   });
 });
 
 describe('Compact Proof Verification', () => {
   it('valid compact proof passes', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(verifyCompactProof(omegaCompact(sealed)).valid).toBe(true);
-  });
-
-  it('detects tampered hash', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
-    expect(verifyCompactProof({ ...proof, hash: 'tampered' }).valid).toBe(false);
-  });
-});
 
-// ============================================================
-// 9. [ENH-3] Triangle Coherence
-// ============================================================
-
-describe('[ENH-3] Triangle Coherence', () => {
-  it('valid pipeline passes triangle coherence', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const result = verifyTriangleCoherence(sealed);
-    expect(result.valid).toBe(true);
-    expect(result.markChainValid).toBe(true);
-    expect(result.historyWitnessValid).toBe(true);
-    expect(result.markHistoryBound).toBe(true);
-  });
-
-  it('validates with proof', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const proof = omegaCompact(sealed);
-    const result = verifyTriangleCoherence(sealed, proof);
+    const result = verifyCompactProof(proof);
     expect(result.valid).toBe(true);
   });
 
-  it('detects proof historyDigest mismatch', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
+  it('detects tampered compact proof hash', () => {
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
-    const tamperedProof = { ...proof, historyDigest: 'wrong_digest' };
-    const result = verifyTriangleCoherence(sealed, tamperedProof);
+
+    const tampered: CompactProof = { ...proof, hash: 'tampered' };
+    const result = verifyCompactProof(tampered);
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('historyDigest'))).toBe(true);
-  });
-
-  it('detects tampered witness in pipeline', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    // Tamper witness
-    const tampered: Pipeline<'sealed'> = {
-      ...sealed,
-      current: {
-        ...sealed.current,
-        history: sealed.current.history.map((t, i) =>
-          i === 0 ? { ...t, witness: { ...t.witness, hash: 'tampered' } } : t
-        ),
-      },
-    };
-    const result = verifyTriangleCoherence(tampered);
-    expect(result.historyWitnessValid).toBe(false);
-  });
-
-  it('[ENH-4] works with published pipeline', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const result = verifyTriangleCoherence(published);
-    expect(result.valid).toBe(true);
-  });
-
-  it('first mark sourceHash matches original state', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const result = verifyTriangleCoherence(sealed);
-    expect(result.markHistoryBound).toBe(true);
   });
 });
 
 // ============================================================
-// 10. Transform Ordering Enforcement
+// 7. Transform Ordering Enforcement
 // ============================================================
 
 describe('Transform Ordering (Φ → Ψ → Ω)', () => {
   it('Φ → Ψ → Ω succeeds', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    expect(omegaCompact(sealed)).toBeDefined();
+    let pipeline = createPipeline(genesisState);
+    pipeline = phiNormalize(pipeline);
+    const sealed = psiCommit(pipeline);
+    const proof = omegaCompact(sealed);
+
+    expect(proof).toBeDefined();
   });
 
   it('Ψ → Ω succeeds (Φ optional)', () => {
-    const sealed = psiCommit(createPipeline(genesisState));
+    const pipeline = createPipeline(genesisState);
+    const sealed = psiCommit(pipeline);
     const proof = omegaCompact(sealed);
-    expect(proof.transformCount).toBe(1);
+
+    expect(proof).toBeDefined();
+    expect(proof.transformCount).toBe(2); // Ψ + Ω
   });
 
   it('Ω without Ψ fails', () => {
-    expect(() => omegaCompact(createPipeline(genesisState) as any)).toThrow();
+    const pipeline = createPipeline(genesisState);
+    expect(() => omegaCompact(pipeline as any)).toThrow('must be sealed');
   });
 
   it('Φ after Ψ fails', () => {
-    const sealed = psiCommit(createPipeline(genesisState));
-    expect(() => phiNormalize(sealed as any)).toThrow();
+    let pipeline = createPipeline(genesisState);
+    const sealed = psiCommit(pipeline);
+    expect(() => phiNormalize(sealed)).toThrow('cannot transform after seal');
   });
 
   it('Ψ after Ψ fails', () => {
-    const sealed = psiCommit(createPipeline(genesisState));
-    expect(() => psiCommit(sealed as any)).toThrow();
+    let pipeline = createPipeline(genesisState);
+    const sealed = psiCommit(pipeline);
+    expect(() => psiCommit(sealed)).toThrow('already sealed');
   });
 
-  it('[ENH-4] Φ → Ψ → Ψ_publish → Ω succeeds', () => {
-    const sealed = psiCommit(phiNormalize(createPipeline(genesisState)));
-    const published = psiPublish(sealed);
-    const proof = omegaCompact(published);
-    expect(proof).toBeDefined();
-    expect(proof.publishProofHash).not.toBeNull();
+  it('Ω after Ω fails', () => {
+    let pipeline = createPipeline(genesisState);
+    const sealed = psiCommit(pipeline);
+    omegaCompact(sealed);
+    const compactedPipeline = { ...sealed, compacted: true };
+    expect(() => omegaCompact(compactedPipeline)).toThrow('already compacted');
   });
 });
 
 // ============================================================
-// 11. Full Pipeline (Integration)
+// 8. Full Pipeline (Integration)
 // ============================================================
 
 describe('executeFullPipeline', () => {
   it('produces valid proof and seal proof', () => {
     const { proof, sealProof, pipeline } = executeFullPipeline(genesisState);
+
     expect(proof).toBeDefined();
     expect(sealProof).toBeDefined();
-    expect(pipeline._phase).toBe('sealed');
+    expect(pipeline.sealed).toBe(true);
+    expect(pipeline.compacted).toBe(true);
   });
 
   it('proof passes verification', () => {
     const { proof } = executeFullPipeline(genesisState);
-    expect(verifyCompactProof(proof).valid).toBe(true);
+    const result = verifyCompactProof(proof);
+    expect(result.valid).toBe(true);
   });
 
   it('seal proof passes verification', () => {
     const { sealProof, pipeline } = executeFullPipeline(genesisState);
-    expect(verifySealProof(sealProof, pipeline.current).valid).toBe(true);
+    const result = verifySealProof(sealProof, pipeline.current);
+    expect(result.valid).toBe(true);
   });
 
   it('mark chain passes verification', () => {
     const { pipeline } = executeFullPipeline(genesisState);
-    expect(verifyMarkChain(pipeline.markChain).valid).toBe(true);
-  });
-
-  it('[ENH-3] triangle coherence passes', () => {
-    const { proof, pipeline } = executeFullPipeline(genesisState);
-    expect(verifyTriangleCoherence(pipeline, proof).valid).toBe(true);
+    const result = verifyMarkChain(pipeline.markChain);
+    expect(result.valid).toBe(true);
   });
 
   it('phase progression is complete', () => {
@@ -680,85 +618,39 @@ describe('executeFullPipeline', () => {
       resetMarkCounter();
       const state = runFullGenesis(energy);
       const { proof } = executeFullPipeline(state);
+
       expect(verifyCompactProof(proof).valid).toBe(true);
       expect(proof.allCSHeld).toBe(true);
+      expect(proof.genesisTransitions).toBe(4);
     }
   });
 
   it('is reproducible', () => {
     resetMarkCounter();
-    const { proof: p1 } = executeFullPipeline(genesisState);
+    const { proof: proof1 } = executeFullPipeline(genesisState);
+
     resetMarkCounter();
-    const { proof: p2 } = executeFullPipeline(runFullGenesis(0.3));
-    expect(p1.hash).toBe(p2.hash);
+    const state2 = runFullGenesis(0.3);
+    const { proof: proof2 } = executeFullPipeline(state2);
+
+    expect(proof1.hash).toBe(proof2.hash);
+    expect(proof1.originalHash).toBe(proof2.originalHash);
+    expect(proof1.finalHash).toBe(proof2.finalHash);
   });
 });
 
 // ============================================================
-// 12. [ENH-4] executePublishPipeline (Integration)
-// ============================================================
-
-describe('[ENH-4] executePublishPipeline', () => {
-  it('produces valid proof, seal proof, and publish proof', () => {
-    const { proof, sealProof, publishProof, pipeline } = executePublishPipeline(genesisState);
-    expect(proof).toBeDefined();
-    expect(sealProof).toBeDefined();
-    expect(publishProof).toBeDefined();
-    expect(pipeline._phase).toBe('sealed');
-  });
-
-  it('all proofs pass verification', () => {
-    const { proof, sealProof, publishProof, pipeline } = executePublishPipeline(genesisState);
-    expect(verifyCompactProof(proof).valid).toBe(true);
-    expect(verifySealProof(sealProof, pipeline.current).valid).toBe(true);
-    expect(verifyPublishProof(publishProof, pipeline.current, sealProof.hash).valid).toBe(true);
-  });
-
-  it('triangle coherence passes with publish', () => {
-    const { proof, pipeline } = executePublishPipeline(genesisState);
-    expect(verifyTriangleCoherence(pipeline, proof).valid).toBe(true);
-  });
-
-  it('compact proof includes publish proof hash', () => {
-    const { proof, publishProof } = executePublishPipeline(genesisState);
-    expect(proof.publishProofHash).toBe(publishProof.hash);
-  });
-
-  it('mark chain has 3 marks: Φ + Ψ_commit + Ψ_publish', () => {
-    const { pipeline } = executePublishPipeline(genesisState);
-    expect(pipeline.markChain.length).toBe(3);
-    expect(pipeline.markChain[0].kind).toBe('phi_normalize');
-    expect(pipeline.markChain[1].kind).toBe('psi_commit');
-    expect(pipeline.markChain[2].kind).toBe('psi_publish');
-  });
-
-  it('works with different energy levels', () => {
-    for (const energy of [0.15, 0.2, 0.3, 0.5]) {
-      resetMarkCounter();
-      const state = runFullGenesis(energy);
-      const { proof, sealProof, publishProof, pipeline } = executePublishPipeline(state);
-      expect(verifyCompactProof(proof).valid).toBe(true);
-      expect(verifyPublishProof(publishProof, pipeline.current, sealProof.hash).valid).toBe(true);
-    }
-  });
-
-  it('is reproducible', () => {
-    resetMarkCounter();
-    const { proof: p1 } = executePublishPipeline(genesisState);
-    resetMarkCounter();
-    const { proof: p2 } = executePublishPipeline(runFullGenesis(0.3));
-    expect(p1.hash).toBe(p2.hash);
-  });
-});
-
-// ============================================================
-// 13. Edge Cases
+// 9. Edge Cases
 // ============================================================
 
 describe('Edge Cases', () => {
-  it('pipeline with void-only state', () => {
-    const result = phiNormalize(createPipeline(createGenesis()));
-    expect(result.current.phase).toBe('void');
+  it('pipeline with void-only state (no transitions)', () => {
+    const voidState = createGenesis();
+    const pipeline = createPipeline(voidState);
+    const normalized = phiNormalize(pipeline);
+
+    expect(normalized.current.phase).toBe('void');
+    expect(normalized.current.history.length).toBe(0);
   });
 
   it('pipeline with partial genesis', () => {
@@ -766,19 +658,274 @@ describe('Edge Cases', () => {
     let state = createGenesis();
     state = evolve(state, 0.5);
     expect(state.phase).toBe('dot');
-    const sealed = psiCommit(phiNormalize(createPipeline(state)));
+
+    const pipeline = createPipeline(state);
+    const normalized = phiNormalize(pipeline);
+    const sealed = psiCommit(normalized);
     const proof = omegaCompact(sealed);
+
     expect(proof.genesisTransitions).toBe(1);
     expect(proof.phaseProgression).toContain('・');
   });
+});
 
-  it('[ENH-2] type-level: cannot assign sealed to open', () => {
-    // This is a compile-time guarantee — we verify the runtime tag
-    const open = createPipeline(genesisState);
-    expect(open._phase).toBe('open');
-    const sealed = psiCommit(open);
-    expect(sealed._phase).toBe('sealed');
-    // At runtime, _phase tag correctly tracks state
-    expect(open._phase !== sealed._phase).toBe(true);
+// ============================================================
+// 10. DSL Layer — applyRule + PipelineRule テスト
+// ============================================================
+
+describe('applyRule DSL', () => {
+  describe('applyRule ↔ convenience wrapper equivalence', () => {
+    it('applyRule(RULE_PHI_NORMALIZE) ≡ phiNormalize()', () => {
+      resetMarkCounter();
+      const p1 = applyRule(createPipeline(genesisState), RULE_PHI_NORMALIZE);
+
+      resetMarkCounter();
+      const p2 = phiNormalize(createPipeline(genesisState));
+
+      // Same mark IDs, same record names, same current state
+      expect(p1.markChain[0].id).toBe(p2.markChain[0].id);
+      expect(p1.records[0].ruleName).toBe(p2.records[0].ruleName);
+      expect(p1.current.curvature).toBe(p2.current.curvature);
+      expect(p1.current.entropy).toBe(p2.current.entropy);
+      expect(p1.current.structure).toBe(p2.current.structure);
+    });
+
+    it('applyRule(RULE_PSI_COMMIT) produces sealProof', () => {
+      let pipeline = createPipeline(genesisState);
+      pipeline = phiNormalize(pipeline);
+
+      const result = applyRule(pipeline, RULE_PSI_COMMIT);
+      expect(result.sealed).toBe(true);
+      expect(result.sealProof).toBeDefined();
+      expect(result.sealProof!.sealMark.kind).toBe('psi_commit');
+    });
+
+    it('applyRule(RULE_OMEGA_COMPACT) generates omega mark', () => {
+      let pipeline = createPipeline(genesisState);
+      pipeline = phiNormalize(pipeline);
+      const sealed = psiCommit(pipeline);
+
+      const compacted = applyRule(sealed, RULE_OMEGA_COMPACT);
+      const lastMark = compacted.markChain[compacted.markChain.length - 1];
+      expect(lastMark.kind).toBe('omega_compact');
+    });
+  });
+
+  describe('firewall enforcement via applyRule', () => {
+    it('RULE_PHI_NORMALIZE blocked after seal', () => {
+      let pipeline = createPipeline(genesisState);
+      const sealed = psiCommit(pipeline);
+
+      expect(() => applyRule(sealed, RULE_PHI_NORMALIZE)).toThrow('firewall');
+      expect(() => applyRule(sealed, RULE_PHI_NORMALIZE)).toThrow('cannot transform after seal');
+    });
+
+    it('RULE_PSI_COMMIT blocked on already-sealed pipeline', () => {
+      let pipeline = createPipeline(genesisState);
+      const sealed = psiCommit(pipeline);
+
+      expect(() => applyRule(sealed, RULE_PSI_COMMIT)).toThrow('firewall');
+      expect(() => applyRule(sealed, RULE_PSI_COMMIT)).toThrow('already sealed');
+    });
+
+    it('RULE_OMEGA_COMPACT blocked without seal', () => {
+      const pipeline = createPipeline(genesisState);
+
+      expect(() => applyRule(pipeline, RULE_OMEGA_COMPACT)).toThrow('firewall');
+      expect(() => applyRule(pipeline, RULE_OMEGA_COMPACT)).toThrow('must be sealed');
+    });
+
+    it('RULE_OMEGA_COMPACT blocked on already-compacted pipeline', () => {
+      let pipeline = createPipeline(genesisState);
+      const sealed = psiCommit(pipeline);
+      const compacted = { ...applyRule(sealed, RULE_OMEGA_COMPACT), compacted: true };
+
+      expect(() => applyRule(compacted, RULE_OMEGA_COMPACT)).toThrow('already compacted');
+    });
+  });
+
+  describe('custom PipelineRule', () => {
+    it('identity rule passes all invariants', () => {
+      const RULE_IDENTITY: PipelineRule = {
+        name: 'identity',
+        kind: 'phi_normalize',
+        category: 'phi',
+        requires: (p) => {
+          if (p.sealed) return { ok: false, reason: 'sealed' };
+          return { ok: true };
+        },
+        pre: () => true,
+        apply: (state) => state,  // no-op
+        post: (before, after) => checkAllInvariants(before, after),
+      };
+
+      const pipeline = createPipeline(genesisState);
+      const result = applyRule(pipeline, RULE_IDENTITY);
+
+      expect(result.records.length).toBe(1);
+      expect(result.records[0].ruleName).toBe('identity');
+      expect(result.records[0].invariants.inv_ast).toBe(true);
+      expect(result.records[0].invariants.inv_witness).toBe(true);
+      expect(result.records[0].invariants.inv_phase).toBe(true);
+    });
+
+    it('custom rule with failing precondition throws', () => {
+      const RULE_ALWAYS_FAIL_PRE: PipelineRule = {
+        name: 'fail_pre',
+        kind: 'phi_normalize',
+        category: 'phi',
+        requires: () => ({ ok: true }),
+        pre: () => false,  // always fails
+        apply: (state) => state,
+        post: (before, after) => checkAllInvariants(before, after),
+      };
+
+      const pipeline = createPipeline(genesisState);
+      expect(() => applyRule(pipeline, RULE_ALWAYS_FAIL_PRE)).toThrow('precondition (S₀) failed');
+    });
+
+    it('custom rule that breaks invariants is caught', () => {
+      const RULE_BREAK_INV: PipelineRule = {
+        name: 'breaker',
+        kind: 'phi_normalize',
+        category: 'phi',
+        requires: () => ({ ok: true }),
+        pre: () => true,
+        apply: (state) => ({ ...state, phase: 'void' as any }),  // breaks inv_ast
+        post: (before, after) => checkAllInvariants(before, after),
+      };
+
+      const pipeline = createPipeline(genesisState);
+      expect(() => applyRule(pipeline, RULE_BREAK_INV)).toThrow('invariant violation');
+    });
+  });
+
+  describe('rule chaining', () => {
+    it('multi-rule mark chain is valid', () => {
+      let pipeline = createPipeline(genesisState);
+
+      // Φ → Φ → Φ → Ψ via applyRule
+      pipeline = applyRule(pipeline, RULE_PHI_NORMALIZE);
+      pipeline = applyRule(pipeline, RULE_PHI_NORMALIZE);
+      pipeline = applyRule(pipeline, RULE_PHI_NORMALIZE);
+      const sealed = applyRule(pipeline, RULE_PSI_COMMIT);
+
+      expect(sealed.markChain.length).toBe(4);
+      const result = verifyMarkChain(sealed.markChain);
+      expect(result.valid).toBe(true);
+
+      // Verify mark kinds in order
+      expect(sealed.markChain[0].kind).toBe('phi_normalize');
+      expect(sealed.markChain[1].kind).toBe('phi_normalize');
+      expect(sealed.markChain[2].kind).toBe('phi_normalize');
+      expect(sealed.markChain[3].kind).toBe('psi_commit');
+    });
+
+    it('custom Φ → built-in Ψ chaining works', () => {
+      const RULE_CUSTOM_PHI: PipelineRule = {
+        name: 'custom_phi',
+        kind: 'phi_normalize',
+        category: 'phi',
+        requires: (p) => {
+          if (p.sealed) return { ok: false, reason: 'sealed' };
+          return { ok: true };
+        },
+        pre: () => true,
+        apply: (state) => ({
+          ...state,
+          curvature: Math.round(state.curvature * 100) / 100,
+          entropy: Math.round(state.entropy * 100) / 100,
+          structure: Math.round(state.structure * 100) / 100,
+        }),
+        post: (before, after) => checkAllInvariants(before, after),
+      };
+
+      let pipeline = createPipeline(genesisState);
+      pipeline = applyRule(pipeline, RULE_CUSTOM_PHI);
+      const sealed = applyRule(pipeline, RULE_PSI_COMMIT);
+
+      expect(sealed.sealed).toBe(true);
+      expect(sealed.markChain.length).toBe(2);
+      expect(sealed.markChain[0].kind).toBe('phi_normalize');
+      expect(sealed.markChain[1].kind).toBe('psi_commit');
+    });
+
+    it('full DSL pipeline (applyRule only) matches executeFullPipeline hash', () => {
+      // applyRule-only pipeline
+      resetMarkCounter();
+      let p = createPipeline(genesisState);
+      p = applyRule(p, RULE_PHI_NORMALIZE);
+      const sealed = applyRule(p, RULE_PSI_COMMIT) as TransformPipeline & { sealProof: SealProof };
+      const dslProof = omegaCompact(sealed);
+
+      // executeFullPipeline
+      resetMarkCounter();
+      const state2 = runFullGenesis(0.3);
+      const { proof: fullProof } = executeFullPipeline(state2);
+
+      expect(dslProof.hash).toBe(fullProof.hash);
+      expect(dslProof.originalHash).toBe(fullProof.originalHash);
+      expect(dslProof.finalHash).toBe(fullProof.finalHash);
+    });
+  });
+
+  describe('built-in rule metadata', () => {
+    it('RULE_PHI_NORMALIZE has correct metadata', () => {
+      expect(RULE_PHI_NORMALIZE.name).toBe('Φ_normalize');
+      expect(RULE_PHI_NORMALIZE.kind).toBe('phi_normalize');
+      expect(RULE_PHI_NORMALIZE.category).toBe('phi');
+    });
+
+    it('RULE_PSI_COMMIT has correct metadata', () => {
+      expect(RULE_PSI_COMMIT.name).toBe('Ψ_commit');
+      expect(RULE_PSI_COMMIT.kind).toBe('psi_commit');
+      expect(RULE_PSI_COMMIT.category).toBe('psi');
+    });
+
+    it('RULE_OMEGA_COMPACT has correct metadata', () => {
+      expect(RULE_OMEGA_COMPACT.name).toBe('Ω_compact');
+      expect(RULE_OMEGA_COMPACT.kind).toBe('omega_compact');
+      expect(RULE_OMEGA_COMPACT.category).toBe('omega');
+    });
+  });
+});
+
+// ============================================================
+// 11. stateHistoryDigest
+// ============================================================
+
+describe('stateHistoryDigest', () => {
+  it('returns a string', () => {
+    const digest = stateHistoryDigest(genesisState);
+    expect(typeof digest).toBe('string');
+    expect(digest.length).toBe(8); // FNV-1a 32-bit → 8 hex chars
+  });
+
+  it('is deterministic', () => {
+    const d1 = stateHistoryDigest(genesisState);
+    const d2 = stateHistoryDigest(genesisState);
+    expect(d1).toBe(d2);
+  });
+
+  it('changes when history changes', () => {
+    const original = stateHistoryDigest(genesisState);
+    const tampered: GenesisState = {
+      ...genesisState,
+      history: genesisState.history.slice(0, 2),
+    };
+    const modified = stateHistoryDigest(tampered);
+    expect(original).not.toBe(modified);
+  });
+
+  it('changes when witness hash changes', () => {
+    const original = stateHistoryDigest(genesisState);
+    const tampered: GenesisState = {
+      ...genesisState,
+      history: genesisState.history.map((t, i) =>
+        i === 0 ? { ...t, witness: { ...t.witness, hash: 'tampered' } } : t
+      ),
+    };
+    const modified = stateHistoryDigest(tampered);
+    expect(original).not.toBe(modified);
   });
 });
