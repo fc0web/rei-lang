@@ -4,20 +4,70 @@ Copyright 2024-2026 Nobuki Fujimoto (藤本伸樹)
 This product is based on D-FUMT (Dimensional Fujimoto Universal Mathematical Theory),
 a comprehensive mathematical framework created by Nobuki Fujimoto.
 
+============================================================
+DUAL LICENSING STRUCTURE
+============================================================
+
+This repository contains two categories of work under different licenses:
+
+1. SOURCE CODE (/src, /tests, /examples)
+   License: Apache License 2.0 (see /LICENSE)
+   - Free for commercial and non-commercial use
+   - Modification and redistribution permitted
+   - Patent protection included
+   - Attribution required
+
+2. THEORETICAL DOCUMENTS (/theory)
+   License: CC BY-NC-SA 4.0 (see /theory/LICENSE-THEORY.md)
+   - Attribution required
+   - Non-commercial use only
+   - Derivative works must use the same license
+   - Commercial licensing available upon request
+
+============================================================
+INTELLECTUAL PROPERTY NOTICE
+============================================================
+
+This repository contains an original theoretical framework created by
+Nobuki Fujimoto (藤本伸樹). The following apply:
+
+1. ATTRIBUTION: All use of this work must clearly credit
+   Nobuki Fujimoto as the original author.
+
+2. THEORETICAL INTEGRITY: The author does not endorse modified
+   versions of D-FUMT, Rei, or GFT that are presented as the
+   original theory. Any derivative theoretical work must clearly
+   state that it is a modification and not the original.
+
+3. TRADEMARKS: "Rei", "0₀式", "D-FUMT", "GFT" (Graphic Formula
+   Theory), and "Genesis Axiom System" are trademarks of
+   Nobuki Fujimoto. This license does not grant permission to use
+   these trademarks except as required for reasonable and customary
+   use in describing the origin of this Work.
+
+4. CERTIFICATION: Only certification programs authorized by
+   Nobuki Fujimoto may issue official Rei/D-FUMT credentials.
+   Unauthorized use of these names in certification or credentialing
+   is prohibited.
+
+============================================================
+
 Theoretical Components:
   - D-FUMT (次元藤本普遍数学理論) — Core mathematical theory
   - 0₀式 (Rei / れいしき) — Computation system based on zero extension theory
   - GFT (Graphic Formula Theory / 図式数式理論) — Visual graph representation
   - Genesis Axiom System (生成公理系) — Pre-zero axiomatization
+  - Notation Equivalence Axiom (記法同値公理) — Four-layer notation framework
+  - Multi-Dimensional Number System Theory (多次元数体系理論)
+  - Zero-Pi Extension Theory (ゼロ・π拡張理論)
   - USFT (Universal Sound Formula Theory) — Extension theory
   - UPFT (Universal Physical Formula Theory) — Extension theory
+  - Cosmic Library Theory (宇宙図書館理論) — Information ethics framework
 
 All theoretical work is the original creation of Nobuki Fujimoto.
 
-ORCID: https://orcid.org/[Nobuki's ORCID]
-Wikidata: [Nobuki's Wikidata ID]
+本リポジトリに含まれるすべての理論的著作物は、藤本伸樹によるオリジナルの創作物です。
+改変版をオリジナルの理論として提示することは、著者の承認を得たものではありません。
 
-"Rei", "0₀式", "D-FUMT", and "GFT" are trademarks of Nobuki Fujimoto.
-The Apache 2.0 License does not grant permission to use these trademarks
-except as required for reasonable and customary use in describing the
-origin of this Work.
+ORCID: https://orcid.org/[Nobuki's ORCID]
+GitHub: https://github.com/fc0web/rei-lang
