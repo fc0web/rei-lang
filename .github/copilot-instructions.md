@@ -20,7 +20,8 @@ achieving 74% code reduction over conventional approaches.
 
 ## Testing
 - Use Vitest (`npx vitest run`)
-- 183 tests must pass before any commit
+- Current test suites: ISL (110 tests) + Phase Guard & κ (73 tests) = 183 total
+- All tests must pass before any commit
 - Adversarial tests are required for any security-related code
 
 ## AI Silence Protocol
@@ -29,4 +30,3 @@ When reasoning about complex Rei code, reduce noise by:
 2. Strip irrelevant context
 3. Follow the phase transition chain — never skip steps
 4. Verify monotonicity before suggesting changes
-
