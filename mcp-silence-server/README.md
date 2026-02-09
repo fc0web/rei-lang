@@ -16,6 +16,14 @@ Claude Desktop、VS Code Copilot、Cursor 等のAIツールから
 | `silence_inject` | ノイズ注入（テスト用） |
 | `silence_explain` | D-FUMT理論の説明 |
 
+## Install
+
+```bash
+cd mcp-silence-server
+npm install
+npm run build
+```
+
 ## Setup
 
 ### Claude Desktop
@@ -23,6 +31,19 @@ Claude Desktop、VS Code Copilot、Cursor 等のAIツールから
 `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac)
 `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
 
+**ビルド済み（推奨）:**
+```json
+{
+  "mcpServers": {
+    "rei-silence": {
+      "command": "node",
+      "args": ["/path/to/mcp-silence-server/dist/index.js"]
+    }
+  }
+}
+```
+
+**開発時（tsx使用）:**
 ```json
 {
   "mcpServers": {
@@ -41,8 +62,8 @@ Claude Desktop、VS Code Copilot、Cursor 等のAIツールから
 {
   "servers": {
     "rei-silence": {
-      "command": "npx",
-      "args": ["tsx", "/path/to/mcp-silence-server/src/index.ts"]
+      "command": "node",
+      "args": ["/path/to/mcp-silence-server/dist/index.js"]
     }
   }
 }
@@ -54,8 +75,8 @@ Settings → MCP Servers → Add:
 ```json
 {
   "rei-silence": {
-    "command": "npx",
-    "args": ["tsx", "/path/to/mcp-silence-server/src/index.ts"]
+    "command": "node",
+    "args": ["/path/to/mcp-silence-server/dist/index.js"]
   }
 }
 ```
