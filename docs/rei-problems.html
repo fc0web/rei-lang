@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei (0₀式) — Problems Only Rei Can Solve</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=Noto+Serif+JP:wght@400;600&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f1117;--bg2:#161922;--bg3:#1c2030;
+  --gold:#c4a265;--gold-dim:#8a7245;--gold-bright:#e0c88a;
+  --blue:#5a8fc5;--green:#5ec47a;--red:#e05555;--cyan:#4ecdc4;
+  --purple:#9b72cf;--text:#c8c8d0;--text-dim:#72727e;
+  --kappa:#ff9f43;--phase:#6c5ce7;
+  --font-display:'Cormorant Garamond',serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-jp:'Noto Serif JP',serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);line-height:1.7;min-height:100vh}
+a{color:var(--blue);text-decoration:none}
+a:hover{color:var(--gold)}
+
+/* Header */
+.header{text-align:center;padding:60px 20px 40px;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:200px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.header h1{font-family:var(--font-display);font-size:2.8em;color:var(--gold);font-weight:700;letter-spacing:0.05em}
+.header .subtitle{font-family:var(--font-jp);color:var(--text-dim);margin-top:8px;font-size:0.95em}
+.header .badge{display:inline-block;margin-top:16px;padding:4px 16px;border:1px solid var(--gold-dim);border-radius:20px;font-size:0.75em;color:var(--gold-dim);letter-spacing:0.1em}
+
+/* Nav */
+.nav{display:flex;justify-content:center;gap:8px;padding:0 20px 30px;flex-wrap:wrap}
+.nav button{background:var(--bg2);border:1px solid #2a2d3a;color:var(--text-dim);padding:8px 16px;border-radius:6px;cursor:pointer;font-family:var(--font-mono);font-size:0.8em;transition:all .2s}
+.nav button:hover,.nav button.active{border-color:var(--gold);color:var(--gold);background:rgba(196,162,101,0.08)}
+.nav button .count{font-size:0.7em;opacity:0.6;margin-left:4px}
+
+/* Stats bar */
+.stats{display:flex;justify-content:center;gap:30px;padding:0 20px 30px;font-size:0.8em}
+.stats .stat{text-align:center}
+.stats .stat-val{font-size:1.6em;font-weight:500;color:var(--gold)}
+.stats .stat-label{color:var(--text-dim);font-size:0.85em}
+
+/* Problem Container */
+.problems{max-width:900px;margin:0 auto;padding:0 20px 60px}
+
+/* Problem Card */
+.problem{background:var(--bg2);border:1px solid #2a2d3a;border-radius:10px;margin-bottom:20px;overflow:hidden;transition:border-color .3s}
+.problem:hover{border-color:#3a3d4a}
+.problem.solved{border-color:var(--green)}
+.problem.solved .p-header{border-bottom-color:rgba(94,196,122,0.2)}
+
+.p-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #2a2d3a;cursor:pointer;user-select:none}
+.p-number{font-family:var(--font-display);font-size:1.4em;color:var(--gold-dim);min-width:36px}
+.p-title{flex:1;font-size:0.95em;font-weight:500;color:var(--text)}
+.p-tags{display:flex;gap:6px}
+.p-tag{padding:2px 8px;border-radius:4px;font-size:0.65em;text-transform:uppercase;letter-spacing:0.08em}
+.p-tag.phase{background:rgba(108,92,231,0.15);color:var(--phase)}
+.p-tag.kappa{background:rgba(255,159,67,0.15);color:var(--kappa)}
+.p-tag.pipe{background:rgba(78,205,196,0.15);color:var(--cyan)}
+.p-tag.center{background:rgba(90,143,197,0.15);color:var(--blue)}
+.p-tag.genesis{background:rgba(155,114,207,0.15);color:var(--purple)}
+.p-tag.compress{background:rgba(94,196,122,0.15);color:var(--green)}
+.p-tag.witness{background:rgba(224,85,85,0.15);color:var(--red)}
+.p-diff{font-size:0.7em;padding:3px 8px;border-radius:4px}
+.p-diff.d1{color:#5ec47a;background:rgba(94,196,122,0.1)}
+.p-diff.d2{color:var(--gold);background:rgba(196,162,101,0.1)}
+.p-diff.d3{color:var(--red);background:rgba(224,85,85,0.1)}
+.p-toggle{color:var(--text-dim);font-size:1.2em;transition:transform .3s}
+.p-toggle.open{transform:rotate(90deg)}
+
+.p-body{display:none;padding:20px}
+.p-body.open{display:block}
+.p-desc{margin-bottom:16px;color:var(--text);font-size:0.88em;line-height:1.8}
+.p-desc .jp{font-family:var(--font-jp);color:var(--text-dim);font-size:0.9em;margin-top:4px}
+
+/* Code blocks */
+.code-block{position:relative;margin:12px 0;border-radius:8px;overflow:hidden}
+.code-label{font-size:0.7em;color:var(--text-dim);padding:8px 16px 4px;background:var(--bg3);letter-spacing:0.08em;text-transform:uppercase}
+.code-label.rei{color:var(--gold)}
+.code-label.python,.code-label.other{color:var(--blue)}
+pre{background:var(--bg3);padding:12px 16px;overflow-x:auto;font-size:0.82em;line-height:1.7;border-bottom:1px solid #2a2d3a}
+pre code{font-family:var(--font-mono)}
+.kw{color:var(--gold)}
+.op{color:var(--cyan)}
+.fn{color:var(--blue)}
+.num{color:var(--green)}
+.str{color:var(--kappa)}
+.cm{color:var(--text-dim);font-style:italic}
+.ph{color:var(--phase)}
+.ka{color:var(--kappa)}
+.err{color:var(--red);text-decoration:line-through wavy var(--red)}
+
+/* Comparison */
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.comparison .col-header{font-size:0.75em;color:var(--text-dim);text-align:center;padding:6px;border-bottom:1px solid #2a2d3a}
+.comparison .col-header.rei-col{color:var(--gold)}
+@media(max-width:700px){.comparison{grid-template-columns:1fr}}
+
+/* Quiz */
+.quiz{margin-top:16px;padding:16px;background:var(--bg);border-radius:8px;border:1px solid #2a2d3a}
+.quiz-q{font-size:0.88em;margin-bottom:12px;color:var(--gold-dim)}
+.quiz-options{display:flex;flex-direction:column;gap:8px}
+.quiz-opt{padding:10px 16px;background:var(--bg2);border:1px solid #2a2d3a;border-radius:6px;cursor:pointer;font-size:0.82em;transition:all .2s}
+.quiz-opt:hover{border-color:var(--gold-dim);background:rgba(196,162,101,0.05)}
+.quiz-opt.correct{border-color:var(--green);background:rgba(94,196,122,0.1);color:var(--green)}
+.quiz-opt.incorrect{border-color:var(--red);background:rgba(224,85,85,0.1);color:var(--red)}
+.quiz-opt.disabled{pointer-events:none;opacity:0.7}
+.quiz-explain{display:none;margin-top:12px;padding:12px;background:rgba(196,162,101,0.05);border-radius:6px;font-size:0.82em;border-left:3px solid var(--gold-dim);line-height:1.7}
+.quiz-explain.show{display:block}
+
+/* Lines metric */
+.lines-metric{display:flex;align-items:center;gap:12px;margin:16px 0;padding:12px 16px;background:var(--bg);border-radius:6px}
+.lines-bar{flex:1;height:8px;background:#2a2d3a;border-radius:4px;overflow:hidden;position:relative}
+.lines-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.lines-bar-fill.rei{background:var(--gold)}
+.lines-bar-fill.other{background:var(--blue)}
+.lines-label{font-size:0.75em;min-width:100px}
+.lines-count{font-size:0.85em;font-weight:500;min-width:50px;text-align:right}
+
+/* Footer */
+.footer{text-align:center;padding:40px 20px;border-top:1px solid #1e2130;color:var(--text-dim);font-size:0.8em}
+.footer a{color:var(--gold-dim)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Rei (0₀式)</h1>
+  <div class="subtitle">Reiでしか書けない問題集 — Problems Only Rei Can Solve</div>
+  <div class="badge">REI_SPEC v0.1 · 12 PROBLEMS · REFERENCE IMPLEMENTATION</div>
+</div>
+
+<div class="nav" id="nav"></div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val" id="score">0</div><div class="stat-label">正答数</div></div>
+  <div class="stat"><div class="stat-val" id="total">12</div><div class="stat-label">全問題</div></div>
+  <div class="stat"><div class="stat-val" id="solved">0</div><div class="stat-label">完了</div></div>
+</div>
+
+<div class="problems" id="problems"></div>
+
+<div class="footer">
+  <a href="https://github.com/fc0web/rei-lang">GitHub Repository</a> ｜ Author: Nobuki Fujimoto ｜ License: Apache 2.0<br>
+  <span style="font-family:var(--font-jp);margin-top:8px;display:inline-block">D-FUMT Mathematical Computation System</span>
+</div>
+
+<script>
+const PROBLEMS = [
+  // ===== Category: Phase Guard (@ Phase) =====
+  {
+    id:1, category:'phase', difficulty:1,
+    title:'Phase Guard — 型安全な不可逆遷移',
+    tags:['phase'],
+    desc:`Reiの相転移ガード（@ Phase）は、パイプラインの状態遷移をコンパイル時に強制します。
+Open → Sealed → Compacted の一方通行を文法レベルで保証する記法は、他言語に存在しません。`,
+    descJp:'ISLの不可逆性を言語文法に埋め込んだ、Rei独自の記法です。',
+    reiCode:`<span class="cm">// 相ガード付き関数定義</span>
+<span class="kw">compress</span> <span class="fn">normalize</span>(p: Pipeline <span class="ph">@ Open</span>) = p |&gt; phi
+<span class="kw">compress</span> <span class="fn">commit</span>(p: Pipeline <span class="ph">@ Open</span>) -&gt; Pipeline <span class="ph">@ Sealed</span> = p |&gt; psi
+<span class="kw">compress</span> <span class="fn">compact</span>(s: Pipeline <span class="ph">@ Sealed</span>) -&gt; Pipeline <span class="ph">@ Compacted</span> = s |&gt; omega
+
+<span class="cm">// 正常なパイプライン</span>
+<span class="kw">let</span> p = createPipeline(state)
+<span class="kw">let</span> n = <span class="fn">normalize</span>(p)     <span class="cm">// ✅ @ Open → @ Open</span>
+<span class="kw">let</span> s = <span class="fn">commit</span>(n)        <span class="cm">// ✅ @ Open → @ Sealed</span>
+<span class="kw">let</span> c = <span class="fn">compact</span>(s)       <span class="cm">// ✅ @ Sealed → @ Compacted</span>
+
+<span class="cm">// 違反（コンパイルエラー）</span>
+<span class="err">normalize(s)</span>              <span class="cm">// ❌ expected @ Open, got @ Sealed</span>
+<span class="err">compact(p)</span>                <span class="cm">// ❌ expected @ Sealed, got @ Open</span>`,
+    otherLabel:'TypeScript (手動チェック)',
+    otherCode:`<span class="cm">// TypeScript: ランタイムエラーでしか検出できない</span>
+<span class="kw">function</span> <span class="fn">normalize</span>(p: Pipeline) {
+  <span class="kw">if</span> (p.stage !== <span class="str">'open'</span>)
+    <span class="kw">throw new</span> Error(<span class="str">'Wrong stage'</span>);
+  <span class="cm">// ... 12行のバリデーションコード</span>
+}
+<span class="cm">// discriminated union で型安全にできるが
+// @ Phase のような1トークン記法は不可能</span>`,
+    reiLines:10, otherLines:30,
+    quiz:'Phase Guard が防ぐ攻撃は？',
+    options:['SQL Injection','Phase Regression（相の逆行）','Buffer Overflow','XSS'],
+    answer:1,
+    explain:'@ Phase はコンパイル時に相の逆行（Sealed → Open 等）を検出します。ISLの不可逆性原理を文法レベルで保証する、Rei独自の防御機構です。'
+  },
+  {
+    id:2, category:'phase', difficulty:2,
+    title:'Genesis Phase Chain — 虚無から数への全過程',
+    tags:['phase','genesis'],
+    desc:`Genesis公理系の5段階（void → dot → zero_zero → zero → number）を、
+相ガード付きのcompressチェーンで記述します。各段階のスキップは不可能です。`,
+    descJp:'「数の誕生」を型安全に記述できるのはReiだけです。',
+    reiCode:`<span class="cm">// Genesis全過程を相ガードで型安全に記述</span>
+<span class="kw">compress</span> <span class="fn">emerge</span>(g: Genesis <span class="ph">@ void</span>) -&gt; Genesis <span class="ph">@ dot</span> =
+  existence(g)
+
+<span class="kw">compress</span> <span class="fn">separate</span>(g: Genesis <span class="ph">@ dot</span>) -&gt; Genesis <span class="ph">@ zero_zero</span> =
+  structure_separation(g)
+
+<span class="kw">compress</span> <span class="fn">fix</span>(g: Genesis <span class="ph">@ zero_zero</span>) -&gt; Genesis <span class="ph">@ zero</span> =
+  value_fixation(g)
+
+<span class="kw">compress</span> <span class="fn">generate</span>(g: Genesis <span class="ph">@ zero</span>) -&gt; Genesis <span class="ph">@ number</span> =
+  number_genesis(g)
+
+<span class="cm">// 正常な生成チェーン</span>
+<span class="kw">let</span> n = ∅ |&gt; <span class="fn">emerge</span> |&gt; <span class="fn">separate</span> |&gt; <span class="fn">fix</span> |&gt; <span class="fn">generate</span>
+
+<span class="cm">// スキップ不可（コンパイルエラー）</span>
+<span class="err">∅ |&gt; separate</span>   <span class="cm">// ❌ expected @ dot, got @ void</span>`,
+    otherLabel:'Python / Haskell',
+    otherCode:`<span class="cm"># Python: 全て手動チェック</span>
+<span class="kw">def</span> <span class="fn">emerge</span>(g):
+  <span class="kw">assert</span> g.phase == <span class="str">'void'</span>
+  <span class="cm">...</span>
+<span class="kw">def</span> <span class="fn">separate</span>(g):
+  <span class="kw">assert</span> g.phase == <span class="str">'dot'</span>
+  <span class="cm">...</span>
+
+<span class="cm"># Haskell: GADTs で近づけるが
+# 5段階の相遷移を1トークンで表現する
+# 記法は存在しない</span>`,
+    reiLines:12, otherLines:45,
+    quiz:'Genesis相遷移で void → zero_zero が禁止される理由は？',
+    options:['メモリ不足','段階スキップは単調性違反','構文エラー','型推論の限界'],
+    answer:1,
+    explain:'GA-v2の単調性保証（monotonicity guarantee）により、相遷移は1段階ずつしか進めません。void → dot → zero_zero が正しい経路で、段飛ばしはphaseDelta > 1 となり違反です。'
+  },
+
+  // ===== Category: Curvature Literal (κ) =====
+  {
+    id:3, category:'kappa', difficulty:1,
+    title:'Curvature Literal — 曲率付き数値',
+    tags:['kappa'],
+    desc:`κ（カッパ）リテラルは、数値に「相転移への近さ」を付与します。
+5κ0.3 は「値5、曲率0.3」を意味し、計算を通じて曲率が自動伝搬します。`,
+    descJp:'数値に理論的メタデータをリテラルで付ける記法は、他言語に前例がありません。',
+    reiCode:`<span class="cm">// 曲率リテラル — 5κ0.3 = {value:5, curvature:0.3}</span>
+<span class="kw">let</span> x = <span class="num">5</span><span class="ka">κ0.3</span>
+<span class="kw">let</span> y = <span class="num">3</span><span class="ka">κ0.5</span>
+
+<span class="cm">// 加算: 曲率は加重平均で伝搬</span>
+<span class="kw">let</span> sum = x + y          <span class="cm">// → 8κ0.375</span>
+
+<span class="cm">// 乗算: 曲率は幾何平均で伝搬</span>
+<span class="kw">let</span> prod = x * y         <span class="cm">// → 15κ0.387</span>
+
+<span class="cm">// パイプ: 曲率は保存</span>
+x |&gt; <span class="fn">double</span>              <span class="cm">// → 10κ0.3</span>
+
+<span class="cm">// 曲率比較・抽出</span>
+y <span class="op">&gt;κ</span> x                   <span class="cm">// → true (0.5 > 0.3)</span>
+x<span class="op">.κ</span>                       <span class="cm">// → 0.3</span>`,
+    otherLabel:'Python (手動実装)',
+    otherCode:`<span class="cm"># Python: クラスで模倣するしかない</span>
+<span class="kw">class</span> <span class="fn">CurvatureValue</span>:
+  <span class="kw">def</span> __init__(self, value, kappa):
+    self.value = value
+    self.kappa = kappa
+  <span class="kw">def</span> __add__(self, other):
+    v = self.value + other.value
+    total = abs(self.value) + abs(other.value)
+    k = (self.kappa*abs(self.value) +
+         other.kappa*abs(other.value)) / total
+    <span class="kw">return</span> CurvatureValue(v, k)
+  <span class="cm"># ... __mul__, __gt__ 等も全て手動実装</span>
+
+x = CurvatureValue(<span class="num">5</span>, <span class="num">0.3</span>)  <span class="cm"># vs Rei: 5κ0.3</span>`,
+    reiLines:8, otherLines:35,
+    quiz:'5κ0.3 + 3κ0.5 の曲率の値は？',
+    options:['0.4（算術平均）','0.375（加重平均）','0.387（幾何平均）','0.8（合計）'],
+    answer:1,
+    explain:'加算時のκ伝搬は加重平均です: (0.3×|5| + 0.5×|3|) / (|5|+|3|) = (1.5+1.5)/8 = 0.375。値の絶対値で重み付けされます。'
+  },
+  {
+    id:4, category:'kappa', difficulty:2,
+    title:'Curvature-Driven Genesis — κで相転移を駆動',
+    tags:['kappa','genesis','phase'],
+    desc:`曲率リテラルとGenesis相遷移を組み合わせ、
+κが閾値（0.7）に達すると自動的に相転移が発生する過程を記述します。`,
+    descJp:'「エネルギー蓄積→閾値超過→相転移」をリテラル1つで表現できます。',
+    reiCode:`<span class="cm">// 初期状態: void相、曲率0</span>
+<span class="kw">let</span> origin = <span class="num">0₀</span><span class="ka">κ0.0</span>
+
+<span class="cm">// エネルギー注入で曲率上昇</span>
+<span class="kw">let</span> step1 = origin |&gt; <span class="fn">energize</span>(<span class="num">0.3</span>)   <span class="cm">// 0₀κ0.3</span>
+<span class="kw">let</span> step2 = step1 |&gt; <span class="fn">energize</span>(<span class="num">0.3</span>)    <span class="cm">// 0₀κ0.6</span>
+
+<span class="cm">// 曲率比較</span>
+step2 <span class="op">&gt;κ</span> step1                        <span class="cm">// true</span>
+
+<span class="cm">// 閾値超過 → 相転移!</span>
+<span class="kw">let</span> step3 = step2 |&gt; <span class="fn">energize</span>(<span class="num">0.3</span>)    <span class="cm">// κ=0.9 ≥ 0.7</span>
+<span class="cm">// → origin: 'transitioned'</span>
+<span class="cm">// → phase transition triggered!</span>
+
+<span class="cm">// 相転移後のガード検査</span>
+step3 |&gt; <span class="fn">evolve_until</span>(<span class="ka">κ</span> &gt; <span class="num">0.85</span>)     <span class="cm">// 条件付き進化</span>`,
+    otherLabel:'従来手法',
+    otherCode:`<span class="cm">// 従来: 閾値チェックは外部ロジック</span>
+state.curvature += <span class="num">0.3</span>;
+<span class="kw">if</span> (state.curvature &gt;= THRESHOLD) {
+  state.phase = nextPhase(state.phase);
+  <span class="cm">// witness生成、単調性チェック...</span>
+  <span class="cm">// 15行以上のボイラープレート</span>
+}
+<span class="cm">// 曲率が「数値の属性」であるという
+// 概念自体が存在しない</span>`,
+    reiLines:9, otherLines:25,
+    quiz:'GA-v2の曲率閾値（CURVATURE_THRESHOLD）は？',
+    options:['0.5','0.7','0.85','1.0'],
+    answer:1,
+    explain:'GA-v2では CURVATURE_THRESHOLD = 0.7 と定義されています。κがこの値に達すると dot → zero_zero の相転移条件が満たされます。'
+  },
+
+  // ===== Category: Directional Pipe =====
+  {
+    id:5, category:'pipe', difficulty:1,
+    title:'Directional Pipe — 方向指定パイプ',
+    tags:['pipe','center'],
+    desc:`|>⟨方向⟩ は、中心-近傍計算でどの方向のneighborを使うかを指定します。
+全方向（*）、直交方向（ortho）、対角方向（diag）、個別指定が可能です。`,
+    descJp:'方向をパイプ演算子に埋め込む記法は、世界初です。',
+    reiCode:`<span class="kw">let</span> cell = <span class="fn">𝕄</span>{<span class="num">5</span>; <span class="num">1,2,3,4,5,6,7,8</span>}
+
+<span class="cm">// 全方向</span>
+cell <span class="op">|&gt;⟨*⟩</span> <span class="fn">convolve</span>(kernel)
+
+<span class="cm">// 直交方向（N,E,S,W）のみ</span>
+cell <span class="op">|&gt;⟨ortho⟩</span> <span class="fn">gradient</span>
+
+<span class="cm">// 対角方向（NE,SE,SW,NW）のみ</span>
+cell <span class="op">|&gt;⟨diag⟩</span> <span class="fn">smooth</span>
+
+<span class="cm">// 特定方向の指定</span>
+cell <span class="op">|&gt;⟨N,NE,E⟩</span> <span class="fn">partial</span>(kernel)
+
+<span class="cm">// 逆方向（外→中心集約）</span>
+satellites <span class="op">&lt;|⟨*⟩</span> <span class="fn">aggregate</span>(center)
+
+<span class="cm">// チェーン: 直交→対角の2段階</span>
+cell <span class="op">|&gt;⟨ortho⟩</span> <span class="fn">gradient</span> <span class="op">|&gt;⟨diag⟩</span> <span class="fn">smooth</span>`,
+    otherLabel:'Python + NumPy',
+    otherCode:`<span class="cm"># Python: 方向ごとにインデックスを手動管理</span>
+ORTHO = [(<span class="num">0</span>,<span class="num">-1</span>),(<span class="num">1</span>,<span class="num">0</span>),(<span class="num">0</span>,<span class="num">1</span>),(<span class="num">-1</span>,<span class="num">0</span>)]
+DIAG = [(<span class="num">1</span>,<span class="num">-1</span>),(<span class="num">1</span>,<span class="num">1</span>),(<span class="num">-1</span>,<span class="num">1</span>),(<span class="num">-1</span>,<span class="num">-1</span>)]
+
+<span class="kw">def</span> <span class="fn">gradient_ortho</span>(grid, x, y):
+  total = <span class="num">0</span>
+  <span class="kw">for</span> dx, dy <span class="kw">in</span> ORTHO:
+    nx, ny = x+dx, y+dy
+    <span class="kw">if</span> <span class="num">0</span>&lt;=nx&lt;W <span class="kw">and</span> <span class="num">0</span>&lt;=ny&lt;H:
+      total += grid[ny][nx] - grid[y][x]
+  <span class="kw">return</span> total / len(ORTHO)
+<span class="cm"># 全方向、対角方向も別関数が必要
+# → 3関数 × 各10行 = 30行以上</span>`,
+    reiLines:10, otherLines:35,
+    quiz:'|>⟨ortho⟩ が選択するneighborは？',
+    options:['NE,SE,SW,NW','N,E,S,W','N,NE,E,SE','全8方向'],
+    answer:1,
+    explain:'ortho（直交）は N, E, S, W の4方向です。diag（対角）は NE, SE, SW, NW です。*（アスタリスク）は全8方向を選択します。'
+  },
+
+  // ===== Category: Dimensional Slice =====
+  {
+    id:6, category:'pipe', difficulty:2,
+    title:'Dimensional Slice — 次元スライス',
+    tags:['pipe','center'],
+    desc:`[dim:方向] は多次元数の特定次元だけを取り出す記法です。
+方向指定パイプと組み合わせることで、部分計算を簡潔に記述できます。`,
+    descJp:'多次元数の「方向名による部分参照」はRei理論と不可分です。',
+    reiCode:`<span class="kw">let</span> md = <span class="fn">𝕄</span>{<span class="num">5</span>; <span class="num">1,2,3,4,5,6,7,8</span>}
+
+<span class="cm">// 次元スライス</span>
+md<span class="op">[dim:N]</span>               <span class="cm">// → 1</span>
+md<span class="op">[dim:N,S]</span>             <span class="cm">// → [1, 5]</span>
+md<span class="op">[dim:diag]</span>            <span class="cm">// → [2, 4, 6, 8]</span>
+md<span class="op">[dim:ortho]</span>           <span class="cm">// → [1, 3, 5, 7]</span>
+
+<span class="cm">// スライス + パイプ</span>
+md<span class="op">[dim:diag]</span> |&gt; <span class="fn">sum</span>    <span class="cm">// → 20</span>
+md<span class="op">[dim:ortho]</span> |&gt; <span class="fn">mean</span>  <span class="cm">// → 4.0</span>
+
+<span class="cm">// 動的スライス</span>
+<span class="kw">let</span> dirs = [N, NE, E]
+md<span class="op">[dim:dirs]</span> |&gt; <span class="fn">weighted_mean</span>`,
+    otherLabel:'NumPy',
+    otherCode:`<span class="cm"># NumPy: インデックスで手動指定</span>
+neighbors = [<span class="num">1,2,3,4,5,6,7,8</span>]
+diag_idx = [<span class="num">1,3,5,7</span>]  <span class="cm"># NE,SE,SW,NW</span>
+ortho_idx = [<span class="num">0,2,4,6</span>] <span class="cm"># N,E,S,W</span>
+
+diag_sum = sum(neighbors[i] <span class="kw">for</span> i <span class="kw">in</span> diag_idx)
+ortho_mean = np.mean([neighbors[i]
+                      <span class="kw">for</span> i <span class="kw">in</span> ortho_idx])
+
+<span class="cm"># 方向名がない → マジックナンバー</span>
+<span class="cm"># 可読性・保守性に難あり</span>`,
+    reiLines:8, otherLines:20,
+    quiz:'𝕄{5; 1,2,3,4,5,6,7,8}[dim:ortho] |> sum の結果は？',
+    options:['10','16','20','36'],
+    answer:1,
+    explain:'ortho は N(1), E(3), S(5), W(7) の4方向です。1+3+5+7 = 16。neighbor indexは N=0, NE=1, E=2, SE=3, S=4, SW=5, W=6, NW=7 です。'
+  },
+
+  // ===== Category: Center-Neighbor =====
+  {
+    id:7, category:'center', difficulty:1,
+    title:'Center-Neighbor Primitive — 4× コード短縮',
+    tags:['center','compress'],
+    desc:`Reiのcenter-neighborパターンは言語プリミティブです。
+画像カーネル計算を例に、従来32行のコードが8行に短縮される実証済みベンチマークを示します。`,
+    descJp:'74%のコード削減はベンチマーク実証済みです。',
+    reiCode:`<span class="cm">// Rei: 画像カーネル計算（8行）</span>
+<span class="kw">compress</span> <span class="fn">kernel3x3</span>(grid, weights) =
+  grid |&gt; <span class="fn">map_cells</span>(cell =&gt;
+    <span class="fn">𝕄</span>{cell.center; cell.neighbors}
+      |&gt; <span class="fn">weighted_sum</span>(weights)
+      |&gt; <span class="fn">clamp</span>(<span class="num">0</span>, <span class="num">255</span>)
+  )
+
+<span class="cm">// 使用例: ぼかし</span>
+image |&gt; <span class="fn">kernel3x3</span>([<span class="num">1,1,1,1,1,1,1,1</span>])`,
+    otherLabel:'Python + NumPy',
+    otherCode:`<span class="cm"># Python: 同等処理（32行）</span>
+<span class="kw">def</span> <span class="fn">kernel3x3</span>(grid, weights):
+  h, w = len(grid), len(grid[<span class="num">0</span>])
+  result = [[<span class="num">0</span>]*w <span class="kw">for</span> _ <span class="kw">in</span> range(h)]
+  offsets = [
+    (<span class="num">-1,-1</span>),(<span class="num">-1,0</span>),(<span class="num">-1,1</span>),
+    (<span class="num">0,-1</span>),         (<span class="num">0,1</span>),
+    (<span class="num">1,-1</span>), (<span class="num">1,0</span>), (<span class="num">1,1</span>)
+  ]
+  <span class="kw">for</span> y <span class="kw">in</span> range(h):
+    <span class="kw">for</span> x <span class="kw">in</span> range(w):
+      total = <span class="num">0</span>
+      <span class="kw">for</span> i,(dy,dx) <span class="kw">in</span> enumerate(offsets):
+        ny, nx = y+dy, x+dx
+        <span class="kw">if</span> <span class="num">0</span>&lt;=ny&lt;h <span class="kw">and</span> <span class="num">0</span>&lt;=nx&lt;w:
+          total += grid[ny][nx] * weights[i]
+      result[y][x] = max(<span class="num">0</span>,min(<span class="num">255</span>,total))
+  <span class="kw">return</span> result`,
+    reiLines:8, otherLines:32,
+    quiz:'Reiのcenter-neighborが言語プリミティブであることの利点は？',
+    options:['メモリ効率が良い','コンパイラが並列最適化できる','エラーが少ない','全て正しい'],
+    answer:3,
+    explain:'center-neighborパターンが言語レベルのプリミティブであることで、コンパイラが自動並列化でき、ボイラープレートが消えてエラーが減り、メモリアクセスパターンの最適化も可能になります。'
+  },
+
+  // ===== Category: Compression =====
+  {
+    id:8, category:'compress', difficulty:2,
+    title:'Compression Level — 段階的圧縮',
+    tags:['compress'],
+    desc:`compress⁰〜compress∞ は圧縮の「深さ」を指定します。
+レベルが高いほど複雑な変換を示し、コンパイラの最適化ヒントとなります。`,
+    descJp:'「圧縮は哲学である」というD-FUMTの思想を記法レベルで表現します。',
+    reiCode:`<span class="cm">// 圧縮レベル指定</span>
+<span class="kw">compress⁰</span> <span class="fn">identity</span>(x) = x              <span class="cm">// L0: 恒等</span>
+<span class="kw">compress¹</span> <span class="fn">double</span>(x) = x * <span class="num">2</span>            <span class="cm">// L1: 単純変換</span>
+<span class="kw">compress²</span> <span class="fn">conv</span>(g, k) = g <span class="op">|&gt;⟨*⟩</span> k       <span class="cm">// L2: パターン</span>
+<span class="kw">compress³</span> <span class="fn">pipeline</span>(s) = s               <span class="cm">// L3: 多段変換</span>
+  |&gt; <span class="fn">normalize</span> |&gt; <span class="fn">transform</span> |&gt; <span class="fn">classify</span>
+<span class="kw">compress∞</span> <span class="fn">genesis</span>(∅) = ℕ               <span class="cm">// L∞: 不可逆</span>
+
+<span class="cm">// 自動推論</span>
+<span class="kw">compress auto</span> <span class="fn">fn</span>(x) = x |&gt; <span class="fn">a</span> |&gt; <span class="fn">b</span>
+fn.compression_level   <span class="cm">// → 2</span>`,
+    otherLabel:'他言語',
+    otherCode:`<span class="cm">// 他言語: 関数の「圧縮レベル」という
+// 概念自体が存在しない</span>
+
+<span class="cm">// 最も近い概念は Haskell の型クラスだが
+// 「変換の複雑さ」を型で表現する手段はない</span>
+
+<span class="kw">def</span> <span class="fn">identity</span>(x): <span class="kw">return</span> x
+<span class="kw">def</span> <span class="fn">double</span>(x): <span class="kw">return</span> x * <span class="num">2</span>
+<span class="cm"># これらの「圧縮レベルの違い」を
+# 型システムで区別する方法がない</span>`,
+    reiLines:9, otherLines:15,
+    quiz:'compress∞ が意味するのは？',
+    options:['無限ループ','不可逆変換（genesis等）','最大速度','エラー'],
+    answer:1,
+    explain:'compress∞ は不可逆変換を示します。genesis（∅→ℕ）のように元に戻せない変換を意味し、ISLの不可逆性と直結しています。'
+  },
+
+  // ===== Category: Witnessed Assignment =====
+  {
+    id:9, category:'witness', difficulty:2,
+    title:'Witnessed Assignment — 証人付き代入',
+    tags:['witness','phase'],
+    desc:`witnessed by は変数代入に証拠（witness）を付与します。
+ISLの暗号学的証人システムを通常のコードに一般化した、Rei独自の記法です。`,
+    descJp:'「代入に証拠を付ける」という概念自体がReiの発明です。',
+    reiCode:`<span class="cm">// 証人付き代入</span>
+<span class="kw">let</span> raw = <span class="fn">loadGrid</span>(<span class="str">"sensor.csv"</span>)
+  <span class="kw">witnessed by</span> <span class="str">"source:sensor_v3"</span>
+
+<span class="cm">// 変換チェーンの証跡追跡</span>
+<span class="kw">let</span> result = raw
+  |&gt; <span class="fn">filter</span> <span class="kw">witnessed by</span> <span class="str">"step1:filter"</span>
+  |&gt; <span class="fn">normalize</span> <span class="kw">witnessed by</span> <span class="str">"step2:norm"</span>
+  |&gt; <span class="fn">classify</span> <span class="kw">witnessed by</span> <span class="str">"step3:class"</span>
+
+<span class="cm">// 証人チェーン参照</span>
+result.witnesses
+<span class="cm">// → ["source:sensor_v3","step1:filter",</span>
+<span class="cm">//    "step2:norm","step3:class"]</span>
+
+result.witness_hash
+<span class="cm">// → "a3f8c1d2" (FNV-1a)</span>`,
+    otherLabel:'従来のログ',
+    otherCode:`<span class="cm">// 従来: ログは外部ファイルに書き出し</span>
+logger.info(<span class="str">"Loading sensor.csv"</span>)
+raw = loadGrid(<span class="str">"sensor.csv"</span>)
+logger.info(<span class="str">"Filtering..."</span>)
+result = <span class="fn">filter</span>(raw)
+logger.info(<span class="str">"Normalizing..."</span>)
+result = <span class="fn">normalize</span>(result)
+<span class="cm">// ログと値が分離 → 改ざん可能
+// ハッシュによる整合性検証なし
+// 値の来歴を型安全に追跡できない</span>`,
+    reiLines:10, otherLines:18,
+    quiz:'witnessed by と従来ログの根本的な違いは？',
+    options:['出力先が違う','値と証拠が型レベルで結合している','パフォーマンスが違う','文法が違うだけ'],
+    answer:1,
+    explain:'witnessed by は値の来歴を値自身の属性として型レベルで追跡します。従来のログは値と分離しているため改ざん可能ですが、Reiの証人チェーンはFNV-1aハッシュで暗号学的に保護されます。'
+  },
+
+  // ===== Category: Zero Extension =====
+  {
+    id:10, category:'genesis', difficulty:2,
+    title:'Zero Extension Chain — 零点拡張チェーン',
+    tags:['genesis'],
+    desc:`0→o→o→x は零点拡張の全過程を一つの式で記述します。
+分岐チェーン（0→o→{x,z}）で同時多方向拡張も可能です。`,
+    descJp:'D-FUMTの次元理論と不可分な記法で、理論なしには模倣不能です。',
+    reiCode:`<span class="cm">// チェーン記法で零点拡張</span>
+<span class="kw">let</span> ext = <span class="num">0</span><span class="op">→</span>o<span class="op">→</span>o<span class="op">→</span>o<span class="op">→</span>x    <span class="cm">// 0ooox</span>
+
+<span class="cm">// 従来の逐次拡張</span>
+<span class="kw">let</span> a = <span class="num">0</span>o
+<span class="kw">let</span> b = a &gt;&gt; :o           <span class="cm">// 0oo</span>
+<span class="kw">let</span> c = b &gt;&gt; :o           <span class="cm">// 0ooo</span>
+<span class="kw">let</span> d = c &gt;&gt; :x           <span class="cm">// 0ooox</span>
+
+<span class="cm">// 分岐チェーン（同時多方向拡張）</span>
+<span class="kw">let</span> branches = <span class="num">0</span><span class="op">→</span>o<span class="op">→</span>{x, z}
+<span class="cm">// → [0oox, 0ooz] を同時生成</span>
+
+<span class="cm">// 縮約チェーン</span>
+<span class="kw">let</span> reduced = <span class="num">0</span>ooox<span class="op">←←</span>      <span class="cm">// 0oo（2回縮約）</span>
+
+<span class="cm">// パイプ接続</span>
+<span class="num">0</span><span class="op">→</span>o<span class="op">→</span>o<span class="op">→</span>x |&gt; <span class="fn">compute</span> |&gt; <span class="fn">seal</span>`,
+    otherLabel:'従来手法',
+    otherCode:`<span class="cm">// 従来: 拡張操作のチェーンという
+// 概念自体が存在しない</span>
+
+<span class="cm">// 最も近い比喩: ビルダーパターン</span>
+<span class="kw">new</span> ExtendedNumber(<span class="num">0</span>)
+  .extend(<span class="str">'o'</span>)
+  .extend(<span class="str">'o'</span>)
+  .extend(<span class="str">'o'</span>)
+  .extend(<span class="str">'x'</span>)
+  .build()
+
+<span class="cm">// 分岐は手動ループ</span>
+branches = [<span class="str">'x'</span>,<span class="str">'z'</span>].map(c =&gt;
+  base.extend(c).build()
+)`,
+    reiLines:8, otherLines:20,
+    quiz:'0→o→{x, z} が生成するのは？',
+    options:['0oxz（1つ）','[0oox, 0ooz]（2つ）','エラー','0o（1つ）'],
+    answer:1,
+    explain:'分岐チェーン →{x, z} は基底 0o から x方向と z方向に同時拡張し、0oox と 0ooz の2つの拡張数を同時に生成します。'
+  },
+
+  // ===== Category: Multi-Dimensional Curvature =====
+  {
+    id:11, category:'kappa', difficulty:3,
+    title:'Multi-Dim Curvature + Directional Conv — 総合問題',
+    tags:['kappa','pipe','center'],
+    desc:`多次元数の各次元に独立した曲率を付与し、方向指定パイプで畳み込みます。
+曲率が高い次元ほど結果に強い影響を与えます（curvature-weighted convolution）。`,
+    descJp:'κ × 方向指定 × center-neighbor の3概念を統合した、Reiの真価を示す問題です。',
+    reiCode:`<span class="cm">// 各次元に独立したκ</span>
+<span class="kw">let</span> cell = <span class="fn">𝕄</span>{<span class="num">5</span><span class="ka">κ0.3</span>; <span class="num">1</span><span class="ka">κ0.1</span>, <span class="num">2</span><span class="ka">κ0.8</span>,
+              <span class="num">3</span><span class="ka">κ0.2</span>, <span class="num">4</span><span class="ka">κ0.9</span>}
+
+<span class="cm">// 高曲率方向のみで畳み込み</span>
+cell <span class="op">|&gt;⟨*⟩</span> <span class="fn">curvature_conv</span>
+<span class="cm">// → 高κのneighborほど影響大</span>
+
+<span class="cm">// 曲率で方向を動的選択</span>
+<span class="kw">let</span> hot = cell.neighbors
+  |&gt; <span class="fn">filter</span>(n =&gt; n<span class="op">.κ</span> &gt; <span class="num">0.5</span>)
+<span class="cm">// → [2κ0.8, 4κ0.9]（高曲率のみ）</span>
+
+<span class="cm">// 最大曲率の次元を特定</span>
+cell |&gt; <span class="fn">max_κ_neighbor</span>
+<span class="cm">// → 4κ0.9（相転移に最も近い次元）</span>`,
+    otherLabel:'Python',
+    otherCode:`<span class="cm"># Python: 数値と曲率を別管理</span>
+values = [<span class="num">1, 2, 3, 4</span>]
+kappas = [<span class="num">0.1, 0.8, 0.2, 0.9</span>]
+center_val, center_k = <span class="num">5</span>, <span class="num">0.3</span>
+
+<span class="cm"># 曲率重み付き畳み込み</span>
+total_w = sum(<span class="num">1</span>+k <span class="kw">for</span> k <span class="kw">in</span> kappas)
+result = sum(v*(<span class="num">1</span>+k)
+  <span class="kw">for</span> v,k <span class="kw">in</span> zip(values,kappas)) / total_w
+
+<span class="cm"># 高曲率フィルタ</span>
+hot = [(v,k) <span class="kw">for</span> v,k <span class="kw">in</span>
+  zip(values,kappas) <span class="kw">if</span> k &gt; <span class="num">0.5</span>]
+
+<span class="cm"># 値と曲率が分離 → バグの温床
+# Reiでは不可分の1リテラル</span>`,
+    reiLines:10, otherLines:22,
+    quiz:'𝕄{5κ0.3; 1κ0.1, 2κ0.8, 3κ0.2, 4κ0.9} で相転移に最も近い次元は？',
+    options:['center(5κ0.3)','neighbor 2(2κ0.8)','neighbor 4(4κ0.9)','neighbor 1(1κ0.1)'],
+    answer:2,
+    explain:'4κ0.9 が最大曲率です。κ=0.9 は閾値 0.7 を超えているため、この次元は既に相転移条件を満たしています。'
+  },
+
+  // ===== Category: Full Integration =====
+  {
+    id:12, category:'integration', difficulty:3,
+    title:'Full Rei Pipeline — 全記法統合',
+    tags:['phase','kappa','pipe','witness','compress'],
+    desc:`Phase Guard + Curvature Literal + Directional Pipe + Witnessed Assignment + Compression Level
+の全てを1つのパイプラインで統合します。これがReiの真の姿です。`,
+    descJp:'6つの独自記法を同時に使う問題は、他言語では原理的に記述不可能です。',
+    reiCode:`<span class="cm">// 全記法統合パイプライン</span>
+<span class="kw">compress³</span> <span class="fn">full_pipeline</span>(
+  data: MultiDim <span class="ph">@ Open</span>
+) -&gt; MultiDim <span class="ph">@ Compacted</span> =
+
+  data
+    <span class="kw">witnessed by</span> <span class="str">"input"</span>
+
+    <span class="cm">// 方向指定畳み込み</span>
+    <span class="op">|&gt;⟨ortho⟩</span> <span class="fn">gradient</span>
+    <span class="kw">witnessed by</span> <span class="str">"gradient:ortho"</span>
+
+    <span class="cm">// 曲率フィルタ</span>
+    |&gt; <span class="fn">filter</span>(cell =&gt; cell<span class="op">.κ</span> &gt; <span class="num">0.3</span>)
+    <span class="kw">witnessed by</span> <span class="str">"filter:high_κ"</span>
+
+    <span class="cm">// 封印 (Open → Sealed)</span>
+    |&gt; <span class="fn">commit</span>
+    <span class="kw">witnessed by</span> <span class="str">"sealed"</span>
+
+    <span class="cm">// 圧縮 (Sealed → Compacted)</span>
+    |&gt; <span class="fn">compact</span>
+    <span class="kw">witnessed by</span> <span class="str">"final_proof"</span>`,
+    otherLabel:'不可能',
+    otherCode:`<span class="cm">// この問題は他言語では記述不可能です。</span>
+<span class="cm">//</span>
+<span class="cm">// 必要な言語機能:</span>
+<span class="cm">//   ① 相ガード (@ Phase)       → 存在しない</span>
+<span class="cm">//   ② 曲率リテラル (κ)         → 存在しない</span>
+<span class="cm">//   ③ 方向指定パイプ (|&gt;⟨⟩)   → 存在しない</span>
+<span class="cm">//   ④ 証人付き代入             → 存在しない</span>
+<span class="cm">//   ⑤ 段階的圧縮               → 存在しない</span>
+<span class="cm">//   ⑥ center-neighbor          → 存在しない</span>
+<span class="cm">//</span>
+<span class="cm">// 6つ全てを備える言語は</span>
+<span class="cm">// Rei (0₀式) だけです。</span>`,
+    reiLines:16, otherLines:0,
+    quiz:'このパイプラインの相遷移は何回発生する？',
+    options:['0回','1回','2回','3回'],
+    answer:2,
+    explain:'Open → Sealed（commit時）と Sealed → Compacted（compact時）の2回です。相ガードにより、この順序は文法レベルで強制されます。'
+  },
+];
+
+// ============================================================
+// Render Engine
+// ============================================================
+
+let solved = new Set();
+let score = 0;
+const CATEGORIES = {
+  all:{label:'全問題',icon:''},
+  phase:{label:'@ Phase',icon:''},
+  kappa:{label:'κ曲率',icon:''},
+  pipe:{label:'方向パイプ',icon:''},
+  center:{label:'中心-近傍',icon:''},
+  compress:{label:'圧縮',icon:''},
+  witness:{label:'証人',icon:''},
+  genesis:{label:'Genesis',icon:''},
+  integration:{label:'統合',icon:''},
+};
+
+function renderNav(){
+  const nav=document.getElementById('nav');
+  nav.innerHTML='';
+  Object.entries(CATEGORIES).forEach(([k,v])=>{
+    const count=k==='all'?PROBLEMS.length:PROBLEMS.filter(p=>p.category===k).length;
+    if(k!=='all'&&count===0)return;
+    const b=document.createElement('button');
+    b.textContent=v.label;
+    b.innerHTML+=`<span class="count">${count}</span>`;
+    b.className=k==='all'?'active':'';
+    b.onclick=()=>{
+      nav.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderProblems(k);
+    };
+    nav.appendChild(b);
+  });
+}
+
+function renderProblems(cat='all'){
+  const c=document.getElementById('problems');
+  c.innerHTML='';
+  const filtered=cat==='all'?PROBLEMS:PROBLEMS.filter(p=>p.category===cat);
+  filtered.forEach(p=>{
+    const el=document.createElement('div');
+    el.className=`problem${solved.has(p.id)?' solved':''}`;
+    el.id=`p${p.id}`;
+    el.innerHTML=`
+      <div class="p-header" onclick="toggleProblem(${p.id})">
+        <span class="p-number">${String(p.id).padStart(2,'0')}</span>
+        <span class="p-title">${p.title}</span>
+        <span class="p-tags">${p.tags.map(t=>`<span class="p-tag ${t}">${t}</span>`).join('')}</span>
+        <span class="p-diff d${p.difficulty}">${['','★','★★','★★★'][p.difficulty]}</span>
+        <span class="p-toggle" id="tog${p.id}">▸</span>
+      </div>
+      <div class="p-body" id="body${p.id}">
+        <div class="p-desc">${p.desc}<div class="jp">${p.descJp}</div></div>
+        ${renderComparison(p)}
+        ${renderLinesMetric(p)}
+        ${renderQuiz(p)}
+      </div>
+    `;
+    c.appendChild(el);
+  });
+}
+
+function renderComparison(p){
+  return `<div class="comparison">
+    <div>
+      <div class="col-header rei-col">Rei (0₀式)</div>
+      <div class="code-block"><div class="code-label rei">Rei</div><pre><code>${p.reiCode}</code></pre></div>
+    </div>
+    <div>
+      <div class="col-header">${p.otherLabel}</div>
+      <div class="code-block"><div class="code-label other">${p.otherLabel}</div><pre><code>${p.otherCode}</code></pre></div>
+    </div>
+  </div>`;
+}
+
+function renderLinesMetric(p){
+  if(!p.otherLines)return '';
+  const ratio = p.reiLines / p.otherLines;
+  const reduction = Math.round((1-ratio)*100);
+  const maxLines = Math.max(p.reiLines, p.otherLines);
+  return `<div class="lines-metric">
+    <div class="lines-label" style="color:var(--gold)">Rei</div>
+    <div class="lines-bar"><div class="lines-bar-fill rei" style="width:${(p.reiLines/maxLines)*100}%"></div></div>
+    <div class="lines-count" style="color:var(--gold)">${p.reiLines}行</div>
+  </div>
+  <div class="lines-metric">
+    <div class="lines-label" style="color:var(--blue)">${p.otherLabel.split(' ')[0]}</div>
+    <div class="lines-bar"><div class="lines-bar-fill other" style="width:${(p.otherLines/maxLines)*100}%"></div></div>
+    <div class="lines-count" style="color:var(--blue)">${p.otherLines}行</div>
+  </div>
+  <div style="text-align:center;font-size:0.8em;color:var(--gold-dim);margin:4px 0 8px">
+    ${reduction}% コード削減 (${(p.otherLines/p.reiLines).toFixed(1)}× 短縮)
+  </div>`;
+}
+
+function renderQuiz(p){
+  return `<div class="quiz" id="quiz${p.id}">
+    <div class="quiz-q">Q: ${p.quiz}</div>
+    <div class="quiz-options">
+      ${p.options.map((o,i)=>`<div class="quiz-opt" id="opt${p.id}_${i}" onclick="answer(${p.id},${i})">${String.fromCharCode(65+i)}. ${o}</div>`).join('')}
+    </div>
+    <div class="quiz-explain" id="exp${p.id}">${p.explain}</div>
+  </div>`;
+}
+
+function toggleProblem(id){
+  const body=document.getElementById(`body${id}`);
+  const tog=document.getElementById(`tog${id}`);
+  body.classList.toggle('open');
+  tog.classList.toggle('open');
+}
+
+function answer(pid,idx){
+  const p=PROBLEMS.find(x=>x.id===pid);
+  if(solved.has(pid))return;
+  
+  const opts=document.querySelectorAll(`#quiz${pid} .quiz-opt`);
+  opts.forEach((o,i)=>{
+    o.classList.add('disabled');
+    if(i===p.answer) o.classList.add('correct');
+    else if(i===idx) o.classList.add('incorrect');
+  });
+  
+  document.getElementById(`exp${pid}`).classList.add('show');
+  solved.add(pid);
+  if(idx===p.answer) score++;
+  
+  document.getElementById('score').textContent=score;
+  document.getElementById('solved').textContent=solved.size;
+  document.getElementById(`p${pid}`).classList.add('solved');
+}
+
+// Init
+renderNav();
+renderProblems();
+</script>
+</body>
+</html>
