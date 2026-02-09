@@ -103,3 +103,39 @@ rei-lang/
 ├── LICENSE (Apache 2.0)
 └── README.md
 ```
+
+## Unique Syntactic Constructs
+
+The Rei language includes syntactic constructs that are **formally derived
+from the D-FUMT theoretical framework**. These are not stylistic choices
+but mathematical necessities of the Rei computational model:
+
+| Construct | Origin | Description |
+|-----------|--------|-------------|
+| `center \|> compute` | Multi-Dimensional Number Theory | Center-neighbor simultaneous computation |
+| `\|>⟨N,S,E,W⟩` | Directional Computation Theory | Direction-specified pipe operator |
+| `compress fn(x) = ...` | Compression Philosophy | Pattern abstraction with compression semantics |
+| `5κ0.3` | Genesis Axiom System (GA-v2) | Curvature-annotated numerical literal |
+| `@ Phase` | Irreversible Syntax Layer (ISL) | Phase transition guard |
+| `witnessed by` | ISL Witness System | Cryptographically tracked assignment |
+| `0→o→o→x` | Zero Extension Theory | Dimensional extension chain |
+| `𝕄{5; 1,2,3,4}` | Multi-Dimensional Number Theory | Multi-dimensional number literal |
+| `[dim:diag]` | Directional Computation Theory | Dimensional slice notation |
+| `compress²` | Compression Philosophy | Leveled compression keyword |
+
+Any system that reproduces equivalent behavior — even under different
+naming or surface syntax — shall be considered a derivative work of Rei
+under the terms specified in the NOTICE file.
+
+The explanatory structure describing these constructs (including metaphors
+such as "center-radiating computation", "phase-irreversible transformation",
+and "curvature-driven genesis") is itself part of the Rei model and is
+protected under CC BY-NC-SA 4.0.
+
+## Language Specification
+
+The formal specification is available at [`spec/REI_SPEC_v0.1.md`](spec/REI_SPEC_v0.1.md).
+
+This document defines Rei Language Specification v0.1, establishing the
+minimum formal boundary of the Rei computational model and its protected
+syntactic constructs.
