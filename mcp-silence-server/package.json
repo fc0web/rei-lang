@@ -1,0 +1,23 @@
+{
+  "name": "@rei-lang/mcp-silence-server",
+  "version": "0.1.0",
+  "description": "AI Silence Generator — MCP Server for AI self-calibration based on D-FUMT theory",
+  "author": "Nobuki Fujimoto",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "rei-silence": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.0.0"
+  }
+}
