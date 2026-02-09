@@ -118,6 +118,22 @@ Rei / D-FUMT and are subject to derivative work provisions:
    The conceptual descriptions, metaphors, and pedagogical
    structures used to explain the above elements are themselves
    part of the Rei model.
+8. CONTRACTION-LIMIT ZERO STATES
+   Any system defining a contraction-fixed-point zero state
+   distinct from void, possessing non-zero energy at the
+   zero-point limit of iterative dimensional contraction.
+
+9. AXIS-PROJECTED DIRECTIONAL COMPUTATION
+   Any system decomposing center-neighbor computation into
+   axis-aligned projection pairs and computing gradients,
+   curvatures, or symmetries along those axes as language
+   primitives.
+
+10. PRE-NUMERIC POINT PRIMITIVES
+    Any system axiomatizing a "point" entity that exists
+    prior to numbers, supports simplex generation through
+    combination, and transitions to numeric types through
+    explicit dimensionalization operations.
 
 Renaming symbols, rephrasing descriptions, or restructuring
 surface syntax does not avoid derivative classification under
