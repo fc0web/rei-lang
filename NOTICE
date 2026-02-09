@@ -77,8 +77,67 @@ UNAUTHORIZED and does NOT represent the authentic theory.
 藤本伸樹が明示的に認可していない有料認定プログラムは、
 本理論の公式な資格ではありません。
 
+
+============================================================
+PROTECTED COMPUTATIONAL MODEL ELEMENTS
 ============================================================
 
+The following computational model elements are integral to
+Rei / D-FUMT and are subject to derivative work provisions:
+
+1. CENTER-NEIGHBOR SIMULTANEOUS COMPUTATION
+   Any system implementing a computation model where a central
+   value is simultaneously computed with surrounding/adjacent
+   values as a language-level primitive.
+
+2. PHASE-BASED IRREVERSIBLE PIPELINES
+   Any system enforcing irreversible state transitions through
+   type-level and/or runtime phase guards (e.g. Open → Sealed
+   → Compacted or equivalent stage progression).
+
+3. CURVATURE-PROPAGATING NUMERICAL MODELS
+   Any system attaching curvature, energy, or genesis-derived
+   metadata to numerical values and propagating such metadata
+   through computation chains.
+
+4. WITNESS-TRACKED TRANSFORMATION CHAINS
+   Any system recording cryptographic witnesses for value
+   transformations and using such witnesses for verification
+   of computation integrity.
+
+5. ZERO-ORIGIN GENERATIVE NUMBER SYSTEMS
+   Any system axiomatizing the generation of numbers from a
+   pre-numeric void state through staged phase transitions.
+
+6. DIRECTIONAL COMPUTATION OPERATORS
+   Any system providing direction-specified computation
+   operators that select subsets of neighbors/dimensions
+   for partial computation.
+
+7. EXPLANATORY FRAMEWORK
+   The conceptual descriptions, metaphors, and pedagogical
+   structures used to explain the above elements are themselves
+   part of the Rei model.
+
+Renaming symbols, rephrasing descriptions, or restructuring
+surface syntax does not avoid derivative classification under
+the applicable license terms.
+
+Formal definitions of the protected constructs are provided
+in "Rei Language Specification v0.1" (spec/REI_SPEC_v0.1.md).
+
+Derivative works include, but are not limited to:
+- Systems implementing center-neighbor simultaneous computation
+  under any naming convention
+- Phase-based irreversible pipelines regardless of phase names
+- Curvature-propagating numerical models with renamed parameters
+- Witness-tracked transformation chains with alternative hashing
+- Zero-origin generative number systems with modified axiom names
+
+As of 2026, there are NO authorized third-party implementations
+of the Rei computational model.
+
+============================================================
 Theoretical Components:
   - D-FUMT (次元藤本普遍数学理論) — Core mathematical theory
   - 0₀式 (Rei / れいしき) — Computation system based on zero extension theory
