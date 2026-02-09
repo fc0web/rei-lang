@@ -135,6 +135,31 @@ Rei / D-FUMT and are subject to derivative work provisions:
     combination, and transitions to numeric types through
     explicit dimensionalization operations.
 
+11. DECLARATIVE INVERSE COMPUTATION
+    Any system providing an inverse operator that infers input
+    structure from desired output values within a center-neighbor
+    computational model, including constraint-based solution
+    narrowing across multiple computation modes.
+
+12. BASIS-DECOMPOSITION AND CROSS-BASIS RECONSTRUCTION
+    Any system decomposing center-neighbor structures into
+    alternative basis representations (directional, axial,
+    symmetric, spectral, hierarchical) and reconstructing
+    them in a different basis as a language-level primitive,
+    generalizing extension/contraction chains.
+
+13. OSCILLATORY MIRROR COMPUTATION
+    Any system defining a mirror operator that alternates two
+    transformation functions (forward/backward or expand/contract)
+    with optional attenuation, computing convergence to fixed points
+    as a language-level primitive on center-neighbor structures.
+
+14. SPIRAL TRAVERSAL COMPUTATION
+    Any system providing spiral-ordered sequential accumulation
+    over center-neighbor structures with configurable direction
+    (clockwise/counter-clockwise), start position, hierarchical
+    depth control, and decay factors as language-level primitives.
+
 Renaming symbols, rephrasing descriptions, or restructuring
 surface syntax does not avoid derivative classification under
 the applicable license terms.
