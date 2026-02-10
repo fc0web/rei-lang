@@ -260,6 +260,16 @@ Description: Introduces a four-valued logic type beyond classical true/false. �
   Theory: 四価0π理論 / 陰陽術統合 (D-FUMT)
   License: MIT
 
+#30 — Category C: Philosophical Foundations (思想的基盤)
+  C1: 意識数理学 — Notation Equivalence Axiom (4-layer parsing)
+  C2: 万物数理統一理論 UMTE — Universal Domain type tags
+  C3: 非数数学理論 NNM — Non-numeric primitives (dot, shape, color, sound)
+  C4: 超数学再構築理論 MMRT — Non-arithmetic computation modes
+  C5: 別数理構築理論 AMRT — Parallel mode execution (fork/join)
+  Author: Nobuki Fujimoto
+  Theory: D-FUMT Philosophical Foundations
+  License: MIT (code) / CC BY-NC-SA 4.0 (theory)
+
 Renaming symbols, rephrasing descriptions, or restructuring
 surface syntax does not avoid derivative classification under
 the applicable license terms.
