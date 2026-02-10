@@ -1,20 +1,66 @@
 {
   "name": "rei-lang",
   "version": "0.2.0",
-  "description": "Rei (0₀式) Language Interpreter — D-FUMT Based Programming Language",
-  "author": "Nobuki Fujimoto",
-  "license": "MIT",
+  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction.",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "rei": "./bin/rei.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "spec",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc",
-    "test": "jest --verbose",
-    "repl": "ts-node src/repl.ts"
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run lint && npm run test && npm run build",
+    "repl": "node bin/rei.js"
+  },
+  "keywords": [
+    "rei",
+    "0₀式",
+    "れいしき",
+    "d-fumt",
+    "multi-dimensional-numbers",
+    "mathematical-computation",
+    "programming-language",
+    "zero-extension",
+    "center-periphery",
+    "compress",
+    "nobuki-fujimoto"
+  ],
+  "author": {
+    "name": "Nobuki Fujimoto"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fc0web/rei-lang"
+  },
+  "homepage": "https://github.com/fc0web/rei-lang#readme",
+  "bugs": {
+    "url": "https://github.com/fc0web/rei-lang/issues"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.0",
-    "@types/jest": "^29.5.0",
-    "ts-node": "^10.9.0"
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
