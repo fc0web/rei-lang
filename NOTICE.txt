@@ -1,0 +1,304 @@
+Rei (0₀式 / れいしき) — Mathematical Computation System & Programming Language
+Copyright 2024-2026 Nobuki Fujimoto (藤本伸樹)
+
+This product is based on D-FUMT (Dimensional Fujimoto Universal Mathematical Theory),
+a comprehensive mathematical framework created by Nobuki Fujimoto.
+
+============================================================
+DUAL LICENSING STRUCTURE
+============================================================
+
+This repository contains two categories of work under different licenses:
+
+1. SOURCE CODE (/src, /tests, /examples)
+   License: Apache License 2.0 (see /LICENSE)
+   - Free for commercial and non-commercial use
+   - Modification and redistribution permitted
+   - Patent protection included
+   - Attribution required
+
+2. THEORETICAL DOCUMENTS (/theory)
+   License: CC BY-NC-SA 4.0 (see /theory/LICENSE-THEORY.md)
+   - Attribution required
+   - Non-commercial use only
+   - Derivative works must use the same license
+   - Commercial licensing available upon request
+
+============================================================
+INTELLECTUAL PROPERTY NOTICE
+============================================================
+
+This repository contains an original theoretical framework created by
+Nobuki Fujimoto (藤本伸樹). The following apply:
+
+1. ATTRIBUTION: All use of this work must clearly credit
+   Nobuki Fujimoto as the original author.
+
+2. THEORETICAL INTEGRITY: The author does not endorse modified
+   versions of D-FUMT, Rei, or GFT that are presented as the
+   original theory. Any derivative theoretical work must clearly
+   state that it is a modification and not the original.
+
+3. TRADEMARKS: "Rei", "0₀式", "D-FUMT", "GFT" (Graphic Formula
+   Theory), and "Genesis Axiom System" are trademarks of
+   Nobuki Fujimoto. This license does not grant permission to use
+   these trademarks except as required for reasonable and customary
+   use in describing the origin of this Work.
+
+4. CERTIFICATION: Only certification programs explicitly designated
+   as "Official Rei / D-FUMT Certification" by Nobuki Fujimoto
+   represent the authentic theoretical framework. Unauthorized use
+   of these names in certification or credentialing is prohibited.
+   As of 2026, there are NO authorized third-party paid
+   certifications based on Rei or D-FUMT.
+
+5. DERIVATIVE WORKS: Rei / D-FUMT is a unified theoretical framework.
+   Any system, course, certification, or publication that reproduces
+   its core structures, definitions, axioms, or evaluation methods
+   — regardless of naming — is considered a derivative work and is
+   subject to the applicable license terms (CC BY-NC-SA 4.0 for
+   theoretical content). Renaming the concepts does not exempt
+   derivative works from these terms.
+
+============================================================
+THIRD-PARTY CERTIFICATION NOTICE
+============================================================
+
+There are no authorized third-party paid certifications, courses,
+or credentialing programs based on Rei, D-FUMT, GFT, or any
+component of this theoretical framework.
+
+Any paid certification claiming to be based on this framework
+that is not explicitly authorized by Nobuki Fujimoto is
+UNAUTHORIZED and does NOT represent the authentic theory.
+
+現時点で、Rei / D-FUMT / GFT に基づく第三者による有料認定・
+資格・検定プログラムは一切認可されていません。
+藤本伸樹が明示的に認可していない有料認定プログラムは、
+本理論の公式な資格ではありません。
+
+
+============================================================
+PROTECTED COMPUTATIONAL MODEL ELEMENTS
+============================================================
+
+The following computational model elements are integral to
+Rei / D-FUMT and are subject to derivative work provisions:
+
+1. CENTER-NEIGHBOR SIMULTANEOUS COMPUTATION
+   Any system implementing a computation model where a central
+   value is simultaneously computed with surrounding/adjacent
+   values as a language-level primitive.
+
+2. PHASE-BASED IRREVERSIBLE PIPELINES
+   Any system enforcing irreversible state transitions through
+   type-level and/or runtime phase guards (e.g. Open → Sealed
+   → Compacted or equivalent stage progression).
+
+3. CURVATURE-PROPAGATING NUMERICAL MODELS
+   Any system attaching curvature, energy, or genesis-derived
+   metadata to numerical values and propagating such metadata
+   through computation chains.
+
+4. WITNESS-TRACKED TRANSFORMATION CHAINS
+   Any system recording cryptographic witnesses for value
+   transformations and using such witnesses for verification
+   of computation integrity.
+
+5. ZERO-ORIGIN GENERATIVE NUMBER SYSTEMS
+   Any system axiomatizing the generation of numbers from a
+   pre-numeric void state through staged phase transitions.
+
+6. DIRECTIONAL COMPUTATION OPERATORS
+   Any system providing direction-specified computation
+   operators that select subsets of neighbors/dimensions
+   for partial computation.
+
+7. EXPLANATORY FRAMEWORK
+   The conceptual descriptions, metaphors, and pedagogical
+   structures used to explain the above elements are themselves
+   part of the Rei model.
+8. CONTRACTION-LIMIT ZERO STATES
+   Any system defining a contraction-fixed-point zero state
+   distinct from void, possessing non-zero energy at the
+   zero-point limit of iterative dimensional contraction.
+
+9. AXIS-PROJECTED DIRECTIONAL COMPUTATION
+   Any system decomposing center-neighbor computation into
+   axis-aligned projection pairs and computing gradients,
+   curvatures, or symmetries along those axes as language
+   primitives.
+
+10. PRE-NUMERIC POINT PRIMITIVES
+    Any system axiomatizing a "point" entity that exists
+    prior to numbers, supports simplex generation through
+    combination, and transitions to numeric types through
+    explicit dimensionalization operations.
+
+11. DECLARATIVE INVERSE COMPUTATION
+    Any system providing an inverse operator that infers input
+    structure from desired output values within a center-neighbor
+    computational model, including constraint-based solution
+    narrowing across multiple computation modes.
+
+12. BASIS-DECOMPOSITION AND CROSS-BASIS RECONSTRUCTION
+    Any system decomposing center-neighbor structures into
+    alternative basis representations (directional, axial,
+    symmetric, spectral, hierarchical) and reconstructing
+    them in a different basis as a language-level primitive,
+    generalizing extension/contraction chains.
+
+13. OSCILLATORY MIRROR COMPUTATION
+    Any system defining a mirror operator that alternates two
+    transformation functions (forward/backward or expand/contract)
+    with optional attenuation, computing convergence to fixed points
+    as a language-level primitive on center-neighbor structures.
+
+14. SPIRAL TRAVERSAL COMPUTATION
+    Any system providing spiral-ordered sequential accumulation
+    over center-neighbor structures with configurable direction
+    (clockwise/counter-clockwise), start position, hierarchical
+    depth control, and decay factors as language-level primitives.
+
+15. Constant Contraction Theory Group (π/e/φ Contraction)
+Theory: Constant Contraction Theory Group (定数縮小理論群)
+Origin: D-FUMT (Dimensional Fujimoto Universal Mathematical Theory)
+Author: Nobuki Fujimoto
+Integration: Rei compress mode extensions (:pi, :e, :phi)
+Description: Extends the contraction operation to use mathematical constants (π, e, φ) as attractors. π-contraction extracts periodic components, e-contraction fits exponential decay parameters, and φ-contraction produces self-similar golden-ratio structures. Non-commutative chaining of modes is supported.
+
+16. Dimensional Spiral Zero-point Theory (DSZT)
+Theory: Dimensional Spiral Zero-point Theory (次元螺旋零点理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Spiral extension operator ⤊/⤋, spiral_extend and find_spiral_zeros commands
+Description: Unifies zero-extension theory with spiral number system theory. Dimensional ascent is modeled as a spiral traversal where each extension step carries a rotation angle. The near-recurrence theorem states that after p steps with twist 2π/p, the phase approximately returns—but at a higher dimension.
+
+17. Infinite Extension Mathematics Theory
+Theory: Infinite Extension Mathematics Theory (無限拡張数学理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Generalized extension subscripts (x >> :b for arbitrary base b)
+Description: Generalizes zero-extension (0 → 0₀) to arbitrary numbers and symbols. Any value can serve as an extension base, making zero-extension a special case. Extension depth, base, root, and chain queries are provided. The asymmetry of extend-then-contract vs. contract-then-extend reflects information-theoretic irreversibility.
+
+18. Contraction Theory (compress/expand Duality)
+Theory: Contraction Theory (縮小理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Expand operator ◁, expand modes (:uniform, :maxent, :pi, :e, :phi)
+Description: Formalizes compress and expand as a categorical adjunction (C ⊣ E). Since compression is generally lossy, expansion uses maximum-entropy reconstruction under constraints. The information loss metric L(m) = d(m, E(C(m))) quantifies round-trip fidelity.
+
+19. Temporal Number System Theory
+Theory: Temporal Number System Theory (時相数体系理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Temporal tag | t=expr in 𝕄 literals, evolve, at, temporal_diff, window commands, Temporal<T> type
+Description: Adds a time dimension to multidimensional numbers. Supports time evolution under named rules (diffusion, wave, advection, custom), temporal slicing, differentiation, and windowed aggregation. Conservation laws are enforced for appropriate evolution rules.
+
+20. Timeless Number System Theory
+Theory: Timeless Number System Theory (無時間性数体系理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Timeless<T> type, extract_invariant, assert_invariant, timeless_project, timeless_pipe commands
+Description: Categorical dual of Temporal Number System Theory. Provides type-level guarantees for time-invariant values and invariant extraction from temporal trajectories. Corresponds to Noether's theorem (symmetries → conservation laws). timeless_pipe enforces commutativity at compile time.
+
+21. Quadrivalent 0π Theory
+Theory: Quadrivalent 0π Theory (四価0π理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Quad type with literals ⊤, ⊥, ⊤π, ⊥π; resolve, certainty, collapse commands; extended ∧/∨/¬ operators
+Description: Introduces a four-valued logic type beyond classical true/false. ⊤π (latent true) and ⊥π (latent false) represent values that may change under conditions, corresponding to quantum superposition, Buddhist śūnyatā (emptiness), and practical NULL semantics. The four values form a diamond lattice with complete truth tables for ∧, ∨, ¬.
+
+#22 — network module (多元数学ネットワーク理論)
+  graph construction, traversal, PageRank, centrality, compress/expand
+  Author: Nobuki Fujimoto
+  Theory: 多元数学ネットワーク理論 (D-FUMT)
+  License: MIT
+
+#23 — chrono module (時間数学理論)
+  time series windowing, trend, seasonality, forecast/backcast
+  Author: Nobuki Fujimoto
+  Theory: 時間数学理論 (D-FUMT)
+  License: MIT
+
+#24 — transform module (知識逆流理論)
+  reversible transform chains, inverse with residual, round-trip analysis
+  Author: Nobuki Fujimoto
+  Theory: 知識逆流理論 (D-FUMT)
+  License: MIT
+
+#25 — holograph module (ホログラフィック投影理論 HMPT)
+  dimensional projection, holographic encode/decode, fidelity analysis
+  Author: Nobuki Fujimoto
+  Theory: ホログラフィック投影理論 (D-FUMT)
+  License: MIT
+
+#26 — sequence module (情報系列ネットワーク理論 ISNT)
+  signal propagation, cascade, influence, transfer entropy
+  Author: Nobuki Fujimoto
+  Theory: 情報系列ネットワーク理論 (D-FUMT)
+  License: MIT
+
+#27 — music module (USFT + 音楽数理統一理論 UMTM)
+  chord analysis, USFT layer decomposition, rhythm rationality,
+  musical symmetry, compression ratio κ_s
+  Author: Nobuki Fujimoto
+  Theory: Universal Sound Formula Theory / 音楽数理統一理論 (D-FUMT)
+  License: MIT
+
+#28 — stego module (文字内情報埋込理論)
+  text/numeric steganography, LSB embedding, spread spectrum,
+  capacity analysis, multi-dimensional steganography
+  Author: Nobuki Fujimoto
+  Theory: 文字内情報埋込理論 (D-FUMT)
+  License: MIT
+
+#29 — oracle module (四価0π理論接続)
+  four-value logic (0/π/0ₒ/πₒ), I Ching hexagram model,
+  transition dynamics, entropy analysis, synchronicity
+  Author: Nobuki Fujimoto
+  Theory: 四価0π理論 / 陰陽術統合 (D-FUMT)
+  License: MIT
+
+Renaming symbols, rephrasing descriptions, or restructuring
+surface syntax does not avoid derivative classification under
+the applicable license terms.
+
+Formal definitions of the protected constructs are provided
+in "Rei Language Specification v0.1" (spec/REI_SPEC_v0.1.md).
+
+Derivative works include, but are not limited to:
+- Systems implementing center-neighbor simultaneous computation
+  under any naming convention
+- Phase-based irreversible pipelines regardless of phase names
+- Curvature-propagating numerical models with renamed parameters
+- Witness-tracked transformation chains with alternative hashing
+- Zero-origin generative number systems with modified axiom names
+
+As of 2026, there are NO authorized third-party implementations
+of the Rei computational model.
+
+============================================================
+Theoretical Components:
+  - D-FUMT (次元藤本普遍数学理論) — Core mathematical theory
+  - 0₀式 (Rei / れいしき) — Computation system based on zero extension theory
+  - GFT (Graphic Formula Theory / 図式数式理論) — Visual graph representation
+  - Genesis Axiom System (生成公理系) — Pre-zero axiomatization
+  - Notation Equivalence Axiom (記法同値公理) — Four-layer notation framework
+  - Multi-Dimensional Number System Theory (多次元数体系理論)
+  - Zero-Pi Extension Theory (ゼロ・π拡張理論)
+  - USFT (Universal Sound Formula Theory) — Extension theory
+  - UPFT (Universal Physical Formula Theory) — Extension theory
+  - Cosmic Library Theory (宇宙図書館理論) — Information ethics framework
+  - ISNT (情報系列ネットワーク理論) — Information sequence propagation theory
+  - UMTM (音楽数理統一理論) — Musical structure unification theory
+  - 文字内情報埋込理論 — Steganographic information embedding theory
+  - 四価0π理論 — Quadrivalent 0π logic and divination model
+
+All theoretical work is the original creation of Nobuki Fujimoto.
+
+本リポジトリに含まれるすべての理論的著作物は、藤本伸樹によるオリジナルの創作物です。
+改変版をオリジナルの理論として提示することは、著者の承認を得たものではありません。
+
+ORCID: https://orcid.org/[Nobuki's ORCID]
+GitHub: https://github.com/fc0web/rei-lang
