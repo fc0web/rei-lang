@@ -209,6 +209,30 @@ Author: Nobuki Fujimoto
 Integration: Quad type with literals ⊤, ⊥, ⊤π, ⊥π; resolve, certainty, collapse commands; extended ∧/∨/¬ operators
 Description: Introduces a four-valued logic type beyond classical true/false. ⊤π (latent true) and ⊥π (latent false) represent values that may change under conditions, corresponding to quantum superposition, Buddhist śūnyatā (emptiness), and practical NULL semantics. The four values form a diamond lattice with complete truth tables for ∧, ∨, ¬.
 
+#22 — network module (多元数学ネットワーク理論)
+  graph construction, traversal, PageRank, centrality, compress/expand
+  Author: Nobuki Fujimoto
+  Theory: 多元数学ネットワーク理論 (D-FUMT)
+  License: MIT
+
+#23 — chrono module (時間数学理論)
+  time series windowing, trend, seasonality, forecast/backcast
+  Author: Nobuki Fujimoto
+  Theory: 時間数学理論 (D-FUMT)
+  License: MIT
+
+#24 — transform module (知識逆流理論)
+  reversible transform chains, inverse with residual, round-trip analysis
+  Author: Nobuki Fujimoto
+  Theory: 知識逆流理論 (D-FUMT)
+  License: MIT
+
+#25 — holograph module (ホログラフィック投影理論 HMPT)
+  dimensional projection, holographic encode/decode, fidelity analysis
+  Author: Nobuki Fujimoto
+  Theory: ホログラフィック投影理論 (D-FUMT)
+  License: MIT
+
 Renaming symbols, rephrasing descriptions, or restructuring
 surface syntax does not avoid derivative classification under
 the applicable license terms.
