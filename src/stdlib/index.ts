@@ -1,9 +1,9 @@
 // ============================================================
-// Rei (0₀式) Standard Library — Module Exports
-// Category B: Standard Library Modules (Tier 1)
-// Author: Nobuki Fujimoto
+// Rei (0₀式) stdlib — Tier 3 Index
+// 独自性が高い領域: sequence, music, stego, oracle
 // ============================================================
 
-export * as field from './field';
-export * as symmetry from './symmetry';
-export * as unified from './unified';
+export * as sequence from './sequence';
+export * as music from './music';
+export * as stego from './stego';
+export * as oracle from './oracle';
