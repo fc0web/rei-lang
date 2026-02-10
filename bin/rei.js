@@ -2,6 +2,7 @@
 
 // ============================================================
 // Rei (0₀式) CLI — REPL & File Execution
+// v0.3 — Space-Layer-Diffusion Model
 // Author: Nobuki Fujimoto
 // ============================================================
 
@@ -12,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 // --- Result formatting ---
 function formatResult(val) {
@@ -35,7 +36,42 @@ function formatResult(val) {
       case 'Quad':
         const sym = { top: '⊤', bottom: '⊥', topPi: '⊤π', bottomPi: '⊥π' };
         return sym[val.value] || val.value;
+      // ── v0.3 Space-Layer-Diffusion ──
+      case 'Space': {
+        const layers = [];
+        for (const [idx, layer] of val.layers) {
+          const nodes = layer.nodes.map(n =>
+            `𝕄{${n.center}; ${n.neighbors.slice(0, 4).join(', ')}${n.neighbors.length > 4 ? ', ...' : ''}}[stage=${n.stage}]`
+          ).join(', ');
+          const frozen = layer.frozen ? ' ❄' : '';
+          layers.push(`  層 ${idx}${frozen}: ${nodes}`);
+        }
+        return `空{${val.topology !== 'flat' ? ` topology: ${val.topology}` : ''}\n${layers.join('\n')}\n} [global_stage=${val.globalStage}]`;
+      }
+      case 'DNode': {
+        const ns = val.neighbors.slice(0, 4).join(', ') + (val.neighbors.length > 4 ? `, ... (${val.neighbors.length}方向)` : '');
+        return `DNode{${val.center}; ${ns}} [stage=${val.stage}, ${val.momentum}]`;
+      }
+      case 'SigmaResult': {
+        return `σ{ flow: {stage=${val.flow.stage}, dirs=${val.flow.directions}, ${val.flow.momentum}}, layer=${val.layer}, memory=[${val.memory.length}] }`;
+      }
       default:
+        // Handle plain objects (sigma sub-objects, resonance pairs, etc.)
+        if (val.similarity !== undefined && val.nodeA && val.nodeB) {
+          return `Resonance(層${val.nodeA.layer}[${val.nodeA.index}] ↔ 層${val.nodeB.layer}[${val.nodeB.index}], sim=${val.similarity})`;
+        }
+        if (val.stage !== undefined && val.momentum !== undefined && val.directions !== undefined) {
+          return `σ.flow{stage=${val.stage}, dirs=${val.directions}, ${val.momentum}, v=${val.velocity}}`;
+        }
+        if (val.tendency !== undefined && val.strength !== undefined) {
+          return `σ.will{τ=${val.tendency}, strength=${val.strength}}`;
+        }
+        if (val.layers !== undefined && val.total_nodes !== undefined) {
+          return `σ.field{layers=${val.layers}, nodes=${val.total_nodes}, active=${val.active_nodes}}`;
+        }
+        if (val.global_stage !== undefined) {
+          return `σ.flow{global_stage=${val.global_stage}, converged=${val.converged_nodes}, expanding=${val.expanding_nodes}}`;
+        }
         return JSON.stringify(val);
     }
   }
@@ -62,6 +98,7 @@ if (args.includes('--version') || args.includes('-v')) {
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
 Rei (0₀式) — D-FUMT Computational Language v${VERSION}
+Space-Layer-Diffusion Model (場-層-拡散計算モデル)
 
 Usage:
   rei                    Start interactive REPL
@@ -76,6 +113,15 @@ REPL commands:
   :tokens <code>         Show token stream
   :reset                 Clear all state
   :quit                  Exit REPL
+
+v0.3 New Features:
+  空{ 層 N: 𝕄{...} }    Space literal with layers
+  s |> step              Single diffusion step
+  s |> diffuse(N)        Diffuse N steps
+  s |> sigma             Self-reference (σ)
+  s |> freeze(N)         Freeze layer N
+  s |> thaw(N)           Thaw layer N
+  s |> resonances(0.5)   Find resonance pairs
 
 Author: Nobuki Fujimoto
 `);
@@ -119,11 +165,12 @@ if (args.length > 0 && !args[0].startsWith('-')) {
 
 // --- Interactive REPL ---
 console.log(`
- ╔══════════════════════════════════════════╗
- ║  Rei (0₀式) REPL v${VERSION}                  ║
- ║  D-FUMT Computational Language           ║
- ║  Author: Nobuki Fujimoto                 ║
- ╚══════════════════════════════════════════╝
+ ╔══════════════════════════════════════════════╗
+ ║  Rei (0₀式) REPL v${VERSION}                     ║
+ ║  D-FUMT Computational Language               ║
+ ║  Space-Layer-Diffusion Model (場-層-拡散)    ║
+ ║  Author: Nobuki Fujimoto                     ║
+ ╚══════════════════════════════════════════════╝
 
  Type :help for commands, :quit to exit
 `);
