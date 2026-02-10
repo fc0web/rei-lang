@@ -160,6 +160,55 @@ Rei / D-FUMT and are subject to derivative work provisions:
     (clockwise/counter-clockwise), start position, hierarchical
     depth control, and decay factors as language-level primitives.
 
+15. Constant Contraction Theory Group (π/e/φ Contraction)
+Theory: Constant Contraction Theory Group (定数縮小理論群)
+Origin: D-FUMT (Dimensional Fujimoto Universal Mathematical Theory)
+Author: Nobuki Fujimoto
+Integration: Rei compress mode extensions (:pi, :e, :phi)
+Description: Extends the contraction operation to use mathematical constants (π, e, φ) as attractors. π-contraction extracts periodic components, e-contraction fits exponential decay parameters, and φ-contraction produces self-similar golden-ratio structures. Non-commutative chaining of modes is supported.
+
+16. Dimensional Spiral Zero-point Theory (DSZT)
+Theory: Dimensional Spiral Zero-point Theory (次元螺旋零点理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Spiral extension operator ⤊/⤋, spiral_extend and find_spiral_zeros commands
+Description: Unifies zero-extension theory with spiral number system theory. Dimensional ascent is modeled as a spiral traversal where each extension step carries a rotation angle. The near-recurrence theorem states that after p steps with twist 2π/p, the phase approximately returns—but at a higher dimension.
+
+17. Infinite Extension Mathematics Theory
+Theory: Infinite Extension Mathematics Theory (無限拡張数学理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Generalized extension subscripts (x >> :b for arbitrary base b)
+Description: Generalizes zero-extension (0 → 0₀) to arbitrary numbers and symbols. Any value can serve as an extension base, making zero-extension a special case. Extension depth, base, root, and chain queries are provided. The asymmetry of extend-then-contract vs. contract-then-extend reflects information-theoretic irreversibility.
+
+18. Contraction Theory (compress/expand Duality)
+Theory: Contraction Theory (縮小理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Expand operator ◁, expand modes (:uniform, :maxent, :pi, :e, :phi)
+Description: Formalizes compress and expand as a categorical adjunction (C ⊣ E). Since compression is generally lossy, expansion uses maximum-entropy reconstruction under constraints. The information loss metric L(m) = d(m, E(C(m))) quantifies round-trip fidelity.
+
+19. Temporal Number System Theory
+Theory: Temporal Number System Theory (時相数体系理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Temporal tag | t=expr in 𝕄 literals, evolve, at, temporal_diff, window commands, Temporal<T> type
+Description: Adds a time dimension to multidimensional numbers. Supports time evolution under named rules (diffusion, wave, advection, custom), temporal slicing, differentiation, and windowed aggregation. Conservation laws are enforced for appropriate evolution rules.
+
+20. Timeless Number System Theory
+Theory: Timeless Number System Theory (無時間性数体系理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Timeless<T> type, extract_invariant, assert_invariant, timeless_project, timeless_pipe commands
+Description: Categorical dual of Temporal Number System Theory. Provides type-level guarantees for time-invariant values and invariant extraction from temporal trajectories. Corresponds to Noether's theorem (symmetries → conservation laws). timeless_pipe enforces commutativity at compile time.
+
+21. Quadrivalent 0π Theory
+Theory: Quadrivalent 0π Theory (四価0π理論)
+Origin: D-FUMT
+Author: Nobuki Fujimoto
+Integration: Quad type with literals ⊤, ⊥, ⊤π, ⊥π; resolve, certainty, collapse commands; extended ∧/∨/¬ operators
+Description: Introduces a four-valued logic type beyond classical true/false. ⊤π (latent true) and ⊥π (latent false) represent values that may change under conditions, corresponding to quantum superposition, Buddhist śūnyatā (emptiness), and practical NULL semantics. The four values form a diamond lattice with complete truth tables for ∧, ∨, ¬.
+
 Renaming symbols, rephrasing descriptions, or restructuring
 surface syntax does not avoid derivative classification under
 the applicable license terms.
