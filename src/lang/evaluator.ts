@@ -413,6 +413,93 @@ function projectToMDim(input: any, centerSpec: string | number | null, args: any
   return { reiType: "MDim", center, neighbors, mode: "weighted" };
 }
 
+// ═══════════════════════════════════════════
+// Tier 3: U1(構造還元公理) & A1(解の多元性公理)
+// ═══════════════════════════════════════════
+
+/** Tier 3 U1: 全射影の生成 — 各要素を中心にした𝕄の配列 */
+function projectAll(input: any): any[] {
+  let elements: any[];
+
+  if (Array.isArray(input)) {
+    elements = [...input];
+  } else if (typeof input === 'string') {
+    elements = Array.from(input).map(c => c.charCodeAt(0));
+  } else if (typeof input === 'number') {
+    elements = Math.abs(input).toString().split('').map(Number);
+  } else if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
+    elements = [input.center, ...input.neighbors];
+  } else {
+    return [{ reiType: "MDim", center: input ?? 0, neighbors: [], mode: "weighted" }];
+  }
+
+  if (elements.length === 0) return [];
+
+  // U1.2（射影の多重性定理）: n要素 → n通りの射影
+  return elements.map((_, centerIdx) => {
+    const center = elements[centerIdx];
+    const neighbors = elements.filter((_: any, i: number) => i !== centerIdx);
+    return { reiType: "MDim", center, neighbors, mode: "weighted" };
+  });
+}
+
+/** Tier 3 A1: 全モードで計算 — 解の多元性 */
+function computeAll(md: any): any {
+  if (!md || md.reiType !== 'MDim') return [];
+  return ALL_COMPUTE_MODES.map(mode => ({
+    mode,
+    value: computeMDim({ ...md, mode }),
+  }));
+}
+
+/** Tier 3 A1: 2つのモードを比較 */
+function compareModes(md: any, mode1: string, mode2: string): any {
+  if (!md || md.reiType !== 'MDim') return null;
+  const v1 = computeMDim({ ...md, mode: mode1 });
+  const v2 = computeMDim({ ...md, mode: mode2 });
+  return {
+    reiType: 'CompareResult',
+    mode1: { mode: mode1, value: v1 },
+    mode2: { mode: mode2, value: v2 },
+    diff: Math.abs(v1 - v2),
+    ratio: v2 !== 0 ? v1 / v2 : Infinity,
+  };
+}
+
+/** Tier 3 U1+A1: perspectives — 全射影 × 全モード */
+function perspectives(input: any): any {
+  const allProjections = projectAll(input);
+  return allProjections.map((proj, idx) => {
+    const results = ALL_COMPUTE_MODES.map(mode => ({
+      mode,
+      value: computeMDim({ ...proj, mode }),
+    }));
+    return {
+      projectionIndex: idx,
+      center: proj.center,
+      neighbors: proj.neighbors,
+      results,
+    };
+  });
+}
+
+/** Tier 3 U1: ネスト𝕄のフラット化 — 𝕄{𝕄{a;b}; 𝕄{c;d}} → 単一数値 */
+function computeNestedMDim(md: any): number {
+  const center = md.reiType === 'MDim'
+    ? (md.center !== null && typeof md.center === 'object' && md.center.reiType === 'MDim'
+        ? computeNestedMDim(md.center)
+        : typeof md.center === 'number' ? md.center : 0)
+    : (typeof md === 'number' ? md : 0);
+
+  const neighbors = (md.neighbors ?? []).map((n: any) =>
+    n !== null && typeof n === 'object' && n.reiType === 'MDim'
+      ? computeNestedMDim(n)
+      : typeof n === 'number' ? n : 0
+  );
+
+  return computeMDim({ ...md, center, neighbors });
+}
+
 // --- Quad logic (v0.2.1) ---
 
 function quadNot(v: string): string {
@@ -831,6 +918,40 @@ export class Evaluator {
         totalWeight += w;
       }
       return totalWeight > 0 ? blendedResult / totalWeight : computeMDim(rawInput);
+    }
+
+    // ═══════════════════════════════════════════
+    // Tier 3: U1(構造還元) & A1(解の多元性)
+    // ═══════════════════════════════════════════
+    if (cmdName === "project_all") {
+      // U1.2: n要素 → n通りの全射影
+      return projectAll(rawInput);
+    }
+    if (cmdName === "compute_all") {
+      // A1: 全モードで計算 → 解の多元性
+      if (this.isMDim(rawInput)) return computeAll(rawInput);
+      // 配列の場合は先にproject → compute_all
+      if (Array.isArray(rawInput)) {
+        const projected = projectToMDim(rawInput, 'first', []);
+        return computeAll(projected);
+      }
+      return [];
+    }
+    if (cmdName === "compare") {
+      // A1: 2モード比較
+      if (!this.isMDim(rawInput)) throw new Error("compare: 𝕄型の値が必要です");
+      const mode1 = args.length >= 1 ? String(args[0]) : "weighted";
+      const mode2 = args.length >= 2 ? String(args[1]) : "geometric";
+      return compareModes(rawInput, mode1, mode2);
+    }
+    if (cmdName === "perspectives") {
+      // U1+A1: 全射影 × 全モード
+      return perspectives(rawInput);
+    }
+    if (cmdName === "flatten_nested") {
+      // U1: ネスト𝕄の再帰的フラット化
+      if (this.isMDim(rawInput)) return computeNestedMDim(rawInput);
+      return rawInput;
     }
 
     // ═══════════════════════════════════════════
