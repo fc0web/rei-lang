@@ -13,6 +13,187 @@ import {
   type ReiSpace, type DNode, type ConvergenceCriteria, type ContractionMethod,
 } from './space';
 
+// --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
+
+export interface SigmaMetadata {
+  memory: any[];           // 来歴: パイプ通過前の値の配列
+  tendency: string;        // 傾向性: 'rest' | 'expand' | 'contract' | 'spiral'
+  pipeCount: number;       // パイプ通過回数
+}
+
+/** 全値型のσラッパー — 値にσメタデータを付与 */
+export interface ReiVal {
+  reiType: 'ReiVal';
+  value: any;
+  __sigma__: SigmaMetadata;
+}
+
+function createSigmaMeta(): SigmaMetadata {
+  return { memory: [], tendency: 'rest', pipeCount: 0 };
+}
+
+/** ReiValでラップ（既にラップ済みなら内部値を更新） */
+function wrapWithSigma(value: any, prevValue: any, prevMeta?: SigmaMetadata): any {
+  // ReiValをネストしない
+  const rawValue = unwrapReiVal(value);
+  const rawPrev = unwrapReiVal(prevValue);
+
+  const meta: SigmaMetadata = prevMeta
+    ? { ...prevMeta, memory: [...prevMeta.memory, rawPrev], pipeCount: prevMeta.pipeCount + 1 }
+    : { memory: [rawPrev], tendency: 'rest', pipeCount: 1 };
+
+  // 傾向性の判定（C2: τ）
+  meta.tendency = computeTendency(meta.memory, rawValue);
+
+  // プリミティブ値はラップして返す
+  if (rawValue === null || typeof rawValue !== 'object') {
+    return { reiType: 'ReiVal' as const, value: rawValue, __sigma__: meta };
+  }
+
+  // オブジェクト値は __sigma__ プロパティを直接付与（型を壊さない）
+  rawValue.__sigma__ = meta;
+  return rawValue;
+}
+
+/** 傾向性を計算（C2: τ — 値の変換方向から判定） */
+function computeTendency(memory: any[], currentValue: any): string {
+  if (memory.length < 2) return 'rest';
+  const recent = memory.slice(-5).map(toNumSafe);
+  const current = toNumSafe(currentValue);
+  
+  let expandCount = 0, contractCount = 0, alternating = 0;
+  
+  for (let i = 0; i < recent.length; i++) {
+    const prev = i === 0 ? recent[0] : recent[i - 1];
+    const cur = i === recent.length - 1 ? current : recent[i + 1];
+    if (cur > prev) expandCount++;
+    else if (cur < prev) contractCount++;
+    if (i > 0 && ((cur > prev) !== (recent[i] > recent[i - 1]))) alternating++;
+  }
+
+  if (alternating >= recent.length - 1) return 'spiral';
+  if (expandCount > contractCount) return 'expand';
+  if (contractCount > expandCount) return 'contract';
+  return 'rest';
+}
+
+function toNumSafe(v: any): number {
+  if (typeof v === 'number') return v;
+  if (v === null || v === undefined) return 0;
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  if (typeof v === 'object' && v.reiType === 'ReiVal') return toNumSafe(v.value);
+  if (typeof v === 'object' && v.reiType === 'Ext') return v.valStar();
+  if (typeof v === 'object' && v.reiType === 'MDim') {
+    const { center, neighbors, mode } = v;
+    const weights = v.weights ?? neighbors.map(() => 1);
+    const n = neighbors.length;
+    if (n === 0) return center;
+    const wSum = weights.reduce((a: number, b: number) => a + b, 0);
+    const wAvg = neighbors.reduce((sum: number, vi: number, i: number) => sum + (weights[i] ?? 1) * vi, 0) / (wSum || 1);
+    return center + wAvg;
+  }
+  return 0;
+}
+
+/** ReiValを透過的にアンラップ */
+function unwrapReiVal(v: any): any {
+  if (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') return v.value;
+  return v;
+}
+
+/** 値からSigmaMetadataを取得 */
+function getSigmaOf(v: any): SigmaMetadata {
+  if (v !== null && typeof v === 'object') {
+    if (v.reiType === 'ReiVal') return v.__sigma__;
+    if (v.__sigma__) return v.__sigma__;
+  }
+  return createSigmaMeta();
+}
+
+/** 全値型からSigmaResult（C1公理のσ関数）を構築 */
+function buildSigmaResult(rawVal: any, meta: SigmaMetadata): any {
+  const val = unwrapReiVal(rawVal);
+
+  // ── field: 値の型に応じた場情報 ──
+  let field: any;
+  let layer = 0;
+  let flow: any = { direction: meta.tendency === 'rest' ? 'rest' : meta.tendency, momentum: meta.pipeCount, velocity: 0 };
+
+  if (val !== null && typeof val === 'object') {
+    if (val.reiType === 'MDim') {
+      field = { center: val.center, neighbors: [...val.neighbors], mode: val.mode, dim: val.neighbors.length };
+    } else if (val.reiType === 'Ext') {
+      field = { base: val.base, order: val.order, subscripts: val.subscripts };
+      layer = val.order;
+    } else if (val.reiType === 'State') {
+      field = { state: val.state, omega: val.omega };
+      flow = { direction: 'forward', momentum: val.history.length - 1, velocity: 1 };
+    } else if (val.reiType === 'Quad') {
+      field = { value: val.value };
+    } else if (val.reiType === 'DNode') {
+      // DNode — 既存のspace.tsのσと統合
+      field = { center: val.center, neighbors: [...val.neighbors], layer: val.layerIndex, index: val.nodeIndex };
+      layer = val.layerIndex;
+      flow = { stage: val.stage, directions: val.neighbors.length, momentum: val.momentum, velocity: 0 };
+      if (val.diffusionHistory.length >= 2) {
+        flow.velocity = Math.abs(
+          val.diffusionHistory[val.diffusionHistory.length - 1].result -
+          val.diffusionHistory[val.diffusionHistory.length - 2].result
+        );
+      }
+    } else if (val.reiType === 'Space') {
+      // Space — 既存のgetSpaceSigmaに委譲（evalPipe側で処理）
+      field = { type: 'space' };
+    } else if (Array.isArray(val)) {
+      field = { length: val.length, first: val[0] ?? null, last: val[val.length - 1] ?? null };
+    } else {
+      field = { type: typeof val };
+    }
+  } else if (typeof val === 'number') {
+    field = { center: val, neighbors: [] };
+  } else if (typeof val === 'string') {
+    field = { value: val, length: val.length };
+  } else if (typeof val === 'boolean') {
+    field = { value: val };
+  } else {
+    field = { value: null };
+  }
+
+  // ── memory: 来歴 ──
+  const memory = [...meta.memory];
+
+  // Genesis の来歴との統合
+  if (val !== null && typeof val === 'object' && val.reiType === 'State' && val.history) {
+    if (memory.length === 0 && val.history.length > 1) {
+      for (let i = 0; i < val.history.length - 1; i++) {
+        memory.push(val.history[i]);
+      }
+    }
+  }
+
+  // ── will: 傾向性（C2） ──
+  const will = {
+    tendency: meta.tendency as any,
+    strength: meta.pipeCount > 0 ? Math.min(meta.pipeCount / 5, 1) : 0,
+    history: meta.memory.map((_: any, i: number) => {
+      if (i === 0) return 'rest';
+      const prev = toNumSafe(meta.memory[i - 1]);
+      const cur = toNumSafe(meta.memory[i]);
+      return cur > prev ? 'expand' : cur < prev ? 'contract' : 'rest';
+    }),
+  };
+
+  return {
+    reiType: 'SigmaResult',
+    field,
+    flow,
+    memory,
+    layer,
+    will,
+    relation: [],
+  };
+}
+
 // --- Environment (Scope) ---
 
 export class Environment {
@@ -342,9 +523,19 @@ export class Evaluator {
   }
 
   private evalPipe(ast: any): any {
-    const input = this.eval(ast.input);
+    const rawInput = this.eval(ast.input);
     const cmd = ast.command;
-    if (cmd.type === "PipeCmd") return this.execPipeCmd(input, cmd);
+    if (cmd.type === "PipeCmd") {
+      // ── Tier 1: σメモリ追跡 ──
+      // sigmaコマンド自体はラップしない（参照操作なので）
+      if (cmd.cmd === "sigma") {
+        return this.execPipeCmd(rawInput, cmd);
+      }
+      const result = this.execPipeCmd(rawInput, cmd);
+      // パイプ通過時にσメタデータを付与
+      const prevMeta = getSigmaOf(rawInput);
+      return wrapWithSigma(result, rawInput, prevMeta.pipeCount > 0 ? prevMeta : undefined);
+    }
     throw new Error("無効なパイプコマンド");
   }
 
@@ -352,11 +543,38 @@ export class Evaluator {
     const { cmd: cmdName, mode, args: argNodes } = cmd;
     const args = argNodes.map((a: any) => this.eval(a));
 
+    // ── Tier 1: σメタデータを保存してからアンラップ ──
+    const sigmaMetadata = getSigmaOf(input);
+    const rawInput = unwrapReiVal(input);
+
     // ═══════════════════════════════════════════
-    // v0.3: Space pipe commands
+    // Tier 1: σ（全値型の自己参照 — 公理C1）
     // ═══════════════════════════════════════════
-    if (this.isSpace(input)) {
-      const sp = input as ReiSpace;
+    if (cmdName === "sigma") {
+      // Space — 既存のgetSpaceSigmaに委譲
+      if (this.isSpace(rawInput)) return getSpaceSigma(rawInput as ReiSpace);
+      // DNode — 既存のσ関数と統合
+      if (this.isDNode(rawInput)) {
+        const dn = rawInput as DNode;
+        return {
+          reiType: "SigmaResult",
+          flow: getSigmaFlow(dn),
+          memory: [...getSigmaMemory(dn), ...sigmaMetadata.memory],
+          layer: dn.layerIndex,
+          will: getSigmaWill(dn),
+          field: { center: dn.center, neighbors: [...dn.neighbors], layer: dn.layerIndex, index: dn.nodeIndex },
+          relation: [],
+        };
+      }
+      // 全値型 — C1公理のσ関数
+      return buildSigmaResult(rawInput, sigmaMetadata);
+    }
+
+    // ═══════════════════════════════════════════
+    // v0.3: Space pipe commands (rawInputを使用)
+    // ═══════════════════════════════════════════
+    if (this.isSpace(rawInput)) {
+      const sp = rawInput as ReiSpace;
       switch (cmdName) {
         case "step": {
           const targetLayer = args.length > 0 ? this.toNumber(args[0]) : undefined;
@@ -434,21 +652,12 @@ export class Evaluator {
     // ═══════════════════════════════════════════
     // v0.3: DNode pipe commands
     // ═══════════════════════════════════════════
-    if (this.isDNode(input)) {
-      const dn = input as DNode;
+    if (this.isDNode(rawInput)) {
+      const dn = rawInput as DNode;
       switch (cmdName) {
         case "sigma": {
-          return {
-            reiType: "SigmaResult",
-            flow: getSigmaFlow(dn),
-            memory: getSigmaMemory(dn),
-            layer: dn.layerIndex,
-            will: getSigmaWill(dn),
-            field: {
-              center: dn.center, neighbors: [...dn.neighbors],
-              layer: dn.layerIndex, index: dn.nodeIndex,
-            },
-          };
+          // Tier 1: 上のσハンドラに統合済み — ここには到達しない
+          return buildSigmaResult(dn, sigmaMetadata);
         }
         case "compute": return computeNodeValue(dn);
         case "center": return dn.center;
@@ -465,22 +674,22 @@ export class Evaluator {
     // ═══════════════════════════════════════════
     // v0.3: SigmaResult pipe commands
     // ═══════════════════════════════════════════
-    if (this.isObj(input) && input.reiType === "SigmaResult") {
+    if (this.isObj(rawInput) && rawInput.reiType === "SigmaResult") {
       switch (cmdName) {
-        case "flow": return input.flow;
-        case "memory": return input.memory;
-        case "layer": case "層": return input.layer;
-        case "will": return input.will;
-        case "field": return input.field;
-        case "relation": return input.relation ?? [];
+        case "flow": return rawInput.flow;
+        case "memory": return rawInput.memory;
+        case "layer": case "層": return rawInput.layer;
+        case "will": return rawInput.will;
+        case "field": return rawInput.field;
+        case "relation": return rawInput.relation ?? [];
       }
     }
 
     // ═══════════════════════════════════════════
-    // v0.2.1 Original pipe commands (unchanged)
+    // v0.2.1 Original pipe commands (rawInputを使用)
     // ═══════════════════════════════════════════
-    if (this.isMDim(input)) {
-      const md = input;
+    if (this.isMDim(rawInput)) {
+      const md = rawInput;
       switch (cmdName) {
         case "compute": {
           const m = mode || md.mode;
@@ -505,8 +714,8 @@ export class Evaluator {
       }
     }
 
-    if (this.isExt(input)) {
-      const ext = input;
+    if (this.isExt(rawInput)) {
+      const ext = rawInput;
       switch (cmdName) {
         case "order": return ext.order;
         case "base": return ext.base;
@@ -515,8 +724,8 @@ export class Evaluator {
       }
     }
 
-    if (this.isGenesis(input)) {
-      const g = input;
+    if (this.isGenesis(rawInput)) {
+      const g = rawInput;
       switch (cmdName) {
         case "forward": genesisForward(g); return g;
         case "phase": return g.state;
@@ -525,73 +734,73 @@ export class Evaluator {
       }
     }
 
-    if (Array.isArray(input)) {
+    if (Array.isArray(rawInput)) {
       switch (cmdName) {
-        case "len": return input.length;
-        case "sum": return input.reduce((a: number, b: any) => a + this.toNumber(b), 0);
-        case "avg": return input.length === 0 ? 0 : input.reduce((a: number, b: any) => a + this.toNumber(b), 0) / input.length;
-        case "first": return input[0] ?? null;
-        case "last": return input[input.length - 1] ?? null;
-        case "reverse": return [...input].reverse();
-        case "sort": return [...input].sort((a: any, b: any) => this.toNumber(a) - this.toNumber(b));
+        case "len": return rawInput.length;
+        case "sum": return rawInput.reduce((a: number, b: any) => a + this.toNumber(b), 0);
+        case "avg": return rawInput.length === 0 ? 0 : rawInput.reduce((a: number, b: any) => a + this.toNumber(b), 0) / rawInput.length;
+        case "first": return rawInput[0] ?? null;
+        case "last": return rawInput[rawInput.length - 1] ?? null;
+        case "reverse": return [...rawInput].reverse();
+        case "sort": return [...rawInput].sort((a: any, b: any) => this.toNumber(a) - this.toNumber(b));
         case "map": {
           if (args.length > 0 && this.isFunction(args[0])) {
-            return input.map((v: any) => this.callFunction(args[0], [v]));
+            return rawInput.map((v: any) => this.callFunction(args[0], [v]));
           }
-          return input;
+          return rawInput;
         }
         case "filter": {
           if (args.length > 0 && this.isFunction(args[0])) {
-            return input.filter((v: any) => !!this.callFunction(args[0], [v]));
+            return rawInput.filter((v: any) => !!this.callFunction(args[0], [v]));
           }
-          return input;
+          return rawInput;
         }
         case "reduce": {
           if (args.length >= 2 && this.isFunction(args[0])) {
-            return input.reduce((acc: any, v: any) => this.callFunction(args[0], [acc, v]), args[1]);
+            return rawInput.reduce((acc: any, v: any) => this.callFunction(args[0], [acc, v]), args[1]);
           }
-          return input;
+          return rawInput;
         }
       }
     }
 
-    if (typeof input === "number") {
+    if (typeof rawInput === "number") {
       switch (cmdName) {
-        case "abs": return Math.abs(input);
-        case "sqrt": return Math.sqrt(input);
-        case "round": return Math.round(input);
-        case "floor": return Math.floor(input);
-        case "ceil": return Math.ceil(input);
-        case "negate": return -input;
+        case "abs": return Math.abs(rawInput);
+        case "sqrt": return Math.sqrt(rawInput);
+        case "round": return Math.round(rawInput);
+        case "floor": return Math.floor(rawInput);
+        case "ceil": return Math.ceil(rawInput);
+        case "negate": return -rawInput;
       }
     }
 
-    if (typeof input === "string") {
+    if (typeof rawInput === "string") {
       switch (cmdName) {
-        case "len": return input.length;
-        case "upper": return input.toUpperCase();
-        case "lower": return input.toLowerCase();
-        case "trim": return input.trim();
-        case "split": return input.split(args[0] ?? "");
-        case "reverse": return Array.from(input).reverse().join("");
+        case "len": return rawInput.length;
+        case "upper": return rawInput.toUpperCase();
+        case "lower": return rawInput.toLowerCase();
+        case "trim": return rawInput.trim();
+        case "split": return rawInput.split(args[0] ?? "");
+        case "reverse": return Array.from(rawInput).reverse().join("");
       }
     }
 
     if (cmdName === "\u290A" || cmdName === "converge") {
-      if (this.isMDim(input)) return computeMDim(input);
-      return input;
+      if (this.isMDim(rawInput)) return computeMDim(rawInput);
+      return rawInput;
     }
     if (cmdName === "\u290B" || cmdName === "diverge") {
-      if (typeof input === "number") {
-        return { reiType: "MDim", center: input, neighbors: [input, input, input, input], mode: "weighted" };
+      if (typeof rawInput === "number") {
+        return { reiType: "MDim", center: rawInput, neighbors: [rawInput, rawInput, rawInput, rawInput], mode: "weighted" };
       }
-      return input;
+      return rawInput;
     }
 
     // User-defined pipe function
     if (this.env.has(cmdName)) {
       const fn = this.env.get(cmdName);
-      if (this.isFunction(fn)) return this.callFunction(fn, [input, ...args]);
+      if (this.isFunction(fn)) return this.callFunction(fn, [rawInput, ...args]);
     }
 
     throw new Error(`未知のパイプコマンド: ${cmdName}`);
@@ -644,7 +853,13 @@ export class Evaluator {
   }
 
   private evalMemberAccess(ast: any): any {
-    const obj = this.eval(ast.object);
+    const rawObj = this.eval(ast.object);
+    const obj = unwrapReiVal(rawObj);
+
+    // ── Tier 1: σメタデータへのメンバーアクセス ──
+    if (ast.member === "__sigma__") {
+      return getSigmaOf(rawObj);
+    }
 
     // ── v0.3: SigmaResult member access ──
     if (this.isObj(obj) && obj.reiType === "SigmaResult") {
@@ -819,6 +1034,8 @@ export class Evaluator {
 
   // --- Helpers ---
   toNumber(val: any): number {
+    // Tier 1: ReiVal透過
+    if (val !== null && typeof val === 'object' && val.reiType === 'ReiVal') return this.toNumber(val.value);
     if (typeof val === "number") return val;
     if (typeof val === "boolean") return val ? 1 : 0;
     if (val === null) return 0;
@@ -829,8 +1046,9 @@ export class Evaluator {
   }
 
   private isTruthy(val: any): boolean {
-    if (val === null || val === false || val === 0) return false;
-    if (this.isQuad(val)) return val.value === "top" || val.value === "topPi";
+    const v = unwrapReiVal(val);
+    if (v === null || v === false || v === 0) return false;
+    if (this.isQuad(v)) return v.value === "top" || v.value === "topPi";
     return true;
   }
 
@@ -840,13 +1058,19 @@ export class Evaluator {
     return false;
   }
 
-  isObj(v: any): boolean { return v !== null && typeof v === "object" && !Array.isArray(v); }
-  isMDim(v: any): boolean { return this.isObj(v) && v.reiType === "MDim"; }
-  isExt(v: any): boolean { return this.isObj(v) && v.reiType === "Ext"; }
-  isGenesis(v: any): boolean { return this.isObj(v) && v.reiType === "State"; }
-  isFunction(v: any): boolean { return this.isObj(v) && v.reiType === "Function"; }
-  isQuad(v: any): boolean { return this.isObj(v) && v.reiType === "Quad"; }
+  isObj(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && !Array.isArray(u); }
+  isMDim(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "MDim"; }
+  isExt(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "Ext"; }
+  isGenesis(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "State"; }
+  isFunction(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "Function"; }
+  isQuad(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "Quad"; }
   // ── v0.3 ──
-  isSpace(v: any): boolean { return this.isObj(v) && v.reiType === "Space"; }
-  isDNode(v: any): boolean { return this.isObj(v) && v.reiType === "DNode"; }
+  isSpace(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "Space"; }
+  isDNode(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "DNode"; }
+  // ── Tier 1 ──
+  isReiVal(v: any): boolean { return v !== null && typeof v === 'object' && v.reiType === 'ReiVal'; }
+  /** 値からσメタデータを取得（Tier 1） */
+  getSigmaMetadata(v: any): SigmaMetadata { return getSigmaOf(v); }
+  /** ReiValを透過的にアンラップ */
+  unwrap(v: any): any { return unwrapReiVal(v); }
 }
