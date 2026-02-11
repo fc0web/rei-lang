@@ -13,12 +13,10 @@ import {
   type ReiSpace, type DNode, type ConvergenceCriteria, type ContractionMethod,
 } from './space';
 import {
-  createSudokuSpace, createLatinSquareSpace, createCustomPuzzleSpace,
-  propagateStep, propagateNakedPair, solvePuzzle, propagateOnly,
-  cellAsMDim, getGrid, getCandidates, getPuzzleSigma,
-  formatSudoku, estimateDifficulty, generateSudoku, parseGrid,
-  type PuzzleSpace,
-} from './puzzle';
+  thinkLoop, getThoughtSigma, formatThought,
+  thoughtTrajectory, thoughtModes, dominantMode,
+  type ThoughtResult, type ThoughtConfig,
+} from './thought';
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2298,19 +2296,33 @@ export class Evaluator {
       if (cmd.cmd === "evolve_value") {
         return this.execPipeCmd(rawInput, cmd);
       }
+      // ── 柱④: Thought Loop — think/思考 はラップしない（ThoughtResult直返却） ──
+      if (cmd.cmd === "think" || cmd.cmd === "思考" ||
+          cmd.cmd === "think_trajectory" || cmd.cmd === "軌跡" ||
+          cmd.cmd === "think_modes" || cmd.cmd === "think_dominant" ||
+          cmd.cmd === "think_format" || cmd.cmd === "思考表示") {
+        return this.execPipeCmd(rawInput, cmd);
+      }
+      // ThoughtResultの後続パイプも直値返却
+      if (rawInput?.reiType === 'ThoughtResult' || (rawInput?.reiType === 'ReiVal' && rawInput?.value?.reiType === 'ThoughtResult')) {
+        const thoughtAccessors = [
+          "final_value", "最終値", "iterations", "反復数",
+          "stop_reason", "停止理由", "trajectory", "軌跡",
+          "convergence", "収束率", "awareness", "覚醒度",
+          "tendency", "意志", "steps", "全履歴",
+          "dominant_mode", "支配モード",
+        ];
+        if (thoughtAccessors.includes(cmd.cmd)) {
+          return this.execPipeCmd(rawInput, cmd);
+        }
+      }
       // ── 柱②: StringMDimアクセサはラップしない（参照操作） ──
       const stringMDimAccessors = [
         "strokes", "画数", "category", "六書", "meaning", "意味",
         "readings", "読み", "radicals", "部首", "phonetic_group", "音符",
         "compose", "合成", "decompose", "分解", "similarity", "類似",
       ];
-      // ── 柱③: PuzzleSpaceアクセサはラップしない ──
-      const puzzleAccessors = [
-        "grid", "盤面", "cell", "セル", "candidates", "候補",
-        "difficulty", "難易度", "format", "表示", "history", "履歴",
-        "solved", "puzzle", "puzzle_generate",
-      ];
-      if (stringMDimAccessors.includes(cmd.cmd) || puzzleAccessors.includes(cmd.cmd)) {
+      if (stringMDimAccessors.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
       const result = this.execPipeCmd(rawInput, cmd);
@@ -2335,10 +2347,6 @@ export class Evaluator {
     if (cmdName === "sigma") {
       // Space — 既存のgetSpaceSigmaに委譲
       if (this.isSpace(rawInput)) return getSpaceSigma(rawInput as ReiSpace);
-      // ── 柱③: PuzzleSpace — パズルσに委譲 ──
-      if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'PuzzleSpace') {
-        return getPuzzleSigma(rawInput as PuzzleSpace);
-      }
       // DNode — 既存のσ関数と統合
       if (this.isDNode(rawInput)) {
         const dn = rawInput as DNode;
@@ -2364,6 +2372,10 @@ export class Evaluator {
           will: { tendency: sigmaMetadata.tendency, strength: 0, history: [] },
           relation: sm.neighbors.map((n: string) => ({ from: sm.center, to: n, type: sm.mode })),
         };
+      }
+      // ── 柱④: ThoughtResult — 思考ループ結果のσ ──
+      if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'ThoughtResult') {
+        return getThoughtSigma(rawInput as ThoughtResult);
       }
       // 全値型 — C1公理のσ関数
       return buildSigmaResult(rawInput, sigmaMetadata);
@@ -2733,87 +2745,6 @@ export class Evaluator {
     }
 
     // ═══════════════════════════════════════════
-    // 柱③: パズル統一 — PuzzleSpace pipe commands
-    // ═══════════════════════════════════════════
-
-    // puzzle("sudoku") / puzzle("latin_square") — パズル空間の生成
-    if (cmdName === "puzzle") {
-      const puzzleType = args.length >= 1 ? String(args[0]) : 'sudoku';
-      if (!Array.isArray(rawInput)) throw new Error("puzzle: グリッド（二次元配列）が必要です");
-
-      // フラット配列の場合は二次元に変換
-      let grid: number[][];
-      if (Array.isArray(rawInput[0])) {
-        grid = rawInput.map((row: any[]) => row.map((v: any) => typeof v === 'number' ? v : 0));
-      } else {
-        grid = parseGrid(rawInput.map((v: any) => typeof v === 'number' ? v : 0));
-      }
-
-      switch (puzzleType) {
-        case 'sudoku': return createSudokuSpace(grid);
-        case 'latin_square': case 'latin': return createLatinSquareSpace(grid);
-        default:
-          // カスタム — 行列制約のみ
-          return createLatinSquareSpace(grid);
-      }
-    }
-
-    // puzzle_generate — 数独問題の生成
-    if (cmdName === "puzzle_generate") {
-      const clues = typeof rawInput === 'number' ? rawInput : 30;
-      const seed = args.length >= 1 ? this.toNumber(args[0]) : undefined;
-      return generateSudoku(clues, seed);
-    }
-
-    // PuzzleSpace専用パイプコマンド
-    if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'PuzzleSpace') {
-      const ps = rawInput as PuzzleSpace;
-      switch (cmdName) {
-        case "propagate": case "拡散": {
-          const steps = args.length >= 1 ? this.toNumber(args[0]) : 1;
-          for (let i = 0; i < steps; i++) propagateStep(ps);
-          return ps;
-        }
-        case "solve": case "解": {
-          solvePuzzle(ps);
-          return ps;
-        }
-        case "grid": case "盤面": {
-          return getGrid(ps);
-        }
-        case "cell": case "セル": {
-          const row = args.length >= 1 ? this.toNumber(args[0]) : 0;
-          const col = args.length >= 2 ? this.toNumber(args[1]) : 0;
-          return cellAsMDim(ps, row, col);
-        }
-        case "candidates": case "候補": {
-          const row = args.length >= 1 ? this.toNumber(args[0]) : 0;
-          const col = args.length >= 2 ? this.toNumber(args[1]) : 0;
-          return getCandidates(ps, row, col);
-        }
-        case "sigma": {
-          return getPuzzleSigma(ps);
-        }
-        case "difficulty": case "難易度": {
-          return estimateDifficulty(ps);
-        }
-        case "format": case "表示": {
-          return formatSudoku(ps);
-        }
-        case "history": case "履歴": {
-          return ps.history;
-        }
-        case "solved": {
-          return ps.solved;
-        }
-        case "step": {
-          propagateStep(ps);
-          return ps;
-        }
-      }
-    }
-
-    // ═══════════════════════════════════════════
     // Evolve — 自動モード選択（柱①）
     // ═══════════════════════════════════════════
     if (cmdName === "evolve") {
@@ -3058,6 +2989,86 @@ export class Evaluator {
         return { reiType: "MDim", center: rawInput, neighbors: [rawInput, rawInput, rawInput, rawInput], mode: "weighted" };
       }
       return rawInput;
+    }
+
+    // ═══════════════════════════════════════════
+    // 柱④: Thought Loop — 思考ループ（自律的自己進化）
+    // ═══════════════════════════════════════════
+
+    // think / 思考: メイン思考ループ
+    if (cmdName === "think" || cmdName === "思考") {
+      // think("converge") / think(10) / think("seek", 15) / think("awaken")
+      const config: Partial<ThoughtConfig> = {};
+
+      if (args.length >= 1) {
+        const firstArg = args[0];
+        if (typeof firstArg === 'string') {
+          config.strategy = firstArg;
+        } else if (typeof firstArg === 'number') {
+          config.maxIterations = firstArg;
+          config.strategy = 'converge';
+        }
+      }
+      if (args.length >= 2) {
+        const secondArg = args[1];
+        if (typeof secondArg === 'number') {
+          if (config.strategy === 'seek') {
+            config.targetValue = secondArg;
+          } else {
+            config.maxIterations = secondArg;
+          }
+        }
+      }
+      if (args.length >= 3 && typeof args[2] === 'number') {
+        config.maxIterations = args[2];
+      }
+
+      return thinkLoop(rawInput, config);
+    }
+
+    // think_trajectory / 軌跡: 思考の数値軌跡を配列で返す
+    if (cmdName === "think_trajectory" || cmdName === "軌跡") {
+      if (rawInput?.reiType === 'ThoughtResult') return thoughtTrajectory(rawInput);
+      // 直接入力の場合は思考してから軌跡を返す
+      const config: Partial<ThoughtConfig> = {};
+      if (args.length >= 1 && typeof args[0] === 'string') config.strategy = args[0];
+      if (args.length >= 1 && typeof args[0] === 'number') config.maxIterations = args[0];
+      return thoughtTrajectory(thinkLoop(rawInput, config));
+    }
+
+    // think_modes: 各ステップで選ばれたモード配列
+    if (cmdName === "think_modes") {
+      if (rawInput?.reiType === 'ThoughtResult') return thoughtModes(rawInput);
+      return thoughtModes(thinkLoop(rawInput, {}));
+    }
+
+    // think_dominant / 支配モード: 最も多く選ばれたモード
+    if (cmdName === "think_dominant" || cmdName === "支配モード") {
+      if (rawInput?.reiType === 'ThoughtResult') return dominantMode(rawInput);
+      return dominantMode(thinkLoop(rawInput, {}));
+    }
+
+    // think_format / 思考表示: 思考結果の文字列フォーマット
+    if (cmdName === "think_format" || cmdName === "思考表示") {
+      if (rawInput?.reiType === 'ThoughtResult') return formatThought(rawInput);
+      return formatThought(thinkLoop(rawInput, {}));
+    }
+
+    // ThoughtResult のアクセサパイプ
+    if (rawInput?.reiType === 'ThoughtResult') {
+      const tr = rawInput as ThoughtResult;
+      switch (cmdName) {
+        case "final_value": case "最終値": return tr.finalValue;
+        case "iterations": case "反復数": return tr.totalIterations;
+        case "stop_reason": case "停止理由": return tr.stopReason;
+        case "trajectory": case "軌跡": return tr.trajectory;
+        case "convergence": case "収束率": return tr.convergenceRate;
+        case "awareness": case "覚醒度": return tr.peakAwareness;
+        case "tendency": case "意志": return { tendency: tr.loopTendency, strength: tr.loopStrength };
+        case "steps": case "全履歴": return tr.steps;
+        case "dominant_mode": case "支配モード": return dominantMode(tr);
+        case "sigma": return getThoughtSigma(tr);
+      }
     }
 
     // User-defined pipe function
