@@ -102,6 +102,34 @@ void → ・ → 0₀ → 0 → ℕ → ... → awakened → resonant
 
 ---
 
+## UMTE（万物数理統一理論）公理体系
+
+C系が「値の内側」を公理化したのに対し、U系は「言語の外側」— Reiの普遍性の根拠を公理化する。
+
+詳細は [README-UMTE.md](README-UMTE.md) を参照。
+
+| 公理 | 名称 | 核心概念 | ファイル |
+|------|------|----------|----------|
+| **U1** | 構造還元公理（Structure Reduction） | π — 何でも 𝕄 になる | [axiom-u1-structure-reduction.md](axiom-u1-structure-reduction.md) |
+| **U2** | 変換保存公理（Transformation Preservation） | ≅_P — どんな操作もパイプで書ける | [axiom-u2-transformation-preservation.md](axiom-u2-transformation-preservation.md) |
+| **U3** | 階層再帰公理（Hierarchical Recursion） | depth — どんな深さも再帰で表現 | [axiom-u3-hierarchical-recursion.md](axiom-u3-hierarchical-recursion.md) |
+| **U4** | 領域架橋公理（Domain Bridging） | bridge — どの領域も互いに繋がる | [axiom-u4-domain-bridging.md](axiom-u4-domain-bridging.md) |
+| **U5** | 完全性公理（Completeness） | SEC — 全てを統合し完全性を宣言 | [axiom-u5-completeness.md](axiom-u5-completeness.md) |
+
+## C系とU系の対称性
+
+```
+C1（自己参照）  ↔  U1（構造還元）    ← 「知る」の対称
+C2（傾向性）    ↔  U2（変換保存）    ← 「動く」の対称
+C3（応答）      ↔  U3（階層再帰）    ← 「深まる」の対称
+C4（覚醒）      ↔  U4（領域架橋）    ← 「繋がる」の対称
+C5（共鳴）      ↔  U5（完全性）      ← 「全体」の対称
+```
+
+C系5公理 + U系5公理 = **10公理で、追加された演算子の数：ゼロ。**
+
+---
+
 *Creator: Nobuki Fujimoto*
 *Framework: D-FUMT (Dimensional Fujimoto Universal Mathematical Theory)*
 *Language: 0₀式 (Rei-shiki) / Rei*
