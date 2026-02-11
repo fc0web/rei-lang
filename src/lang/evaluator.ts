@@ -1358,6 +1358,85 @@ function solutionCompleteness(md: any): any {
   };
 }
 
+// ============================================================
+// Serialization — 𝕄のシリアライゼーション（保存・復元）
+// serialize: Rei値 → JSON文字列（σ/τ/覚醒状態を含む）
+// deserialize: JSON文字列 → Rei値（来歴を引き継いで計算再開）
+// ============================================================
+
+const REI_SERIAL_VERSION = "0.3.1";
+
+function reiSerialize(value: any, pretty: boolean = false): string {
+  const type = detectSerialType(value);
+  let sigma: any;
+  if (value !== null && typeof value === "object" && value.__sigma__) {
+    sigma = {
+      memory: value.__sigma__.memory || [],
+      tendency: value.__sigma__.tendency || "rest",
+      pipeCount: value.__sigma__.pipeCount || 0,
+    };
+  }
+  const payload = cleanSerialPayload(value);
+  const envelope = {
+    __rei__: true as const,
+    version: REI_SERIAL_VERSION,
+    type,
+    timestamp: new Date().toISOString(),
+    payload,
+    ...(sigma ? { sigma } : {}),
+  };
+  return JSON.stringify(envelope, null, pretty ? 2 : undefined);
+}
+
+function reiDeserialize(value: any): any {
+  let json: string;
+  if (typeof value === "string") {
+    json = value;
+  } else if (typeof value === "object" && value !== null && value.reiType === "ReiVal" && typeof value.value === "string") {
+    json = value.value;
+  } else {
+    json = JSON.stringify(value);
+  }
+  let parsed: any;
+  try { parsed = JSON.parse(json); } catch (e) {
+    throw new Error(`deserialize: 無効なJSON — ${(e as Error).message}`);
+  }
+  if (parsed && parsed.__rei__ === true && "payload" in parsed) {
+    let val = parsed.payload;
+    if (parsed.sigma && val !== null && typeof val === "object") {
+      val.__sigma__ = {
+        memory: parsed.sigma.memory || [],
+        tendency: parsed.sigma.tendency || "rest",
+        pipeCount: parsed.sigma.pipeCount || 0,
+      };
+    }
+    return val;
+  }
+  return parsed;
+}
+
+function detectSerialType(value: any): string {
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "number") return "number";
+  if (typeof value === "string") return "string";
+  if (typeof value === "boolean") return "boolean";
+  if (Array.isArray(value)) return "array";
+  if (typeof value === "object" && value.reiType) return value.reiType;
+  return "object";
+}
+
+function cleanSerialPayload(value: any): any {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(cleanSerialPayload);
+  const clean: any = {};
+  for (const key of Object.keys(value)) {
+    if (key === "__sigma__") continue;
+    clean[key] = value[key];
+  }
+  return clean;
+}
+
 function quadNot(v: string): string {
   switch (v) {
     case "top": return "bottom";
@@ -1581,6 +1660,13 @@ export class Evaluator {
       // sigmaコマンド自体はラップしない（参照操作なので）
       if (cmd.cmd === "sigma") {
         return this.execPipeCmd(rawInput, cmd);
+      }
+      // ── Serialization: serialize/deserialize もラップしない ──
+      if (cmd.cmd === "serialize" || cmd.cmd === "serialize_pretty") {
+        return reiSerialize(rawInput, cmd.cmd === "serialize_pretty");
+      }
+      if (cmd.cmd === "deserialize") {
+        return reiDeserialize(rawInput);
       }
       const result = this.execPipeCmd(rawInput, cmd);
       // パイプ通過時にσメタデータを付与
