@@ -500,6 +500,189 @@ function computeNestedMDim(md: any): number {
   return computeMDim({ ...md, center, neighbors });
 }
 
+// ═══════════════════════════════════════════
+// Tier 4: C3(応答公理) & C4(覚醒公理) & U2(変換保存) & M2(モード等価)
+// ═══════════════════════════════════════════
+
+/**
+ * Tier 4 C3: 応答 — 値が外部刺激に反応して変化する
+ * 仏教対応: 触（phassa）— 感覚器官と対象の接触による反応
+ */
+function respondToStimulus(input: any, stimulus: number, method: string = 'absorb'): any {
+  if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
+    const md = input;
+    switch (method) {
+      case 'absorb': {
+        // 刺激を吸収: centerが刺激の影響を受ける
+        const factor = stimulus / (Math.abs(md.center) + Math.abs(stimulus) || 1);
+        const newCenter = md.center + stimulus * factor;
+        return { ...md, center: newCenter };
+      }
+      case 'distribute': {
+        // 刺激を近傍に分配
+        const share = stimulus / (md.neighbors.length || 1);
+        const newNeighbors = md.neighbors.map((n: number) => n + share);
+        return { ...md, neighbors: newNeighbors };
+      }
+      case 'reflect': {
+        // 刺激を反射（centerはそのまま、近傍が反転方向に変化）
+        const newNeighbors = md.neighbors.map((n: number) => n - stimulus / (md.neighbors.length || 1));
+        return { ...md, neighbors: newNeighbors };
+      }
+      case 'resonate': {
+        // 刺激と共鳴（全体がstimulus周波数で変調）
+        const newCenter = md.center * (1 + Math.sin(stimulus));
+        const newNeighbors = md.neighbors.map((n: number, i: number) =>
+          n * (1 + Math.sin(stimulus + (i + 1) * Math.PI / md.neighbors.length))
+        );
+        return { ...md, center: newCenter, neighbors: newNeighbors };
+      }
+      default:
+        return respondToStimulus(input, stimulus, 'absorb');
+    }
+  }
+
+  // 非𝕄: 数値は単純加算
+  if (typeof input === 'number') return input + stimulus;
+  return input;
+}
+
+/**
+ * Tier 4 C3: 感度 — 値が刺激にどれだけ敏感かを測定
+ * 微小刺激に対する変化率
+ */
+function computeSensitivity(input: any): number {
+  if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
+    const original = computeMDim(input);
+    const epsilon = 0.001;
+    const perturbed = respondToStimulus(input, epsilon, 'absorb');
+    const perturbedVal = computeMDim(perturbed);
+    return Math.abs(perturbedVal - original) / epsilon;
+  }
+  if (typeof input === 'number') return 1.0; // 数値は常に感度1
+  return 0;
+}
+
+/**
+ * Tier 4 C4: 覚醒度 — σの豊かさに基づく自己認識スコア
+ * 仏教対応: 菩提（bodhi）— 悟りへの段階
+ *
+ * スコア要素:
+ *   - memory の深さ（パイプ通過履歴）
+ *   - tendency の変化（静止でない）
+ *   - 構造の複雑さ（近傍の数）
+ *   - pipeCount（変換回数）
+ */
+function computeAwareness(input: any, meta: SigmaMetadata): number {
+  let score = 0;
+  const maxScore = 5;
+
+  // 1. 記憶の深さ（0〜1）
+  score += Math.min(meta.memory.length / 5, 1);
+
+  // 2. 傾向性が静止でない（0 or 1）
+  if (meta.tendency !== 'rest') score += 1;
+
+  // 3. パイプ通過回数（0〜1）
+  score += Math.min(meta.pipeCount / 5, 1);
+
+  // 4. 構造の複雑さ（0〜1）
+  const raw = unwrapReiVal(input);
+  if (raw !== null && typeof raw === 'object') {
+    if (raw.reiType === 'MDim' && raw.neighbors) {
+      score += Math.min(raw.neighbors.length / 8, 1);
+    } else if (raw.reiType === 'Space') {
+      score += 1; // Spaceは最も複雑
+    } else if (raw.reiType === 'State' && raw.history) {
+      score += Math.min(raw.history.length / 5, 1);
+    }
+  }
+
+  // 5. 記憶の多様性（同じ値ばかりでないか）
+  if (meta.memory.length >= 2) {
+    const unique = new Set(meta.memory.map(v => JSON.stringify(v)));
+    score += Math.min(unique.size / meta.memory.length, 1);
+  }
+
+  return Math.min(score / maxScore, 1);
+}
+
+/** Tier 4 C4: 覚醒閾値 — awareness >= 0.6 で覚醒 */
+const AWAKENING_THRESHOLD = 0.6;
+
+/**
+ * Tier 4 U2: 変換パターンの統一適用
+ * 異なる領域の変換を𝕄上の同じパイプ操作で表現
+ */
+function applyTransform(input: any, transformName: string, param: number): any {
+  const raw = unwrapReiVal(input);
+
+  if (raw !== null && typeof raw === 'object' && raw.reiType === 'MDim') {
+    const md = raw;
+    switch (transformName) {
+      case 'scale': {
+        // スケール変換: 全要素をparam倍
+        return { ...md, center: md.center * param, neighbors: md.neighbors.map((n: number) => n * param) };
+      }
+      case 'shift': {
+        // シフト変換: 全要素にparam加算
+        return { ...md, center: md.center + param, neighbors: md.neighbors.map((n: number) => n + param) };
+      }
+      case 'rotate': {
+        // 回転変換: 近傍をparam位置ずらす
+        const n = md.neighbors.length;
+        if (n === 0) return md;
+        const shift = ((param % n) + n) % n;
+        const rotated = [...md.neighbors.slice(shift), ...md.neighbors.slice(0, shift)];
+        return { ...md, neighbors: rotated };
+      }
+      case 'invert': {
+        // 反転変換: center基準で近傍を反転
+        return { ...md, neighbors: md.neighbors.map((n: number) => 2 * md.center - n) };
+      }
+      case 'normalize_to': {
+        // 正規化変換: 全要素の和がparamになるよう正規化
+        const total = Math.abs(md.center) + md.neighbors.reduce((s: number, v: number) => s + Math.abs(v), 0) || 1;
+        const factor = param / total;
+        return { ...md, center: md.center * factor, neighbors: md.neighbors.map((n: number) => n * factor) };
+      }
+      default:
+        throw new Error(`未知の変換: ${transformName}`);
+    }
+  }
+
+  // 数値への変換
+  if (typeof raw === 'number') {
+    switch (transformName) {
+      case 'scale': return raw * param;
+      case 'shift': return raw + param;
+      case 'invert': return -raw;
+      default: return raw;
+    }
+  }
+
+  return raw;
+}
+
+/**
+ * Tier 4 M2: モード等価判定
+ * 2つのモードが同じ型の出力を返すことを確認
+ */
+function checkModeEquivalence(md: any, mode1: string, mode2: string): any {
+  if (!md || md.reiType !== 'MDim') return { equivalent: false, reason: 'non-MDim input' };
+  const v1 = computeMDim({ ...md, mode: mode1 });
+  const v2 = computeMDim({ ...md, mode: mode2 });
+  return {
+    reiType: 'ModeEquivResult',
+    mode1,
+    mode2,
+    type_equivalent: typeof v1 === typeof v2, // M2: 出力型が等価
+    value1: v1,
+    value2: v2,
+    relative_diff: Math.abs(v2) > 0 ? Math.abs(v1 - v2) / Math.abs(v2) : (v1 === v2 ? 0 : Infinity),
+  };
+}
+
 // --- Quad logic (v0.2.1) ---
 
 function quadNot(v: string): string {
@@ -952,6 +1135,41 @@ export class Evaluator {
       // U1: ネスト𝕄の再帰的フラット化
       if (this.isMDim(rawInput)) return computeNestedMDim(rawInput);
       return rawInput;
+    }
+
+    // ═══════════════════════════════════════════
+    // Tier 4: C3(応答) & C4(覚醒) & U2(変換保存) & M2(モード等価)
+    // ═══════════════════════════════════════════
+    if (cmdName === "respond") {
+      // C3: 外部刺激への応答
+      const stimulus = args.length >= 1 ? this.toNumber(args[0]) : 0;
+      const method = args.length >= 2 ? String(args[1]) : 'absorb';
+      return respondToStimulus(rawInput, stimulus, method);
+    }
+    if (cmdName === "sensitivity") {
+      // C3: 応答感度の測定
+      return computeSensitivity(rawInput);
+    }
+    if (cmdName === "awareness") {
+      // C4: 覚醒度スコア（0.0〜1.0）
+      return computeAwareness(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "awakened") {
+      // C4: 覚醒判定
+      return computeAwareness(rawInput, sigmaMetadata) >= AWAKENING_THRESHOLD;
+    }
+    if (cmdName === "transform") {
+      // U2: 変換パターンの統一適用
+      const transformName = args.length >= 1 ? String(args[0]) : 'scale';
+      const param = args.length >= 2 ? this.toNumber(args[1]) : 1;
+      return applyTransform(rawInput, transformName, param);
+    }
+    if (cmdName === "mode_equiv") {
+      // M2: モード等価判定
+      if (!this.isMDim(rawInput)) throw new Error("mode_equiv: 𝕄型の値が必要です");
+      const m1 = args.length >= 1 ? String(args[0]) : "weighted";
+      const m2 = args.length >= 2 ? String(args[1]) : "geometric";
+      return checkModeEquivalence(rawInput, m1, m2);
     }
 
     // ═══════════════════════════════════════════
