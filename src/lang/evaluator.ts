@@ -12,6 +12,13 @@ import {
   getSpaceSigma, findResonances,
   type ReiSpace, type DNode, type ConvergenceCriteria, type ContractionMethod,
 } from './space';
+import {
+  createSudokuSpace, createLatinSquareSpace, createCustomPuzzleSpace,
+  propagateStep, propagateNakedPair, solvePuzzle, propagateOnly,
+  cellAsMDim, getGrid, getCandidates, getPuzzleSigma,
+  formatSudoku, estimateDifficulty, generateSudoku, parseGrid,
+  type PuzzleSpace,
+} from './puzzle';
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2297,7 +2304,13 @@ export class Evaluator {
         "readings", "読み", "radicals", "部首", "phonetic_group", "音符",
         "compose", "合成", "decompose", "分解", "similarity", "類似",
       ];
-      if (stringMDimAccessors.includes(cmd.cmd)) {
+      // ── 柱③: PuzzleSpaceアクセサはラップしない ──
+      const puzzleAccessors = [
+        "grid", "盤面", "cell", "セル", "candidates", "候補",
+        "difficulty", "難易度", "format", "表示", "history", "履歴",
+        "solved", "puzzle", "puzzle_generate",
+      ];
+      if (stringMDimAccessors.includes(cmd.cmd) || puzzleAccessors.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
       const result = this.execPipeCmd(rawInput, cmd);
@@ -2322,6 +2335,10 @@ export class Evaluator {
     if (cmdName === "sigma") {
       // Space — 既存のgetSpaceSigmaに委譲
       if (this.isSpace(rawInput)) return getSpaceSigma(rawInput as ReiSpace);
+      // ── 柱③: PuzzleSpace — パズルσに委譲 ──
+      if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'PuzzleSpace') {
+        return getPuzzleSigma(rawInput as PuzzleSpace);
+      }
       // DNode — 既存のσ関数と統合
       if (this.isDNode(rawInput)) {
         const dn = rawInput as DNode;
@@ -2713,6 +2730,87 @@ export class Evaluator {
         throw new Error("solution_completeness: 𝕄型または配列が必要です");
       }
       return solutionCompleteness(rawInput);
+    }
+
+    // ═══════════════════════════════════════════
+    // 柱③: パズル統一 — PuzzleSpace pipe commands
+    // ═══════════════════════════════════════════
+
+    // puzzle("sudoku") / puzzle("latin_square") — パズル空間の生成
+    if (cmdName === "puzzle") {
+      const puzzleType = args.length >= 1 ? String(args[0]) : 'sudoku';
+      if (!Array.isArray(rawInput)) throw new Error("puzzle: グリッド（二次元配列）が必要です");
+
+      // フラット配列の場合は二次元に変換
+      let grid: number[][];
+      if (Array.isArray(rawInput[0])) {
+        grid = rawInput.map((row: any[]) => row.map((v: any) => typeof v === 'number' ? v : 0));
+      } else {
+        grid = parseGrid(rawInput.map((v: any) => typeof v === 'number' ? v : 0));
+      }
+
+      switch (puzzleType) {
+        case 'sudoku': return createSudokuSpace(grid);
+        case 'latin_square': case 'latin': return createLatinSquareSpace(grid);
+        default:
+          // カスタム — 行列制約のみ
+          return createLatinSquareSpace(grid);
+      }
+    }
+
+    // puzzle_generate — 数独問題の生成
+    if (cmdName === "puzzle_generate") {
+      const clues = typeof rawInput === 'number' ? rawInput : 30;
+      const seed = args.length >= 1 ? this.toNumber(args[0]) : undefined;
+      return generateSudoku(clues, seed);
+    }
+
+    // PuzzleSpace専用パイプコマンド
+    if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'PuzzleSpace') {
+      const ps = rawInput as PuzzleSpace;
+      switch (cmdName) {
+        case "propagate": case "拡散": {
+          const steps = args.length >= 1 ? this.toNumber(args[0]) : 1;
+          for (let i = 0; i < steps; i++) propagateStep(ps);
+          return ps;
+        }
+        case "solve": case "解": {
+          solvePuzzle(ps);
+          return ps;
+        }
+        case "grid": case "盤面": {
+          return getGrid(ps);
+        }
+        case "cell": case "セル": {
+          const row = args.length >= 1 ? this.toNumber(args[0]) : 0;
+          const col = args.length >= 2 ? this.toNumber(args[1]) : 0;
+          return cellAsMDim(ps, row, col);
+        }
+        case "candidates": case "候補": {
+          const row = args.length >= 1 ? this.toNumber(args[0]) : 0;
+          const col = args.length >= 2 ? this.toNumber(args[1]) : 0;
+          return getCandidates(ps, row, col);
+        }
+        case "sigma": {
+          return getPuzzleSigma(ps);
+        }
+        case "difficulty": case "難易度": {
+          return estimateDifficulty(ps);
+        }
+        case "format": case "表示": {
+          return formatSudoku(ps);
+        }
+        case "history": case "履歴": {
+          return ps.history;
+        }
+        case "solved": {
+          return ps.solved;
+        }
+        case "step": {
+          propagateStep(ps);
+          return ps;
+        }
+      }
     }
 
     // ═══════════════════════════════════════════
