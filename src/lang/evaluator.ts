@@ -685,6 +685,679 @@ function checkModeEquivalence(md: any, mode1: string, mode2: string): any {
 
 // --- Quad logic (v0.2.1) ---
 
+// ============================================================
+// Tier 5: C5(共鳴) & N3-N5(非数数学) & M4-M5(モード生成・完全性)
+//         U3-U5(階層再帰・架橋・完全性) & A2-A5(解変換・合成・評価・完全性)
+// ============================================================
+
+/**
+ * Tier 5 C5: 共鳴計算 — 2つの𝕄の構造的共鳴度を算出
+ * 覚醒した値同士が非局所的に影響し合う（仏教: 因陀羅網 Indra's Net）
+ */
+function computeResonance(a: any, b: any): any {
+  const aRaw = unwrapReiVal(a);
+  const bRaw = unwrapReiVal(b);
+
+  // 数値同士の共鳴: 差の逆数に基づく
+  const aNum = typeof aRaw === 'number' ? aRaw : (aRaw?.center ?? 0);
+  const bNum = typeof bRaw === 'number' ? bRaw : (bRaw?.center ?? 0);
+
+  // 構造的共鳴: 次元の一致度
+  const aDim = aRaw?.neighbors?.length ?? 0;
+  const bDim = bRaw?.neighbors?.length ?? 0;
+  const dimMatch = aDim === 0 && bDim === 0 ? 1 : 1 - Math.abs(aDim - bDim) / Math.max(aDim, bDim, 1);
+
+  // 値の近接度
+  const maxAbs = Math.max(Math.abs(aNum), Math.abs(bNum), 1);
+  const valueProximity = 1 - Math.abs(aNum - bNum) / maxAbs;
+
+  // 近傍パターンの類似度（余弦類似度）
+  let patternSimilarity = 0;
+  if (aDim > 0 && bDim > 0) {
+    const minLen = Math.min(aDim, bDim);
+    const aN = aRaw.neighbors.slice(0, minLen);
+    const bN = bRaw.neighbors.slice(0, minLen);
+    const dotProduct = aN.reduce((s: number, v: number, i: number) => s + v * bN[i], 0);
+    const normA = Math.sqrt(aN.reduce((s: number, v: number) => s + v * v, 0)) || 1;
+    const normB = Math.sqrt(bN.reduce((s: number, v: number) => s + v * v, 0)) || 1;
+    patternSimilarity = dotProduct / (normA * normB);
+  }
+
+  // 総合共鳴度: 3要素の加重平均
+  const strength = (dimMatch * 0.3 + Math.max(valueProximity, 0) * 0.3 + (patternSimilarity + 1) / 2 * 0.4);
+
+  return {
+    reiType: 'ResonanceResult',
+    strength: Math.max(0, Math.min(1, strength)),
+    dimMatch,
+    valueProximity: Math.max(0, valueProximity),
+    patternSimilarity,
+    resonates: strength >= 0.5,
+  };
+}
+
+/**
+ * Tier 5 C5: 共鳴場 — 値の共鳴メタデータを返す
+ */
+function getResonanceField(input: any, meta: SigmaMetadata): any {
+  const raw = unwrapReiVal(input);
+  const isAwakened = computeAwareness(input, meta) >= AWAKENING_THRESHOLD;
+  return {
+    reiType: 'ResonanceField',
+    awakened: isAwakened,
+    // 覚醒値はより広い共鳴場を持つ
+    range: isAwakened ? 'non-local' : 'local',
+    capacity: isAwakened ? 1.0 : 0.3,
+    signature: raw?.neighbors?.length ?? 0,
+  };
+}
+
+/**
+ * Tier 5 C5: 共鳴マップ — 配列内の全ペアの共鳴を算出
+ */
+function resonanceMap(input: any): any {
+  const raw = unwrapReiVal(input);
+  if (!Array.isArray(raw)) {
+    if (raw?.reiType === 'MDim') {
+      // 𝕄の中心と各近傍の共鳴
+      return raw.neighbors.map((n: number, i: number) => ({
+        pair: [raw.center, n],
+        index: i,
+        strength: 1 - Math.abs(raw.center - n) / Math.max(Math.abs(raw.center), Math.abs(n), 1),
+      }));
+    }
+    return [];
+  }
+  // 配列: 全ペアの共鳴
+  const results: any[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    for (let j = i + 1; j < raw.length; j++) {
+      const res = computeResonance(raw[i], raw[j]);
+      results.push({ pair: [i, j], ...res });
+    }
+  }
+  return results;
+}
+
+/**
+ * Tier 5 C5: 共鳴チェーン — 共鳴の連鎖を追跡
+ */
+function resonanceChain(input: any): any {
+  const raw = unwrapReiVal(input);
+  if (!raw || raw.reiType !== 'MDim') {
+    return { reiType: 'ResonanceChain', chain: [], depth: 0 };
+  }
+  // 中心→各近傍→近傍同士の共鳴連鎖
+  const chain: any[] = [];
+  const visited = new Set<number>();
+  function trace(value: number, depth: number) {
+    if (visited.has(value) || depth > 5) return;
+    visited.add(value);
+    chain.push({ value, depth });
+    for (const n of raw.neighbors) {
+      if (!visited.has(n)) {
+        const proximity = 1 - Math.abs(value - n) / Math.max(Math.abs(value), Math.abs(n), 1);
+        if (proximity > 0.3) trace(n, depth + 1);
+      }
+    }
+  }
+  trace(raw.center, 0);
+  return { reiType: 'ResonanceChain', chain, depth: chain.length };
+}
+
+/**
+ * Tier 5 N3: 型変換射影 — 𝕄を異なる構造型として再解釈
+ */
+function projectAs(input: any, targetType: string): any {
+  const raw = unwrapReiVal(input);
+
+  // まず𝕄に変換
+  let md: any;
+  if (raw?.reiType === 'MDim') {
+    md = raw;
+  } else if (Array.isArray(raw)) {
+    md = projectToMDim(raw, 'first', []);
+  } else if (typeof raw === 'number') {
+    const digits = String(Math.abs(Math.floor(raw))).split('').map(Number);
+    md = { reiType: 'MDim', center: digits[0], neighbors: digits.slice(1), mode: 'weighted' };
+  } else {
+    md = { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
+  }
+
+  switch (targetType) {
+    case 'graph': {
+      // グラフ構造: center=ハブ, neighbors=接続ノード, edges=ハブから各ノードへ
+      const edges = md.neighbors.map((n: number, i: number) => ({
+        from: md.center, to: n, weight: Math.abs(md.center - n),
+      }));
+      return {
+        reiType: 'GraphProjection',
+        hub: md.center,
+        nodes: [md.center, ...md.neighbors],
+        edges,
+        degree: md.neighbors.length,
+      };
+    }
+    case 'series': {
+      // 時系列: center=初期値, neighbors=時間ステップ
+      const series = [md.center, ...md.neighbors];
+      const deltas = [];
+      for (let i = 1; i < series.length; i++) deltas.push(series[i] - series[i - 1]);
+      return {
+        reiType: 'SeriesProjection',
+        values: series,
+        deltas,
+        trend: deltas.length > 0 ? (deltas.reduce((a: number, b: number) => a + b, 0) / deltas.length > 0 ? 'up' : 'down') : 'flat',
+        length: series.length,
+      };
+    }
+    case 'matrix': {
+      // 行列行: center=対角要素, neighbors=非対角要素
+      const size = md.neighbors.length + 1;
+      const row = [md.center, ...md.neighbors];
+      return {
+        reiType: 'MatrixProjection',
+        row,
+        size,
+        diagonal: md.center,
+        trace: md.center, // 1行分のtrace
+      };
+    }
+    case 'tree': {
+      // 木構造: center=root, neighbors=children
+      const children = md.neighbors.map((n: number, i: number) => ({
+        value: n, depth: 1, index: i, leaf: true,
+      }));
+      return {
+        reiType: 'TreeProjection',
+        root: md.center,
+        children,
+        height: md.neighbors.length > 0 ? 1 : 0,
+        leaves: md.neighbors.length,
+      };
+    }
+    default:
+      throw new Error(`未知の射影型: ${targetType}`);
+  }
+}
+
+/**
+ * Tier 5 N4: 射影合成 — 複数の射影を合成して新しい𝕄を生成
+ */
+function composeProjections(input: any): any {
+  const raw = unwrapReiVal(input);
+  if (!Array.isArray(raw)) {
+    if (raw?.reiType === 'MDim') {
+      // 𝕄の全射影を合成: 各射影のcompute結果を新しい近傍に
+      const allProj = projectAll(raw);
+      const values = allProj.map((p: any) => computeMDim(p));
+      const center = values.reduce((a: number, b: number) => a + b, 0) / values.length;
+      return { reiType: 'MDim', center, neighbors: values, mode: 'weighted' };
+    }
+    return raw;
+  }
+  // 配列の射影合成: 各射影の中心を新しい𝕄の近傍に
+  const projected = raw.map((item: any) => {
+    if (item?.reiType === 'MDim') return item;
+    return projectToMDim(typeof item === 'number' ? [item] : item, 'first', []);
+  });
+  const centers = projected.map((p: any) => p.center);
+  const avgCenter = centers.reduce((a: number, b: number) => a + b, 0) / centers.length;
+  return { reiType: 'MDim', center: avgCenter, neighbors: centers, mode: 'weighted' };
+}
+
+/**
+ * Tier 5 N5: 表現可能性判定 — 任意の値が𝕄として表現可能かを判定
+ */
+function checkRepresentable(input: any): any {
+  const raw = unwrapReiVal(input);
+  const result = { reiType: 'RepresentableResult', representable: true, reason: '', lossless: true };
+
+  if (raw === null || raw === undefined) {
+    result.representable = true;
+    result.reason = 'null → 𝕄{0;}';
+    result.lossless = true;
+  } else if (typeof raw === 'number') {
+    result.representable = true;
+    result.reason = 'number → 𝕄{n;}';
+    result.lossless = true;
+  } else if (typeof raw === 'string') {
+    result.representable = true;
+    result.reason = 'string → 𝕄{charCode(center); charCodes(rest)}';
+    result.lossless = true;
+  } else if (typeof raw === 'boolean') {
+    result.representable = true;
+    result.reason = 'boolean → 𝕄{0|1;}';
+    result.lossless = true;
+  } else if (Array.isArray(raw)) {
+    result.representable = true;
+    result.reason = `array[${raw.length}] → 𝕄{first; rest}`;
+    result.lossless = true;
+  } else if (raw?.reiType === 'MDim') {
+    result.representable = true;
+    result.reason = 'already 𝕄';
+    result.lossless = true;
+  } else if (raw?.reiType === 'Space') {
+    result.representable = true;
+    result.reason = 'Space → nested 𝕄 (U3 hierarchical)';
+    result.lossless = true;
+  } else if (raw?.reiType) {
+    result.representable = true;
+    result.reason = `${raw.reiType} → 𝕄 via structural projection`;
+    result.lossless = false; // 型情報の一部が失われる可能性
+  } else if (typeof raw === 'object') {
+    result.representable = true;
+    result.reason = 'object → 𝕄{keys; values}';
+    result.lossless = false;
+  } else {
+    result.representable = false;
+    result.reason = `unknown type: ${typeof raw}`;
+    result.lossless = false;
+  }
+  return result;
+}
+
+/**
+ * Tier 5 M4: モード導出 — 既存2モードの合成で新モードを生成
+ */
+function deriveMode(md: any, baseModes: string[], weights: number[]): any {
+  if (!md || md.reiType !== 'MDim') throw new Error('derive_mode: 𝕄型が必要です');
+  const results = baseModes.map(m => computeMDim({ ...md, mode: m }));
+  let derived = 0;
+  let totalWeight = 0;
+  for (let i = 0; i < results.length; i++) {
+    const w = weights[i] ?? 1;
+    derived += results[i] * w;
+    totalWeight += w;
+  }
+  derived = totalWeight > 0 ? derived / totalWeight : 0;
+  return {
+    reiType: 'DerivedModeResult',
+    value: derived,
+    baseModes,
+    weights,
+    formula: baseModes.map((m, i) => `${weights[i] ?? 1}×${m}`).join(' + '),
+  };
+}
+
+/**
+ * Tier 5 M5: モード空間 — 全モードの完全記述
+ */
+function getModeSpace(md: any): any {
+  if (!md || md.reiType !== 'MDim') {
+    return { reiType: 'ModeSpace', modes: ALL_COMPUTE_MODES.length, values: [], coverage: 0 };
+  }
+  const values = ALL_COMPUTE_MODES.map(mode => ({
+    mode,
+    value: computeMDim({ ...md, mode }),
+  }));
+  // モード間の距離行列
+  const distances: number[][] = [];
+  for (let i = 0; i < values.length; i++) {
+    distances[i] = [];
+    for (let j = 0; j < values.length; j++) {
+      distances[i][j] = Math.abs(values[i].value - values[j].value);
+    }
+  }
+  // 分散（多様性の指標）
+  const allVals = values.map(v => v.value);
+  const mean = allVals.reduce((a, b) => a + b, 0) / allVals.length;
+  const variance = allVals.reduce((a, v) => a + (v - mean) ** 2, 0) / allVals.length;
+  return {
+    reiType: 'ModeSpace',
+    modes: ALL_COMPUTE_MODES.length,
+    values,
+    variance,
+    diversity: Math.sqrt(variance),
+    coverage: 1.0, // 全モード利用可能
+  };
+}
+
+/**
+ * Tier 5 U3: ネスト深度の計測
+ */
+function measureDepth(input: any): number {
+  const raw = unwrapReiVal(input);
+  if (!raw || raw.reiType !== 'MDim') return 0;
+
+  let maxDepth = 0;
+  // centerが𝕄なら再帰
+  if (raw.center !== null && typeof raw.center === 'object' && raw.center.reiType === 'MDim') {
+    maxDepth = Math.max(maxDepth, 1 + measureDepth(raw.center));
+  }
+  // neighborsに𝕄があれば再帰
+  if (raw.neighbors) {
+    for (const n of raw.neighbors) {
+      if (n !== null && typeof n === 'object' && n.reiType === 'MDim') {
+        maxDepth = Math.max(maxDepth, 1 + measureDepth(n));
+      }
+    }
+  }
+  return maxDepth;
+}
+
+/**
+ * Tier 5 U3: ネスト化 — 𝕄を指定レベル分ネストする
+ */
+function nestMDim(input: any, levels: number = 1): any {
+  const raw = unwrapReiVal(input);
+  if (!raw || raw.reiType !== 'MDim') {
+    // 非𝕄はまず𝕄に変換
+    const md = { reiType: 'MDim', center: typeof raw === 'number' ? raw : 0, neighbors: [], mode: 'weighted' };
+    return levels <= 1 ? md : nestMDim(md, levels - 1);
+  }
+  if (levels <= 0) return raw;
+  // 現在の𝕄を新しい𝕄のcenterにラップ
+  const wrapped = {
+    reiType: 'MDim',
+    center: raw,
+    neighbors: [],
+    mode: 'weighted',
+  };
+  return levels <= 1 ? wrapped : nestMDim(wrapped, levels - 1);
+}
+
+/**
+ * Tier 5 U3: 再帰的計算 — ネストされた𝕄を底から上へ再帰的に計算
+ */
+function recursiveCompute(input: any): number {
+  const raw = unwrapReiVal(input);
+  if (typeof raw === 'number') return raw;
+  if (!raw || raw.reiType !== 'MDim') return 0;
+
+  // centerが𝕄なら再帰的に計算
+  const centerVal = (raw.center?.reiType === 'MDim')
+    ? recursiveCompute(raw.center)
+    : (typeof raw.center === 'number' ? raw.center : 0);
+
+  // neighborsも再帰的に計算
+  const neighborVals = (raw.neighbors || []).map((n: any) =>
+    (n?.reiType === 'MDim') ? recursiveCompute(n) : (typeof n === 'number' ? n : 0)
+  );
+
+  // フラット化した値でcomputeMDim
+  return computeMDim({
+    reiType: 'MDim',
+    center: centerVal,
+    neighbors: neighborVals,
+    mode: raw.mode || 'weighted',
+  });
+}
+
+/**
+ * Tier 5 U4: 構造的類似度 — 2つの𝕄の構造的類似性を算出
+ */
+function structuralSimilarity(a: any, b: any): any {
+  const aRaw = unwrapReiVal(a);
+  const bRaw = unwrapReiVal(b);
+
+  // 次元の一致度
+  const aDim = aRaw?.neighbors?.length ?? 0;
+  const bDim = bRaw?.neighbors?.length ?? 0;
+  const dimSim = aDim === 0 && bDim === 0 ? 1 : 1 - Math.abs(aDim - bDim) / Math.max(aDim, bDim, 1);
+
+  // 比率パターンの類似度
+  const aCenter = typeof aRaw === 'number' ? aRaw : (aRaw?.center ?? 0);
+  const bCenter = typeof bRaw === 'number' ? bRaw : (bRaw?.center ?? 0);
+  const aRatios = (aRaw?.neighbors ?? []).map((n: number) => aCenter !== 0 ? n / aCenter : n);
+  const bRatios = (bRaw?.neighbors ?? []).map((n: number) => bCenter !== 0 ? n / bCenter : n);
+
+  let ratioSim = 0;
+  if (aRatios.length > 0 && bRatios.length > 0) {
+    const minLen = Math.min(aRatios.length, bRatios.length);
+    let sumDiff = 0;
+    for (let i = 0; i < minLen; i++) {
+      sumDiff += Math.abs(aRatios[i] - bRatios[i]);
+    }
+    ratioSim = 1 / (1 + sumDiff / minLen);
+  } else if (aRatios.length === 0 && bRatios.length === 0) {
+    ratioSim = 1;
+  }
+
+  // モードの一致
+  const modeSim = (aRaw?.mode ?? 'weighted') === (bRaw?.mode ?? 'weighted') ? 1 : 0.5;
+
+  const similarity = dimSim * 0.4 + ratioSim * 0.4 + modeSim * 0.2;
+
+  return {
+    reiType: 'SimilarityResult',
+    similarity,
+    dimSimilarity: dimSim,
+    ratioSimilarity: ratioSim,
+    modeSimilarity: modeSim,
+    isomorphic: similarity > 0.9,
+  };
+}
+
+/**
+ * Tier 5 U4: 領域架橋 — 2つの𝕄間の構造的マッピングを生成
+ */
+function bridgeMDim(a: any, b: any): any {
+  const sim = structuralSimilarity(a, b);
+  const aRaw = unwrapReiVal(a);
+  const bRaw = unwrapReiVal(b);
+  const aCenter = typeof aRaw === 'number' ? aRaw : (aRaw?.center ?? 0);
+  const bCenter = typeof bRaw === 'number' ? bRaw : (bRaw?.center ?? 0);
+
+  // スケールファクターの計算
+  const scaleFactor = aCenter !== 0 ? bCenter / aCenter : 1;
+
+  return {
+    reiType: 'BridgeResult',
+    similarity: sim.similarity,
+    scaleFactor,
+    mapping: {
+      centerA: aCenter,
+      centerB: bCenter,
+      dimA: aRaw?.neighbors?.length ?? 0,
+      dimB: bRaw?.neighbors?.length ?? 0,
+    },
+    transferable: sim.similarity > 0.5,
+  };
+}
+
+/**
+ * Tier 5 U5: エンコード — 任意の値を𝕄に変換
+ */
+function encodeMDim(input: any): any {
+  const raw = unwrapReiVal(input);
+  if (raw?.reiType === 'MDim') return raw;
+  if (typeof raw === 'number') {
+    return { reiType: 'MDim', center: raw, neighbors: [], mode: 'weighted' };
+  }
+  if (typeof raw === 'string') {
+    const codes = Array.from(raw).map(c => c.charCodeAt(0));
+    if (codes.length === 0) return { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
+    return { reiType: 'MDim', center: codes[0], neighbors: codes.slice(1), mode: 'weighted' };
+  }
+  if (typeof raw === 'boolean') {
+    return { reiType: 'MDim', center: raw ? 1 : 0, neighbors: [], mode: 'weighted' };
+  }
+  if (raw === null || raw === undefined) {
+    return { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
+  }
+  if (Array.isArray(raw)) {
+    const nums = raw.map((v: any) => typeof v === 'number' ? v : 0);
+    return { reiType: 'MDim', center: nums[0] ?? 0, neighbors: nums.slice(1), mode: 'weighted' };
+  }
+  // オブジェクト型 — キー数をcenter, 値を近傍に
+  if (typeof raw === 'object') {
+    const values = Object.values(raw).filter(v => typeof v === 'number') as number[];
+    return { reiType: 'MDim', center: values[0] ?? 0, neighbors: values.slice(1), mode: 'weighted' };
+  }
+  return { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
+}
+
+/**
+ * Tier 5 U5: デコード — 𝕄を指定型に変換
+ */
+function decodeMDim(input: any, targetType: string): any {
+  const raw = unwrapReiVal(input);
+  const md = raw?.reiType === 'MDim' ? raw : encodeMDim(raw);
+
+  switch (targetType) {
+    case 'number':
+      return computeMDim(md);
+    case 'array':
+      return [md.center, ...md.neighbors];
+    case 'string':
+      return String.fromCharCode(md.center, ...md.neighbors);
+    case 'object':
+      const obj: any = { center: md.center };
+      md.neighbors.forEach((n: number, i: number) => { obj[`n${i}`] = n; });
+      return obj;
+    default:
+      return [md.center, ...md.neighbors];
+  }
+}
+
+/**
+ * Tier 5 A2: 解変換 — compute_allの結果に変換を適用
+ */
+function mapSolutions(md: any, transformName: string, param: number = 1): any {
+  const solutions = computeAll(md);
+  return solutions.map((sol: any) => {
+    let transformed: number;
+    switch (transformName) {
+      case 'scale': transformed = sol.value * param; break;
+      case 'shift': transformed = sol.value + param; break;
+      case 'normalize': {
+        const maxVal = Math.max(...solutions.map((s: any) => Math.abs(s.value)), 1);
+        transformed = sol.value / maxVal;
+        break;
+      }
+      case 'rank_normalize': {
+        const sorted = [...solutions].sort((a: any, b: any) => a.value - b.value);
+        const rank = sorted.findIndex((s: any) => s.mode === sol.mode);
+        transformed = (rank + 1) / solutions.length;
+        break;
+      }
+      default: transformed = sol.value;
+    }
+    return { ...sol, original: sol.value, value: transformed, transform: transformName };
+  });
+}
+
+/**
+ * Tier 5 A3: 合意形成 — 全モードの結果からコンセンサスを算出
+ */
+function computeConsensus(md: any): any {
+  const solutions = computeAll(md);
+  const values = solutions.map((s: any) => s.value);
+
+  // 中央値（ロバストなコンセンサス）
+  const sorted = [...values].sort((a: number, b: number) => a - b);
+  const median = sorted.length % 2 === 0
+    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+    : sorted[Math.floor(sorted.length / 2)];
+
+  // 平均
+  const mean = values.reduce((a: number, b: number) => a + b, 0) / values.length;
+
+  // 標準偏差（合意の度合い）
+  const variance = values.reduce((a: number, v: number) => a + (v - mean) ** 2, 0) / values.length;
+  const stddev = Math.sqrt(variance);
+
+  // 合意度: 標準偏差が小さいほど高い
+  const agreement = 1 / (1 + stddev / (Math.abs(mean) || 1));
+
+  return {
+    reiType: 'ConsensusResult',
+    median,
+    mean,
+    stddev,
+    agreement,
+    solutions: solutions.length,
+    range: { min: sorted[0], max: sorted[sorted.length - 1] },
+  };
+}
+
+/**
+ * Tier 5 A4: 最良解選択 — 指定基準で最良の解を選択
+ */
+function selectBest(md: any, criteria: string = 'median_closest'): any {
+  const solutions = computeAll(md);
+  const values = solutions.map((s: any) => s.value);
+
+  switch (criteria) {
+    case 'max':
+      return solutions.reduce((best: any, s: any) => s.value > best.value ? s : best);
+    case 'min':
+      return solutions.reduce((best: any, s: any) => s.value < best.value ? s : best);
+    case 'median_closest':
+    default: {
+      const sorted = [...values].sort((a: number, b: number) => a - b);
+      const median = sorted.length % 2 === 0
+        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+        : sorted[Math.floor(sorted.length / 2)];
+      return solutions.reduce((best: any, s: any) =>
+        Math.abs(s.value - median) < Math.abs(best.value - median) ? s : best
+      );
+    }
+  }
+}
+
+/**
+ * Tier 5 A4: 解のランキング
+ */
+function rankSolutions(md: any, criteria: string = 'value'): any {
+  const solutions = computeAll(md);
+  const sorted = [...solutions].sort((a: any, b: any) => {
+    switch (criteria) {
+      case 'value': return b.value - a.value; // 降順
+      case 'abs': return Math.abs(b.value) - Math.abs(a.value);
+      default: return b.value - a.value;
+    }
+  });
+  return sorted.map((s: any, i: number) => ({ ...s, rank: i + 1 }));
+}
+
+/**
+ * Tier 5 A5: 解の完全性 — 解空間の網羅度を評価
+ */
+function solutionCompleteness(md: any): any {
+  const solutions = computeAll(md);
+  const values = solutions.map((s: any) => s.value);
+
+  // ユニーク値の比率
+  const uniqueValues = new Set(values.map((v: number) => Math.round(v * 1e6) / 1e6));
+  const uniqueRatio = uniqueValues.size / values.length;
+
+  // レンジカバレッジ
+  const sorted = [...values].sort((a: number, b: number) => a - b);
+  const range = sorted[sorted.length - 1] - sorted[0];
+
+  // 分布の均一性（エントロピーベース）
+  const bins = 4;
+  const binWidth = range / bins || 1;
+  const histogram = new Array(bins).fill(0);
+  for (const v of values) {
+    const bin = Math.min(Math.floor((v - sorted[0]) / binWidth), bins - 1);
+    histogram[bin]++;
+  }
+  const total = values.length;
+  let entropy = 0;
+  for (const count of histogram) {
+    if (count > 0) {
+      const p = count / total;
+      entropy -= p * Math.log2(p);
+    }
+  }
+  const maxEntropy = Math.log2(bins);
+  const uniformity = maxEntropy > 0 ? entropy / maxEntropy : 1;
+
+  return {
+    reiType: 'CompletenessResult',
+    totalModes: solutions.length,
+    uniqueSolutions: uniqueValues.size,
+    uniqueRatio,
+    range,
+    uniformity,
+    completeness: (uniqueRatio * 0.5 + uniformity * 0.5),
+    isComplete: uniqueRatio > 0.5 && uniformity > 0.3,
+  };
+}
+
 function quadNot(v: string): string {
   switch (v) {
     case "top": return "bottom";
@@ -1170,6 +1843,145 @@ export class Evaluator {
       const m1 = args.length >= 1 ? String(args[0]) : "weighted";
       const m2 = args.length >= 2 ? String(args[1]) : "geometric";
       return checkModeEquivalence(rawInput, m1, m2);
+    }
+
+    // ═══════════════════════════════════════════
+    // Tier 5: C5(共鳴) & N3-N5 & M4-M5 & U3-U5 & A2-A5
+    // ═══════════════════════════════════════════
+
+    // C5: 共鳴
+    if (cmdName === "resonate") {
+      // C5: 2つの値の共鳴を算出
+      if (args.length < 1) throw new Error("resonate: 比較対象が必要です");
+      return computeResonance(rawInput, args[0]);
+    }
+    if (cmdName === "resonance_field") {
+      // C5: 共鳴場の取得
+      return getResonanceField(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "resonance_map") {
+      // C5: 共鳴マップ（全ペアの共鳴）
+      return resonanceMap(rawInput);
+    }
+    if (cmdName === "resonance_chain") {
+      // C5: 共鳴チェーン
+      return resonanceChain(rawInput);
+    }
+
+    // N3: 型変換射影
+    if (cmdName === "project_as") {
+      const targetType = args.length >= 1 ? String(args[0]) : 'graph';
+      return projectAs(rawInput, targetType);
+    }
+
+    // N4: 射影合成
+    if (cmdName === "compose_projections") {
+      return composeProjections(rawInput);
+    }
+
+    // N5: 表現可能性判定
+    if (cmdName === "representable") {
+      return checkRepresentable(rawInput);
+    }
+
+    // M4: モード導出
+    if (cmdName === "derive_mode") {
+      if (!this.isMDim(rawInput)) throw new Error("derive_mode: 𝕄型が必要です");
+      const modes = args.filter((a: any) => typeof a === 'string');
+      const weights = args.filter((a: any) => typeof a === 'number');
+      if (modes.length === 0) modes.push('weighted', 'geometric');
+      if (weights.length === 0) weights.push(0.5, 0.5);
+      return deriveMode(rawInput, modes, weights);
+    }
+
+    // M5: モード空間
+    if (cmdName === "mode_space") {
+      return getModeSpace(rawInput);
+    }
+
+    // U3: 階層再帰
+    if (cmdName === "depth") {
+      return measureDepth(rawInput);
+    }
+    if (cmdName === "nest") {
+      const levels = args.length >= 1 ? this.toNumber(args[0]) : 1;
+      return nestMDim(rawInput, levels);
+    }
+    if (cmdName === "recursive_compute") {
+      return recursiveCompute(rawInput);
+    }
+
+    // U4: 領域架橋
+    if (cmdName === "bridge") {
+      if (args.length < 1) throw new Error("bridge: 比較対象が必要です");
+      return bridgeMDim(rawInput, args[0]);
+    }
+    if (cmdName === "structural_similarity") {
+      if (args.length < 1) throw new Error("structural_similarity: 比較対象が必要です");
+      return structuralSimilarity(rawInput, args[0]);
+    }
+
+    // U5: 完全性
+    if (cmdName === "encode") {
+      return encodeMDim(rawInput);
+    }
+    if (cmdName === "decode") {
+      const targetType = args.length >= 1 ? String(args[0]) : 'array';
+      return decodeMDim(rawInput, targetType);
+    }
+
+    // A2: 解変換
+    if (cmdName === "map_solutions") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          const projected = projectToMDim(rawInput, 'first', []);
+          return mapSolutions(projected, args.length >= 1 ? String(args[0]) : 'scale', args.length >= 2 ? this.toNumber(args[1]) : 1);
+        }
+        throw new Error("map_solutions: 𝕄型または配列が必要です");
+      }
+      return mapSolutions(rawInput, args.length >= 1 ? String(args[0]) : 'scale', args.length >= 2 ? this.toNumber(args[1]) : 1);
+    }
+
+    // A3: 合意形成
+    if (cmdName === "consensus") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return computeConsensus(projectToMDim(rawInput, 'first', []));
+        }
+        throw new Error("consensus: 𝕄型または配列が必要です");
+      }
+      return computeConsensus(rawInput);
+    }
+
+    // A4: 最良解・ランキング
+    if (cmdName === "best") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return selectBest(projectToMDim(rawInput, 'first', []), args.length >= 1 ? String(args[0]) : 'median_closest');
+        }
+        throw new Error("best: 𝕄型または配列が必要です");
+      }
+      return selectBest(rawInput, args.length >= 1 ? String(args[0]) : 'median_closest');
+    }
+    if (cmdName === "rank") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return rankSolutions(projectToMDim(rawInput, 'first', []), args.length >= 1 ? String(args[0]) : 'value');
+        }
+        throw new Error("rank: 𝕄型または配列が必要です");
+      }
+      return rankSolutions(rawInput, args.length >= 1 ? String(args[0]) : 'value');
+    }
+
+    // A5: 解の完全性
+    if (cmdName === "solution_completeness") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return solutionCompleteness(projectToMDim(rawInput, 'first', []));
+        }
+        throw new Error("solution_completeness: 𝕄型または配列が必要です");
+      }
+      return solutionCompleteness(rawInput);
     }
 
     // ═══════════════════════════════════════════
