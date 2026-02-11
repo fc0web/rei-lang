@@ -278,11 +278,25 @@ function parseExtLit(raw: string) {
 
 // --- MDim computation (v0.2.1 original) ---
 
+// ═══════════════════════════════════════════
+// Tier 2: 利用可能な全計算モード一覧（M1: 計算多元性公理）
+// ═══════════════════════════════════════════
+const ALL_COMPUTE_MODES = [
+  "weighted", "multiplicative", "harmonic", "exponential",
+  "geometric", "median", "minkowski", "entropy",
+] as const;
+
 function computeMDim(md: any): number {
   const { center, neighbors, mode } = md;
   const weights = md.weights ?? neighbors.map(() => 1);
   const n = neighbors.length;
   if (n === 0) return center;
+
+  // Tier 2 M3: blend モード — blend(weighted:0.7,geometric:0.3)
+  if (typeof mode === 'string' && mode.startsWith('blend(')) {
+    return computeBlend(md, mode);
+  }
+
   switch (mode) {
     case "weighted": {
       const wSum = weights.reduce((a: number, b: number) => a + b, 0);
@@ -301,8 +315,102 @@ function computeMDim(md: any): number {
       const expSum = neighbors.reduce((s: number, v: number) => s + Math.exp(v), 0);
       return center * (expSum / n);
     }
+    // ── Tier 2 M1: 新計算モード ──
+    case "geometric": {
+      // 幾何平均: center × (Π|neighbors|)^(1/n)
+      const prod = neighbors.reduce((p: number, v: number) => p * Math.abs(v || 1), 1);
+      return center * Math.pow(prod, 1 / n);
+    }
+    case "median": {
+      // 中央値: center + median(neighbors)
+      const sorted = [...neighbors].sort((a: number, b: number) => a - b);
+      const mid = Math.floor(n / 2);
+      const med = n % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      return center + med;
+    }
+    case "minkowski": {
+      // ミンコフスキー距離（p=2, ユークリッド距離）: center + sqrt(Σ(neighbors²)/n)
+      const p = md.minkowskiP ?? 2;
+      const sumP = neighbors.reduce((s: number, v: number) => s + Math.pow(Math.abs(v), p), 0);
+      return center + Math.pow(sumP / n, 1 / p);
+    }
+    case "entropy": {
+      // 情報エントロピー: center × (1 + H(neighbors))
+      const total = neighbors.reduce((s: number, v: number) => s + Math.abs(v), 0) || 1;
+      const probs = neighbors.map((v: number) => Math.abs(v) / total);
+      const H = -probs.reduce((s: number, p: number) => s + (p > 0 ? p * Math.log2(p) : 0), 0);
+      return center * (1 + H);
+    }
     default: return center;
   }
+}
+
+/** Tier 2 M3: モード合成 — blend(weighted:0.7,geometric:0.3) */
+function computeBlend(md: any, blendSpec: string): number {
+  // Parse: "blend(weighted:0.7,geometric:0.3)"
+  const inner = blendSpec.slice(6, -1); // remove "blend(" and ")"
+  const parts = inner.split(',').map(s => s.trim());
+  let totalWeight = 0;
+  let blendedResult = 0;
+
+  for (const part of parts) {
+    const [modeName, weightStr] = part.split(':').map(s => s.trim());
+    const w = parseFloat(weightStr) || 0;
+    const result = computeMDim({ ...md, mode: modeName });
+    blendedResult += w * result;
+    totalWeight += w;
+  }
+
+  return totalWeight > 0 ? blendedResult / totalWeight : md.center;
+}
+
+/** Tier 2 N1: 配列・文字列・数値を𝕄に射影する */
+function projectToMDim(input: any, centerSpec: string | number | null, args: any[]): any {
+  let elements: any[];
+
+  // 入力を要素配列に変換
+  if (Array.isArray(input)) {
+    elements = [...input];
+  } else if (typeof input === 'string') {
+    // 文字列 → 文字コード配列
+    elements = Array.from(input).map(c => c.charCodeAt(0));
+  } else if (typeof input === 'number') {
+    // 数値 → 桁の配列
+    const digits = Math.abs(input).toString().split('').map(Number);
+    elements = digits;
+  } else if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
+    // MDimの再射影（N2: reproject）
+    elements = [input.center, ...input.neighbors];
+  } else {
+    return { reiType: "MDim", center: input ?? 0, neighbors: [], mode: "weighted" };
+  }
+
+  if (elements.length === 0) {
+    return { reiType: "MDim", center: 0, neighbors: [], mode: "weighted" };
+  }
+
+  // 中心の選択
+  let centerIndex = 0;
+  if (centerSpec === ':max' || centerSpec === 'max') {
+    centerIndex = elements.indexOf(Math.max(...elements.map(Number)));
+  } else if (centerSpec === ':min' || centerSpec === 'min') {
+    centerIndex = elements.indexOf(Math.min(...elements.map(Number)));
+  } else if (centerSpec === ':first' || centerSpec === 'first') {
+    centerIndex = 0;
+  } else if (centerSpec === ':last' || centerSpec === 'last') {
+    centerIndex = elements.length - 1;
+  } else if (centerSpec === ':middle' || centerSpec === 'middle') {
+    centerIndex = Math.floor(elements.length / 2);
+  } else if (typeof centerSpec === 'number') {
+    // 具体的な値で指定 → その値を持つ要素を中心にする
+    const idx = elements.indexOf(centerSpec);
+    centerIndex = idx >= 0 ? idx : 0;
+  }
+
+  const center = elements[centerIndex];
+  const neighbors = elements.filter((_: any, i: number) => i !== centerIndex);
+
+  return { reiType: "MDim", center, neighbors, mode: "weighted" };
 }
 
 // --- Quad logic (v0.2.1) ---
@@ -683,6 +791,46 @@ export class Evaluator {
         case "field": return rawInput.field;
         case "relation": return rawInput.relation ?? [];
       }
+    }
+
+    // ═══════════════════════════════════════════
+    // Tier 2: project（N1 射影公理）/ reproject（N2 複数射影）
+    // ═══════════════════════════════════════════
+    if (cmdName === "project") {
+      const centerSpec = args.length > 0 ? args[0] : ':first';
+      return projectToMDim(rawInput, centerSpec, args);
+    }
+    if (cmdName === "reproject") {
+      if (this.isMDim(rawInput) && args.length > 0) {
+        const newCenter = args[0];
+        const allElements = [rawInput.center, ...rawInput.neighbors];
+        const idx = typeof newCenter === 'number'
+          ? allElements.indexOf(newCenter)
+          : 0;
+        if (idx < 0) throw new Error(`reproject: 中心値 ${newCenter} が見つかりません`);
+        const center = allElements[idx];
+        const neighbors = allElements.filter((_: any, i: number) => i !== idx);
+        return { reiType: "MDim", center, neighbors, mode: rawInput.mode };
+      }
+      // 非MDimの場合はprojectにフォールバック
+      return projectToMDim(rawInput, args[0] ?? ':first', args);
+    }
+    if (cmdName === "modes") {
+      return [...ALL_COMPUTE_MODES];
+    }
+    if (cmdName === "blend") {
+      // blend("weighted", 0.7, "geometric", 0.3) — モード合成（M3: モード合成公理）
+      if (!this.isMDim(rawInput)) throw new Error("blend: 𝕄型の値が必要です");
+      let blendedResult = 0;
+      let totalWeight = 0;
+      for (let i = 0; i < args.length - 1; i += 2) {
+        const modeName = String(args[i]);
+        const w = typeof args[i + 1] === 'number' ? args[i + 1] : 0;
+        const result = computeMDim({ ...rawInput, mode: modeName });
+        blendedResult += w * result;
+        totalWeight += w;
+      }
+      return totalWeight > 0 ? blendedResult / totalWeight : computeMDim(rawInput);
     }
 
     // ═══════════════════════════════════════════
