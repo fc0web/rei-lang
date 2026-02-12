@@ -2,9 +2,10 @@
 // Kanji/Japanese 𝕄 Tests — 柱② 漢字/日本語の𝕄表現
 // ============================================================
 
-import { Lexer } from './lexer';
-import { Parser } from './parser';
-import { Evaluator } from './evaluator';
+import { describe, it, expect } from 'vitest';
+import { Lexer } from '../src/lang/lexer';
+import { Parser } from '../src/lang/parser';
+import { Evaluator } from '../src/lang/evaluator';
 
 function run(code: string): any {
   const tokens = new Lexer(code).tokenize();
@@ -35,6 +36,9 @@ function assert(condition: boolean, msg: string = '') {
 // ═══════════════════════════════════════════
 // Group 1: 𝕄リテラルでの文字列𝕄（StringMDim自動検出）
 // ═══════════════════════════════════════════
+
+describe('柱② 漢字/日本語の𝕄表現', () => {
+  it('all kanji tests', () => {
 console.log('\n📦 Group 1: 文字列𝕄リテラル');
 
 test('𝕄{"休"; "人", "木"} creates StringMDim', () => {
@@ -410,4 +414,6 @@ if (failures.length > 0) {
   failures.forEach(f => console.log(`  ❌ ${f}`));
 }
 console.log(`${'═'.repeat(50)}`);
-process.exit(failed > 0 ? 1 : 0);
+if (failed > 0) { throw new Error(`${failed} kanji tests failed`); }
+  });
+});

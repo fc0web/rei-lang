@@ -1,45 +1,41 @@
-// ============================================================
-// Rei v0.3 — D-FUMT Computational Language
-// Space-Layer-Diffusion Model (場-層-拡散計算モデル)
-// Author: Nobuki Fujimoto
-// ============================================================
-
-import { Lexer, TokenType, type Token } from './lang/lexer';
+import { Lexer } from './lang/lexer';
 import { Parser } from './lang/parser';
-import { Evaluator, Environment } from './lang/evaluator';
+import { Evaluator } from './lang/evaluator';
 
-// Re-export everything
-export { Lexer, Parser, Evaluator, Environment, TokenType };
-export type { Token };
+export { Lexer } from './lang/lexer';
+export { Parser } from './lang/parser';
+export { Evaluator } from './lang/evaluator';
 
-// --- Convenience API ---
+function unwrapReiVal(v: any): any {
+  if (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') {
+    return v.value;
+  }
+  // Strip __sigma__ from arrays
+  if (Array.isArray(v) && (v as any).__sigma__) {
+    const clean = [...v];
+    return clean;
+  }
+  return v;
+}
 
+// Stateful rei interface
 let _evaluator = new Evaluator();
 
-export function rei(code: string): any {
-  const lexer = new Lexer(code);
+function reiFn(source: string): any {
+  const lexer = new Lexer(source);
   const tokens = lexer.tokenize();
   const parser = new Parser(tokens);
   const ast = parser.parseProgram();
-  return _evaluator.eval(ast);
+  const result = _evaluator.eval(ast);
+  return unwrapReiVal(result);
 }
 
-rei.reset = function reset() {
+reiFn.reset = function () {
   _evaluator = new Evaluator();
 };
 
-rei.evaluator = function evaluator() {
+reiFn.evaluator = function () {
   return _evaluator;
 };
 
-rei.parse = function parse(code: string) {
-  const lexer = new Lexer(code);
-  const tokens = lexer.tokenize();
-  const parser = new Parser(tokens);
-  return parser.parseProgram();
-};
-
-rei.tokenize = function tokenize(code: string) {
-  const lexer = new Lexer(code);
-  return lexer.tokenize();
-};
+export const rei = reiFn;

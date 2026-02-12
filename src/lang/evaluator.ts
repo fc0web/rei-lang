@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Rei v0.3 Evaluator — Integrated with Space-Layer-Diffusion
 // Original: v0.2.1 by Nobuki Fujimoto
 // Extended: v0.3 Space-Layer-Diffusion (collaborative design)
@@ -251,7 +251,7 @@ export class Environment {
     return false;
   }
 
-  getBinding(name: string) {
+  getBinding(name: string): any {
     const b = this.bindings.get(name);
     if (b) return b;
     if (this.parent) return this.parent.getBinding(name);

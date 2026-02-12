@@ -3,6 +3,7 @@
 // Tests the core engine independently of the parser
 // ============================================================
 
+import { describe, it, expect } from 'vitest';
 import {
   createSpace,
   createDNode,
@@ -47,6 +48,9 @@ function section(name: string) {
 
 // ============ Tests ============
 
+
+describe('Space-Layer-Diffusion', () => {
+  it('all space tests', () => {
 section('1. DNode 生成と基本計算');
 
 {
@@ -413,5 +417,7 @@ console.log(`  結果: ${passed} passed, ${failed} failed, ${passed + failed} to
 console.log('════════════════════════════════════');
 
 if (failed > 0) {
-  process.exit(1);
+  throw new Error(`${failed} space tests failed`);
 }
+  });
+});
