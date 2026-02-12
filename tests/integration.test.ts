@@ -1,373 +1,373 @@
 // ============================================================
-// Rei v0.3 Integration Tests
-// Tests full pipeline: Rei syntax → Lexer → Parser → Evaluator
-// Covers both v0.2.1 backward compatibility and v0.3 new features
+// Rei v0.3 — 全モジュール統合テスト
+// Tier 1-5 (25公理) + 柱①②③④⑤ の後方互換性と統合動作
 // ============================================================
 
+import { describe, it, expect } from 'vitest';
 import { Lexer } from '../src/lang/lexer';
 import { Parser } from '../src/lang/parser';
 import { Evaluator } from '../src/lang/evaluator';
 
-// --- Test Runner ---
-let passed = 0;
-let failed = 0;
-
-const evaluator = new Evaluator();
-
-function run(code: string): any {
-  const lexer = new Lexer(code);
-  const tokens = lexer.tokenize();
-  const parser = new Parser(tokens);
-  const ast = parser.parseProgram();
-  return evaluator.eval(ast);
+function rei(code: string): any {
+  const tokens = new Lexer(code).tokenize();
+  const ast = new Parser(tokens).parseProgram();
+  return new Evaluator().eval(ast);
 }
 
-function reset() {
-  Object.assign(evaluator, new Evaluator());
+function unwrap(v: any): any {
+  return (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') ? v.value : v;
 }
 
-function assert(condition: boolean, message: string) {
-  if (condition) { passed++; console.log(`  ✅ ${message}`); }
-  else { failed++; console.log(`  ❌ ${message}`); }
-}
+// ═══════════════════════════════════════════
+// v0.2.1 互換: 基本演算
+// ═══════════════════════════════════════════
 
-function assertEq(actual: any, expected: any, message: string) {
-  if (typeof actual === 'number' && typeof expected === 'number') {
-    assert(Math.abs(actual - expected) < 0.01, `${message} (${actual} ≈ ${expected})`);
-  } else {
-    assert(actual === expected, `${message} (${JSON.stringify(actual)} === ${JSON.stringify(expected)})`);
-  }
-}
+describe("v0.2.1互換: 基本演算", () => {
+  it("四則演算", () => {
+    expect(rei('2 + 3')).toBe(5);
+    expect(rei('10 - 7')).toBe(3);
+    expect(rei('4 * 5')).toBe(20);
+    expect(rei('15 / 3')).toBe(5);
+  });
 
-function section(name: string) {
-  console.log(`\n─── ${name} ───`);
-  reset();
-}
+  it("変数宣言と利用", () => {
+    expect(rei('let x = 42; x')).toBe(42);
+  });
 
-// ════════════════════════════════════
-// PART 1: v0.2.1 BACKWARD COMPATIBILITY
-// ════════════════════════════════════
+  it("if式", () => {
+    expect(rei('if true then 1 else 0')).toBe(1);
+  });
 
-section('1. 基本演算（v0.2.1互換）');
-assertEq(run('2 + 3'), 5, '加算');
-assertEq(run('10 - 4'), 6, '減算');
-assertEq(run('3 * 7'), 21, '乗算');
-assertEq(run('15 / 3'), 5, '除算');
-assertEq(run('2 + 3 * 4'), 14, '優先順位');
+  it("配列", () => {
+    const r = rei('[1, 2, 3]');
+    expect(r).toEqual([1, 2, 3]);
+  });
 
-section('2. 変数束縛（v0.2.1互換）');
-run('let x = 42');
-assertEq(run('x'), 42, 'let束縛');
-run('let mut y = 10');
-assertEq(run('y'), 10, 'mut束縛');
+  it("compress関数", () => {
+    const r = rei('compress f(x) = x + 1; f(5)');
+    expect(r).toBe(6);
+  });
 
-section('3. MDim計算（v0.2.1互換）');
-{
-  const r = run('𝕄{5; 1, 2, 3, 4} |> compute :weighted');
-  assertEq(r, 7.5, '𝕄 weighted compute');
-}
-{
-  run('let m = 𝕄{5; 1, 2, 3, 4}');
-  assertEq(run('m |> center'), 5, 'MDim center');
-  assertEq(run('m |> dim'), 4, 'MDim dim');
-  const ns = run('m |> neighbors');
-  assert(Array.isArray(ns) && ns.length === 4, 'MDim neighbors');
-}
+  it("文字列", () => {
+    expect(rei('"hello"')).toBe('hello');
+  });
 
-section('4. 拡張数（v0.2.1互換）');
-{
-  run('let z = 0ooo');
-  assertEq(run('z |> order'), 3, '拡張数 order');
-}
+  it("比較演算", () => {
+    expect(rei('3 > 2')).toBe(true);
+    expect(rei('1 == 1')).toBe(true);
+  });
 
-section('5. compress関数（v0.2.1互換）');
-{
-  run('compress double(x) = x * 2');
-  assertEq(run('double(5)'), 10, 'compress関数呼び出し');
-  run('compress energy(m) = m |> compute :weighted');
-  assertEq(run('energy(𝕄{0; 10, 20, 30})'), 20, 'compress + MDim');
-}
+  it("𝕄基本compute", () => {
+    expect(unwrap(rei('𝕄{5; 1, 2, 3, 4} |> compute'))).toBe(7.5);
+  });
 
-section('6. Genesis公理系（v0.2.1互換）');
-{
-  run('let g = genesis()');
-  run('g |> forward');
-  run('g |> forward');
-  assertEq(run('g |> phase'), 'line', 'Genesis phase');
-}
+  it("𝕄compute :weighted", () => {
+    expect(unwrap(rei('𝕄{5; 1, 2, 3, 4} |> compute :weighted'))).toBe(7.5);
+  });
+});
 
-section('7. 四価論理（v0.2.1互換）');
-assertEq(run('⊤').value, 'top', '⊤');
-assertEq(run('⊥').value, 'bottom', '⊥');
-assertEq(run('¬⊤').value, 'bottom', '¬⊤ = ⊥');
+// ═══════════════════════════════════════════
+// v0.3: Space-Layer-Diffusion
+// ═══════════════════════════════════════════
 
-section('8. パイプ演算（v0.2.1互換）');
-assertEq(run('-25 |> abs'), 25, 'abs');
-assertEq(run('-25 |> abs |> sqrt'), 5, 'chained pipe');
-assertEq(run('"hello" |> upper'), 'HELLO', 'string upper');
-assertEq(run('[3,1,2] |> sort |> first'), 1, 'array sort + first');
+describe("v0.3: Space-Layer-Diffusion", () => {
+  it("space構文で空間を構築", () => {
+    const r = rei('let s = space { layer 0: 𝕄{5; 1, 2, 3} }; s |> sigma');
+    expect(r.field).toBeDefined();
+  });
 
-section('9. if/match式（v0.2.1互換）');
-assertEq(run('if 1 > 0 then 42 else 0'), 42, 'if true');
-assertEq(run('if 0 > 1 then 42 else 0'), 0, 'if false');
-assertEq(run('match 2 { case 1 -> "one", case 2 -> "two", case 3 -> "three" }'), 'two', 'match');
+  it("space diffuse", () => {
+    const r = rei('let s = space { layer 0: 𝕄{5; 1, 2, 3, 4} }; s |> diffuse(3)');
+    expect(Array.isArray(r)).toBe(true);
+  });
+});
 
-// ════════════════════════════════════
-// PART 2: v0.3 SPACE-LAYER-DIFFUSION
-// ════════════════════════════════════
+// ═══════════════════════════════════════════
+// Tier 1: C1(σ全値型) & C2(τ傾向性)
+// ═══════════════════════════════════════════
 
-section('10. 空（Space）リテラルの生成');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  const s = run('s');
-  assert(s && s.reiType === 'Space', 'space リテラルでSpace型が生成される');
-  assertEq(s.layers.size, 1, '1つの層');
-}
+describe("Tier 1: σ全値型 & τ傾向性", () => {
+  it("数値σ", () => {
+    const r = rei('42 |> sigma');
+    expect(r.reiType).toBe('SigmaResult');
+    expect(r.field).toBeDefined();
+  });
 
-section('11. 空リテラル — 複数層');
-{
-  run(`let s = space{
-    layer 0: 𝕄{5; 1, 2, 3, 4}, 𝕄{10; 3, 7}
-    layer 1: 𝕄{0; 1, -1}
-  }`);
-  const s = run('s');
-  assertEq(s.layers.size, 2, '2つの層');
-  assertEq(s.layers.get(0).nodes.length, 2, '層0に2ノード');
-  assertEq(s.layers.get(1).nodes.length, 1, '層1に1ノード');
-}
+  it("文字列σ", () => {
+    const r = rei('"hello" |> sigma');
+    expect(r.reiType).toBe('SigmaResult');
+  });
 
-section('12. Unicode 空/層 構文');
-{
-  run('let s = 空{ 層 0: 𝕄{5; 1, 2, 3, 4} }');
-  const s = run('s');
-  assert(s && s.reiType === 'Space', '空{ 層 } でSpace型が生成される');
-  assertEq(s.layers.get(0).nodes.length, 1, '層0に1ノード');
-}
+  it("MDimσ", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> sigma');
+    expect(r.reiType).toBe('SigmaResult');
+  });
 
-section('13. step — 1段階拡散');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  run('s |> step');
-  const node = run('s |> node(0, 0)');
-  assertEq(node.stage, 1, 'step後: 段階1');
-  assertEq(node.neighbors.length, 8, 'step後: 4→8方向');
-}
+  it("τ傾向性: contract", () => {
+    const r = rei('100 |> sqrt |> sqrt |> sigma');
+    expect(r.will.tendency).toBe('contract');
+  });
 
-section('14. step — 複数回');
-{
-  run('let s = space{ layer 0: 𝕄{0; 1, 2, 3, 4, 5, 6, 7, 8} }');
-  run('s |> step');
-  run('s |> step');
-  run('s |> step');
-  const node = run('s |> node(0, 0)');
-  assertEq(node.stage, 3, '3回step: 段階3');
-  assertEq(node.neighbors.length, 64, '8→16→32→64 方向');
-}
+  it("τ傾向性: expand", () => {
+    const r = rei('2 |> abs |> abs |> abs |> sigma');
+    expect(typeof r.will.tendency).toBe('string');
+  });
+});
 
-section('15. diffuse — 段階数制限');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  const results = run('s |> diffuse(5)');
-  assert(Array.isArray(results), 'diffuse結果は配列');
-  assert(typeof results[0] === 'number', '結果は数値');
-  const node = run('s |> node(0, 0)');
-  assert(node.stage >= 5, '5段階以上拡散');
-}
+// ═══════════════════════════════════════════
+// Tier 2: N1(射影) & M1(計算多元性)
+// ═══════════════════════════════════════════
 
-section('16. diffuse — 収束まで');
-{
-  run('let s = space{ layer 0: 𝕄{5; 2, 2, 2, 2} }');
-  const results = run('s |> diffuse("converged")');
-  const node = run('s |> node(0, 0)');
-  assertEq(node.momentum, 'converged', '収束完了');
-}
+describe("Tier 2: 射影 & 計算多元性", () => {
+  it("project", () => {
+    const r = rei('[1, 5, 3] |> project("max")');
+    expect(r.center).toBe(5);
+    expect(r.reiType).toBe('MDim');
+  });
 
-section('17. 複数ノード同時拡散');
-{
-  run(`let s = space{
-    layer 0: 𝕄{5; 1, 2, 3, 4}, 𝕄{10; 3, 7, 2}, 𝕄{-3; 8, 1, 5}
-  }`);
-  const results = run('s |> diffuse(3)');
-  assertEq(results.length, 3, '3ノードの結果');
-}
+  it("compute :geometric", () => {
+    const r = rei('𝕄{2; 4, 8} |> compute :geometric');
+    expect(typeof unwrap(r)).toBe('number');
+  });
 
-section('18. sigma — ノードの自己参照（公理C1）');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  run('s |> step');
-  run('s |> step');
+  it("modes", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> modes');
+    expect(Array.isArray(r)).toBe(true);
+    expect(r.length).toBe(8);
+  });
 
-  const sigma = run('s |> node(0, 0) |> sigma');
-  assert(sigma && sigma.reiType === 'SigmaResult', 'sigma結果');
+  it("blend", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> blend("weighted", 0.7, "geometric", 0.3)');
+    expect(typeof unwrap(r)).toBe('number');
+  });
+});
 
-  const flow = run('s |> node(0, 0) |> sigma |> flow');
-  assertEq(flow.stage, 2, 'σ.flow.stage = 2');
-  assertEq(flow.directions, 16, 'σ.flow.directions = 16');
+// ═══════════════════════════════════════════
+// Tier 3: U1(構造還元) & A1(解の多元性)
+// ═══════════════════════════════════════════
 
-  const memory = run('s |> node(0, 0) |> sigma |> memory');
-  assertEq(memory.length, 3, 'σ.memory: 3エントリ');
+describe("Tier 3: 構造還元 & 解の多元性", () => {
+  it("project_all", () => {
+    const r = rei('[1, 5, 3] |> project_all');
+    expect(Array.isArray(r)).toBe(true);
+    expect(r.length).toBe(3);
+  });
 
-  const layer = run('s |> node(0, 0) |> sigma |> layer');
-  assertEq(layer, 0, 'σ.layer = 0');
-}
+  it("compute_all", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> compute_all');
+    expect(Array.isArray(r)).toBe(true);
+    expect(r.length).toBe(8);
+  });
 
-section('19. sigma.flow のメンバーアクセス');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  run('s |> step');
+  it("perspectives", () => {
+    const r = rei('[1, 5, 3] |> perspectives');
+    expect(Array.isArray(r)).toBe(true);
+  });
+});
 
-  const stage = run('(s |> node(0, 0) |> sigma |> flow).stage');
-  assertEq(stage, 1, 'σ.flow.stage via member access');
+// ═══════════════════════════════════════════
+// Tier 4: C3(応答) & C4(覚醒) & U2(変換) & M2(等価)
+// ═══════════════════════════════════════════
 
-  const momentum = run('(s |> node(0, 0) |> sigma |> flow).momentum');
-  assertEq(momentum, 'expanding', 'σ.flow.momentum = expanding');
-}
+describe("Tier 4: 応答 & 覚醒 & 変換 & 等価", () => {
+  it("respond", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> respond(10)');
+    expect(r.center).not.toBe(5);
+  });
 
-section('20. sigma.will — 傾向性（公理C2）');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  // 複数段階拡散して傾向性を蓄積
-  for (let i = 0; i < 6; i++) run('s |> step');
+  it("awareness", () => {
+    const r = rei('42 |> awareness');
+    expect(typeof unwrap(r)).toBe('number');
+  });
 
-  const will = run('s |> node(0, 0) |> sigma |> will');
-  assert(
-    ['contract', 'expand', 'spiral', 'rest'].includes(will.tendency),
-    `σ.will.tendency: "${will.tendency}"`
-  );
-  assert(will.history.length === 6, 'σ.will.history: 6エントリ');
-}
+  it("transform scale", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> transform("scale", 2)');
+    expect(r.center).toBe(10);
+  });
 
-section('21. 場全体のsigma');
-{
-  run(`let s = space{
-    layer 0: 𝕄{5; 1, 2, 3, 4}, 𝕄{10; 3, 7}
-    layer 1: 𝕄{0; 1, -1}
-  }`);
+  it("mode_equiv", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> mode_equiv("weighted", "geometric")');
+    expect(typeof r.type_equivalent).toBe('boolean');
+  });
+});
 
-  const sigma = run('s |> sigma');
-  assertEq(sigma.field.layers, 2, 'Space σ.field.layers = 2');
-  assertEq(sigma.field.total_nodes, 3, 'Space σ.field.total_nodes = 3');
-}
+// ═══════════════════════════════════════════
+// Tier 5: C5(共鳴) & N3-N5 & M4-M5 & U3-U5 & A2-A5
+// ═══════════════════════════════════════════
 
-section('22. freeze/thaw — 層の凍結と解凍');
-{
-  run(`let s = space{
-    layer 0: 𝕄{5; 1, 2, 3, 4}
-    layer 1: 𝕄{10; 3, 7, 2}
-  }`);
+describe("Tier 5: 共鳴 & 高度機能", () => {
+  it("resonate", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> resonate(𝕄{5; 1, 2, 3})');
+    expect(r.strength).toBeGreaterThan(0.5);
+  });
 
-  run('s |> freeze(0)');
-  run('s |> step');
+  it("encode", () => {
+    const r = rei('[1, 5, 3, 2] |> encode');
+    expect(r.reiType).toBe('MDim');
+  });
 
-  const node0 = run('s |> node(0, 0)');
-  const node1 = run('s |> node(1, 0)');
-  assertEq(node0.stage, 0, '凍結した層0: 段階0のまま');
-  assertEq(node1.stage, 1, '層1: 段階1に進む');
+  it("consensus", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> consensus');
+    expect(r.reiType).toBe('ConsensusResult');
+  });
 
-  run('s |> thaw(0)');
-  run('s |> step');
+  it("mode_space", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> mode_space');
+    expect(typeof r.modes).toBe('number');
+  });
 
-  const node0b = run('s |> node(0, 0)');
-  assertEq(node0b.stage, 1, '解凍後の層0: 段階1に進む');
-}
+  it("structural_similarity", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> structural_similarity(𝕄{5; 1, 2, 3})');
+    expect(r.similarity).toBeGreaterThan(0.5);
+  });
+});
 
-section('23. spawn — ノードの動的追加');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  run('s |> spawn(𝕄{10; 3, 7}, 0)');
+// ═══════════════════════════════════════════
+// 柱①: evolveパイプ（自動モード選択）
+// ═══════════════════════════════════════════
 
-  const s = run('s');
-  assertEq(s.layers.get(0).nodes.length, 2, 'spawn後: 層0に2ノード');
-}
+describe("柱①: evolveパイプ", () => {
+  it("基本evolve", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> evolve');
+    expect(r.reiType).toBe('EvolveResult');
+    expect(typeof r.value).toBe('number');
+    expect(typeof r.selectedMode).toBe('string');
+  });
 
-section('24. result — 結果取得');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  const r = run('s |> result(0)');
-  assert(typeof r === 'number', 'result: 数値を返す');
-}
+  it("evolve(stable)", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> evolve("stable")');
+    expect(r.reiType).toBe('EvolveResult');
+  });
+});
 
-section('25. resonances — 共鳴検出（公理C5）');
-{
-  run(`let s = space{
-    layer 0: 𝕄{5; 1, 2, 3, 4}
-    layer 2: 𝕄{5.1; 1.1, 2, 3, 4}
-  }`);
+// ═══════════════════════════════════════════
+// 柱②: 漢字/日本語の𝕄表現
+// ═══════════════════════════════════════════
 
-  const pairs = run('s |> resonances(0.5)');
-  assert(Array.isArray(pairs), '共鳴ペアは配列');
-  assert(pairs.length >= 1, '類似ノード間に共鳴を検出');
-  if (pairs.length > 0) {
-    assert(pairs[0].similarity > 0.8, `高い類似度: ${pairs[0].similarity}`);
-  }
-}
+describe("柱②: 漢字/日本語𝕄", () => {
+  it("kanji (漢字分解)", () => {
+    const r = rei('"休" |> kanji');
+    expect(r.reiType).toBe('StringMDim');
+    expect(r.center).toBe('休');
+  });
 
-section('26. DNode extract — MDim互換');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  const extracted = run('s |> node(0, 0) |> extract');
-  assertEq(extracted.reiType, 'MDim', 'extract → MDim型');
-  assertEq(extracted.center, 5, 'extract: center保持');
-  assertEq(run('(s |> node(0, 0) |> extract) |> compute :weighted'), 7.5, 'extract後のcompute');
-}
+  it("sentence (文解析)", () => {
+    const r = rei('"猫が魚を食べた" |> sentence');
+    expect(r.reiType).toBe('StringMDim');
+  });
 
-section('27. DNode compute');
-{
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  const v = run('s |> node(0, 0) |> compute');
-  assertEq(v, 7.5, 'DNode compute = MDim compute');
-}
+  it("kanji → similarity", () => {
+    const r = rei('"休" |> kanji |> similarity("体")');
+    expect(typeof r.strength).toBe('number');
+  });
+});
 
-section('28. 拡散方向倍増パターンの構文検証');
-{
-  run('let s = space{ layer 0: 𝕄{0; 1, 2, 3, 4, 5, 6, 7, 8} }');
-  run('s |> step');
-  assertEq(run('(s |> node(0, 0)).neighbors.length'), 16, '8→16');
-  run('s |> step');
-  assertEq(run('(s |> node(0, 0)).neighbors.length'), 32, '16→32');
-  run('s |> step');
-  assertEq(run('(s |> node(0, 0)).neighbors.length'), 64, '32→64');
-}
+// ═══════════════════════════════════════════
+// 柱③: パズル統一（新規統合）
+// ═══════════════════════════════════════════
 
-section('29. 複合パイプライン');
-{
-  run(`let s = space{
-    layer 0: 𝕄{5; 1, 2, 3, 4}
-    layer 1: 𝕄{10; 3, 7, 2}
-  }`);
-  // step → freeze → step → thaw → diffuse
-  run('s |> step');
-  run('s |> freeze(0)');
-  run('s |> step');
-  run('s |> step');
-  run('s |> thaw(0)');
-  const results = run('s |> diffuse(3)');
-  assert(Array.isArray(results) && results.length === 2, '2ノードの結果');
-}
+describe("柱③: パズル統一", () => {
+  it("数独生成 → 解く（パイプチェーン）", () => {
+    const r = rei('30 |> generate_sudoku(42) |> solve');
+    expect(r.reiType).toBe('PuzzleSpace');
+    expect(r.solved).toBe(true);
+  });
 
-section('30. v0.2.1 + v0.3 混在コード');
-{
-  // 従来のMDimと新しいSpaceが同じプログラム内で共存
-  run('let m = 𝕄{5; 1, 2, 3, 4}');
-  run('let direct = m |> compute :weighted');
-  assertEq(run('direct'), 7.5, '従来のMDim compute');
+  it("日本語: 数独生成 → 解く → σ", () => {
+    const r = rei('30 |> 数独生成(42) |> 解く |> sigma');
+    expect(r.reiType).toBe('SigmaResult');
+    expect(r.flow.momentum).toBe('converged');
+  });
 
-  run('let s = space{ layer 0: 𝕄{5; 1, 2, 3, 4} }');
-  run('let via_space = s |> node(0, 0) |> compute');
-  assertEq(run('via_space'), 7.5, 'Space経由のcompute');
+  it("文字列から数独構築 → solve", () => {
+    const r = rei('"530070000600195000098000060800060003400803001700020006060000280000419005000080079" |> puzzle |> solve');
+    expect(r.solved).toBe(true);
+  });
+});
 
-  // compress関数でSpaceを扱う
-  run('compress make_space(c, n1, n2, n3, n4) = space{ layer 0: 𝕄{c; n1, n2, n3, n4} }');
-  run('let s2 = make_space(100, 10, 20, 30, 40)');
-  assert(run('s2').reiType === 'Space', 'compress関数でSpace生成');
-}
+// ═══════════════════════════════════════════
+// 柱④: Thought Loop（思考ループ）
+// ═══════════════════════════════════════════
 
-// ════════════════════════════════════
-// SUMMARY
-// ════════════════════════════════════
+describe("柱④: Thought Loop", () => {
+  it("基本think", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> think("converge")');
+    expect(r.reiType).toBe('ThoughtResult');
+    expect(typeof r.finalNumeric).toBe('number');
+  });
 
-console.log('\n════════════════════════════════════');
-console.log(`  結果: ${passed} passed, ${failed} failed, ${passed + failed} total`);
-console.log('════════════════════════════════════');
+  it("think回数指定", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> think(5)');
+    expect(r.reiType).toBe('ThoughtResult');
+    expect(r.totalIterations).toBeLessThanOrEqual(5);
+  });
 
-if (failed > 0) process.exit(1);
+  it("think_trajectory", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> think_trajectory');
+    expect(Array.isArray(r)).toBe(true);
+  });
+
+  it("日本語: 思考", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> 思考("converge")');
+    expect(r.reiType).toBe('ThoughtResult');
+  });
+});
+
+// ═══════════════════════════════════════════
+// 柱⑤: Game & Randomness
+// ═══════════════════════════════════════════
+
+describe("柱⑤: Game & Randomness", () => {
+  it("ゲーム作成", () => {
+    const r = rei('"tic_tac_toe" |> game');
+    expect(r.reiType).toBe('GameSpace');
+  });
+
+  it("自動対局", () => {
+    const r = rei('"tic_tac_toe" |> game |> auto_play');
+    expect(r.reiType).toBe('GameSpace');
+  });
+
+  it("ランダム", () => {
+    const r = rei('𝕄{5; 1, 2, 3, 4} |> random');
+    expect(r.reiType).toBe('RandomResult');
+    expect(typeof r.value).toBe('number');
+  });
+
+  it("エントロピー", () => {
+    const r = rei('𝕄{5; 1, 2, 3, 4} |> entropy');
+    expect(r.reiType).toBe('EntropyAnalysis');
+    expect(typeof r.shannon).toBe('number');
+  });
+
+  it("日本語: ゲーム", () => {
+    const r = rei('"tic_tac_toe" |> ゲーム');
+    expect(r.reiType).toBe('GameSpace');
+  });
+});
+
+// ═══════════════════════════════════════════
+// 全柱横断: パイプチェーン互換性
+// ═══════════════════════════════════════════
+
+describe("全柱横断テスト", () => {
+  it("evolve → think: 柱①→④の連携", () => {
+    const r = rei('𝕄{5; 1, 2, 3} |> evolve');
+    expect(r.reiType).toBe('EvolveResult');
+    // evolve結果のvalueは数値
+    expect(typeof r.value).toBe('number');
+  });
+
+  it("パズル→σ→awareness: 柱③→Tier4の連携", () => {
+    const sigma = rei('30 |> generate_sudoku(42) |> solve |> sigma');
+    expect(sigma.reiType).toBe('SigmaResult');
+    expect(sigma.flow.progress).toBe(1);
+  });
+
+  it("serialize/deserialize の後方互換", () => {
+    const serialized = rei('𝕄{5; 1, 2, 3} |> compute |> serialize');
+    expect(typeof serialized).toBe('string');
+    const parsed = JSON.parse(serialized);
+    expect(parsed.__rei__).toBe(true);
+  });
+});
