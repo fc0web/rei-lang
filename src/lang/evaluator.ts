@@ -17,6 +17,13 @@ import {
   thoughtTrajectory, thoughtModes, dominantMode,
   type ThoughtResult, type ThoughtConfig,
 } from './thought';
+import {
+  createGameSpace, playMove, autoPlay, selectBestMove,
+  gameAsMDim, getGameSigma, formatGame, getLegalMoves, simulateGames,
+  randomFromMDim, randomUniform, randomWeighted, randomWalk,
+  monteCarloSample, analyzeEntropy, seedRandom,
+  type GameSpace, type RandomResult, type EntropyAnalysis,
+} from './game';
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2316,6 +2323,37 @@ export class Evaluator {
           return this.execPipeCmd(rawInput, cmd);
         }
       }
+      // ── 柱⑤: Game/Random — ラップしない（直値返却） ──
+      const gameCommands = [
+        "game", "ゲーム", "play", "打つ", "auto_play", "自動対局",
+        "best_move", "最善手", "legal_moves", "合法手",
+        "game_format", "盤面表示", "game_sigma",
+        "simulate", "シミュレート",
+        "random", "ランダム", "random_walk", "entropy", "エントロピー",
+        "monte_carlo", "seed",
+      ];
+      if (gameCommands.includes(cmd.cmd)) {
+        return this.execPipeCmd(rawInput, cmd);
+      }
+      // GameSpaceの後続パイプも直値返却
+      const unwrappedForGame = rawInput?.reiType === 'ReiVal' ? rawInput.value : rawInput;
+      if (unwrappedForGame?.reiType === 'GameSpace') {
+        const gameAccessors = [
+          "play", "打つ", "auto_play", "自動対局",
+          "best_move", "最善手", "legal_moves", "合法手",
+          "board", "盤面", "status", "状態", "winner", "勝者",
+          "turn", "手番", "history", "棋譜",
+          "game_format", "盤面表示", "sigma",
+          "as_mdim",
+        ];
+        if (gameAccessors.includes(cmd.cmd)) {
+          return this.execPipeCmd(rawInput, cmd);
+        }
+      }
+      // RandomResult/EntropyAnalysisの後続パイプも直値返却
+      if (unwrappedForGame?.reiType === 'RandomResult' || unwrappedForGame?.reiType === 'EntropyAnalysis') {
+        return this.execPipeCmd(rawInput, cmd);
+      }
       // ── 柱②: StringMDimアクセサはラップしない（参照操作） ──
       const stringMDimAccessors = [
         "strokes", "画数", "category", "六書", "meaning", "意味",
@@ -2376,6 +2414,10 @@ export class Evaluator {
       // ── 柱④: ThoughtResult — 思考ループ結果のσ ──
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'ThoughtResult') {
         return getThoughtSigma(rawInput as ThoughtResult);
+      }
+      // ── 柱⑤: GameSpace — ゲームのσ ──
+      if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'GameSpace') {
+        return getGameSigma(rawInput as GameSpace);
       }
       // 全値型 — C1公理のσ関数
       return buildSigmaResult(rawInput, sigmaMetadata);
@@ -3068,6 +3110,129 @@ export class Evaluator {
         case "steps": case "全履歴": return tr.steps;
         case "dominant_mode": case "支配モード": return dominantMode(tr);
         case "sigma": return getThoughtSigma(tr);
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // 柱⑤: Game & Randomness — ゲーム統一 & ピュアランダムネス
+    // ═══════════════════════════════════════════
+
+    // --- Random commands ---
+
+    // random / ランダム: 𝕄のneighborsからランダム選択
+    if (cmdName === "random" || cmdName === "ランダム") {
+      if (rawInput?.reiType === 'MDim') return randomFromMDim(rawInput);
+      if (Array.isArray(rawInput)) return randomUniform(rawInput);
+      if (typeof rawInput === 'number') {
+        // random(n) → 0〜n-1のランダム整数
+        return Math.floor(rawInput * Math.random());
+      }
+      return randomUniform([rawInput]);
+    }
+
+    // seed: 乱数シード設定
+    if (cmdName === "seed") {
+      const s = typeof rawInput === 'number' ? rawInput : 42;
+      seedRandom(s);
+      return s;
+    }
+
+    // random_walk: ランダムウォーク
+    if (cmdName === "random_walk") {
+      const start = typeof rawInput === 'number' ? rawInput : 0;
+      const steps = args.length >= 1 ? Number(args[0]) : 20;
+      const stepSize = args.length >= 2 ? Number(args[1]) : 1;
+      return randomWalk(start, steps, stepSize);
+    }
+
+    // entropy / エントロピー: シャノンエントロピー分析
+    if (cmdName === "entropy" || cmdName === "エントロピー") {
+      if (Array.isArray(rawInput)) return analyzeEntropy(rawInput);
+      if (rawInput?.reiType === 'MDim') return analyzeEntropy(rawInput.neighbors);
+      return analyzeEntropy([rawInput]);
+    }
+
+    // monte_carlo: モンテカルロサンプリング
+    if (cmdName === "monte_carlo") {
+      const n = args.length >= 1 ? Number(args[0]) : 100;
+      if (rawInput?.reiType === 'MDim') return monteCarloSample(rawInput, n);
+      return monteCarloSample({ reiType: 'MDim', center: 0, neighbors: Array.isArray(rawInput) ? rawInput : [rawInput] }, n);
+    }
+
+    // --- Game commands ---
+
+    // game / ゲーム: ゲームスペースの作成
+    if (cmdName === "game" || cmdName === "ゲーム") {
+      const gameName = typeof rawInput === 'string' ? rawInput :
+                       args.length >= 1 ? String(args[0]) : 'tic_tac_toe';
+      const config: any = {};
+      if (typeof rawInput === 'number') config.stones = rawInput;
+      if (args.length >= 2 && typeof args[1] === 'number') config.stones = args[1];
+      return createGameSpace(gameName, config);
+    }
+
+    // GameSpace handlers
+    if (rawInput?.reiType === 'GameSpace') {
+      const gs = rawInput as GameSpace;
+      switch (cmdName) {
+        case "play": case "打つ": {
+          const pos = args.length >= 1 ? Number(args[0]) : undefined;
+          return playMove(gs, pos);
+        }
+        case "auto_play": case "自動対局": {
+          const s1 = args.length >= 1 ? String(args[0]) : gs.strategy;
+          const s2 = args.length >= 2 ? String(args[1]) : gs.strategy;
+          return autoPlay(gs, s1, s2);
+        }
+        case "best_move": case "最善手":
+          return selectBestMove(gs);
+        case "legal_moves": case "合法手":
+          return getLegalMoves(gs);
+        case "board": case "盤面":
+          return gs.state.board;
+        case "status": case "状態":
+          return gs.state.status;
+        case "winner": case "勝者":
+          return gs.state.winner;
+        case "turn": case "手番":
+          return gs.state.currentPlayer;
+        case "history": case "棋譜":
+          return gs.state.moveHistory;
+        case "game_format": case "盤面表示":
+          return formatGame(gs);
+        case "as_mdim":
+          return gameAsMDim(gs);
+        case "sigma": case "game_sigma":
+          return getGameSigma(gs);
+      }
+    }
+
+    // simulate / シミュレート: 複数対局シミュレーション
+    if (cmdName === "simulate" || cmdName === "シミュレート") {
+      const gameName = typeof rawInput === 'string' ? rawInput : 'tic_tac_toe';
+      const n = args.length >= 1 ? Number(args[0]) : 10;
+      const s1 = args.length >= 2 ? String(args[1]) : 'minimax';
+      const s2 = args.length >= 3 ? String(args[2]) : 'random';
+      return simulateGames(gameName, n, s1, s2);
+    }
+
+    // RandomResult accessors
+    if (rawInput?.reiType === 'RandomResult') {
+      const rr = rawInput as RandomResult;
+      switch (cmdName) {
+        case "value": return rr.value;
+        case "probability": case "確率": return rr.probability;
+        case "entropy": case "エントロピー": return rr.entropy;
+      }
+    }
+
+    // EntropyAnalysis accessors
+    if (rawInput?.reiType === 'EntropyAnalysis') {
+      const ea = rawInput as EntropyAnalysis;
+      switch (cmdName) {
+        case "shannon": return ea.shannon;
+        case "relative": return ea.relativeEntropy;
+        case "distribution": return ea.distribution;
       }
     }
 
