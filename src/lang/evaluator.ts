@@ -24,6 +24,13 @@ import {
   monteCarloSample, analyzeEntropy, seedRandom,
   type GameSpace, type RandomResult, type EntropyAnalysis,
 } from './game';
+import {
+  createSudokuSpace, createLatinSquareSpace, createCustomPuzzleSpace,
+  solvePuzzle, propagateOnly, propagateStep, propagateNakedPair,
+  cellAsMDim, getGrid, getCandidates, getPuzzleSigma,
+  formatSudoku, estimateDifficulty, generateSudoku, parseGrid,
+  type PuzzleSpace,
+} from './puzzle';
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2354,6 +2361,31 @@ export class Evaluator {
       if (unwrappedForGame?.reiType === 'RandomResult' || unwrappedForGame?.reiType === 'EntropyAnalysis') {
         return this.execPipeCmd(rawInput, cmd);
       }
+      // ── 柱③: Puzzle — パズルコマンドはラップしない（直値返却） ──
+      const puzzleCommands = [
+        "puzzle", "パズル", "数独", "sudoku", "latin_square", "ラテン方陣",
+        "solve", "解く", "propagate", "伝播", "propagate_pair",
+        "cell", "セル", "grid", "盤面", "candidates", "候補",
+        "puzzle_format", "数独表示", "difficulty", "難易度",
+        "generate_sudoku", "数独生成",
+      ];
+      if (puzzleCommands.includes(cmd.cmd)) {
+        return this.execPipeCmd(rawInput, cmd);
+      }
+      // PuzzleSpaceの後続パイプも直値返却
+      const unwrappedForPuzzle = rawInput?.reiType === 'ReiVal' ? rawInput.value : rawInput;
+      if (unwrappedForPuzzle?.reiType === 'PuzzleSpace') {
+        const puzzleAccessors = [
+          "solve", "解く", "propagate", "伝播", "propagate_pair",
+          "cell", "セル", "grid", "盤面", "candidates", "候補",
+          "puzzle_format", "数独表示", "difficulty", "難易度",
+          "sigma", "status", "状態", "history", "履歴",
+          "as_mdim",
+        ];
+        if (puzzleAccessors.includes(cmd.cmd)) {
+          return this.execPipeCmd(rawInput, cmd);
+        }
+      }
       // ── 柱②: StringMDimアクセサはラップしない（参照操作） ──
       const stringMDimAccessors = [
         "strokes", "画数", "category", "六書", "meaning", "意味",
@@ -2418,6 +2450,10 @@ export class Evaluator {
       // ── 柱⑤: GameSpace — ゲームのσ ──
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'GameSpace') {
         return getGameSigma(rawInput as GameSpace);
+      }
+      // ── 柱③: PuzzleSpace — パズルのσ ──
+      if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'PuzzleSpace') {
+        return getPuzzleSigma(rawInput as PuzzleSpace);
       }
       // 全値型 — C1公理のσ関数
       return buildSigmaResult(rawInput, sigmaMetadata);
@@ -3233,6 +3269,134 @@ export class Evaluator {
         case "shannon": return ea.shannon;
         case "relative": return ea.relativeEntropy;
         case "distribution": return ea.distribution;
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // 柱③: Puzzle Unification — パズル統一
+    // ═══════════════════════════════════════════
+
+    // puzzle / パズル / 数独 / sudoku: パズル空間の作成
+    if (cmdName === "puzzle" || cmdName === "パズル" || cmdName === "sudoku" || cmdName === "数独") {
+      // 文字列入力 → parseGrid
+      if (typeof rawInput === 'string') {
+        const grid = parseGrid(rawInput);
+        return createSudokuSpace(grid);
+      }
+      // 配列入力 → 直接グリッド or フラット配列
+      if (Array.isArray(rawInput)) {
+        if (Array.isArray(rawInput[0])) {
+          return createSudokuSpace(rawInput as number[][]);
+        }
+        // フラット配列
+        const grid = parseGrid(rawInput as number[]);
+        return createSudokuSpace(grid);
+      }
+      // 数値入力 → ヒント数で生成
+      if (typeof rawInput === 'number') {
+        const seed = args.length > 0 ? Number(args[0]) : undefined;
+        const grid = generateSudoku(rawInput, seed);
+        return createSudokuSpace(grid);
+      }
+      throw new Error('puzzle: 文字列・配列・数値のいずれかを入力してください');
+    }
+
+    // latin_square / ラテン方陣
+    if (cmdName === "latin_square" || cmdName === "ラテン方陣") {
+      if (Array.isArray(rawInput)) {
+        if (Array.isArray(rawInput[0])) {
+          return createLatinSquareSpace(rawInput as number[][]);
+        }
+        const grid = parseGrid(rawInput as number[]);
+        return createLatinSquareSpace(grid);
+      }
+      throw new Error('latin_square: 二次元配列を入力してください');
+    }
+
+    // generate_sudoku / 数独生成
+    if (cmdName === "generate_sudoku" || cmdName === "数独生成") {
+      const clues = typeof rawInput === 'number' ? rawInput : 30;
+      const seed = args.length > 0 ? Number(args[0]) : undefined;
+      const grid = generateSudoku(clues, seed);
+      return createSudokuSpace(grid);
+    }
+
+    // PuzzleSpace handlers
+    if (rawInput?.reiType === 'PuzzleSpace') {
+      const ps = rawInput as PuzzleSpace;
+
+      switch (cmdName) {
+        // 解く
+        case "solve": case "解く":
+          return solvePuzzle(ps);
+
+        // 制約伝播のみ
+        case "propagate": case "伝播": {
+          const maxSteps = args.length > 0 ? Number(args[0]) : 100;
+          return propagateOnly(ps, maxSteps);
+        }
+
+        // 1ステップ伝播
+        case "step": case "ステップ":
+          propagateStep(ps);
+          return ps;
+
+        // Naked Pair
+        case "propagate_pair": case "裸ペア":
+          propagateNakedPair(ps);
+          return ps;
+
+        // セル取得（𝕄形式）
+        case "cell": case "セル": {
+          const row = args.length > 0 ? Number(args[0]) : 0;
+          const col = args.length > 1 ? Number(args[1]) : 0;
+          return cellAsMDim(ps, row, col);
+        }
+
+        // 候補取得
+        case "candidates": case "候補": {
+          const row = args.length > 0 ? Number(args[0]) : 0;
+          const col = args.length > 1 ? Number(args[1]) : 0;
+          return getCandidates(ps, row, col);
+        }
+
+        // グリッド取得
+        case "grid": case "盤面":
+          return getGrid(ps);
+
+        // 表示
+        case "puzzle_format": case "数独表示":
+          return formatSudoku(ps);
+
+        // 難易度
+        case "difficulty": case "難易度":
+          return estimateDifficulty(ps);
+
+        // σ
+        case "sigma":
+          return getPuzzleSigma(ps);
+
+        // 状態
+        case "status": case "状態":
+          return {
+            solved: ps.solved,
+            confirmedCells: ps.confirmedCells,
+            totalCandidates: ps.totalCandidates,
+            step: ps.step,
+            size: ps.size,
+            puzzleType: ps.puzzleType,
+          };
+
+        // 履歴
+        case "history": case "履歴":
+          return ps.history;
+
+        // 𝕄形式変換
+        case "as_mdim": {
+          const row = args.length > 0 ? Number(args[0]) : 0;
+          const col = args.length > 1 ? Number(args[1]) : 0;
+          return cellAsMDim(ps, row, col);
+        }
       }
     }
 
