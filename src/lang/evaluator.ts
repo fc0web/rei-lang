@@ -31,6 +31,15 @@ import {
   formatSudoku, estimateDifficulty, generateSudoku, parseGrid,
   type PuzzleSpace,
 } from './puzzle';
+import {
+  BindingRegistry, getBindingSimilarity,
+  type ReiBinding, type BindingMode, type BindingSummary,
+} from './relation';
+import {
+  createIntention, willCompute, willIterate,
+  buildWillSigma, getIntentionOf, attachIntention,
+  type ReiIntention, type IntentionType, type WillComputeResult,
+} from './will';
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2100,6 +2109,8 @@ function genesisForward(g: any) {
 
 export class Evaluator {
   env: Environment;
+  // ── v0.4: 関係エンジン ──
+  bindingRegistry: BindingRegistry = new BindingRegistry();
 
   constructor(parent?: Environment) {
     this.env = new Environment(parent ?? null);
@@ -2395,6 +2406,18 @@ export class Evaluator {
       if (stringMDimAccessors.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
+      // ── v0.4: 関係・意志コマンド — ラップしない（直値返却） ──
+      const relationWillCommands = [
+        "bind", "結合", "unbind", "解除", "unbind_all", "全解除",
+        "bindings", "結合一覧", "cause", "因果",
+        "propagate_bindings", "伝播実行",
+        "intend", "意志", "will_compute", "意志計算",
+        "will_iterate", "意志反復",
+        "intention", "意志確認", "satisfaction", "満足度",
+      ];
+      if (relationWillCommands.includes(cmd.cmd)) {
+        return this.execPipeCmd(rawInput, cmd);
+      }
       const result = this.execPipeCmd(rawInput, cmd);
       // パイプ通過時にσメタデータを付与
       const prevMeta = getSigmaOf(rawInput);
@@ -2456,7 +2479,17 @@ export class Evaluator {
         return getPuzzleSigma(rawInput as PuzzleSpace);
       }
       // 全値型 — C1公理のσ関数
-      return buildSigmaResult(rawInput, sigmaMetadata);
+      const sigmaResult = buildSigmaResult(rawInput, sigmaMetadata);
+      // ── v0.4: σにrelation/will情報を注入 ──
+      const ref = this.findRefByValue(input);
+      if (ref) {
+        sigmaResult.relation = this.bindingRegistry.buildRelationSigma(ref);
+      }
+      const intention = getIntentionOf(rawInput);
+      if (intention) {
+        sigmaResult.will = buildWillSigma(intention);
+      }
+      return sigmaResult;
     }
 
     // ═══════════════════════════════════════════
@@ -2835,6 +2868,184 @@ export class Evaluator {
       const strategy = args.length >= 1 ? String(args[0]) : 'auto';
       const result = evolveMode(input, sigmaMetadata, strategy);
       return result.value;
+    }
+
+    // ═══════════════════════════════════════════
+    // v0.4: 関係（Relation）— 非局所的結合
+    // ═══════════════════════════════════════════
+
+    if (cmdName === "bind" || cmdName === "結合") {
+      // a |> bind("b", "mirror")  or  a |> bind("b", "mirror", 0.8)
+      // a |> 結合("b", "鏡像")
+      if (args.length < 1) throw new Error("bind: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const modeArg = args.length >= 2 ? String(args[1]) : 'mirror';
+      const strength = args.length >= 3 ? this.toNumber(args[2]) : 1.0;
+      const bidir = args.length >= 4 ? !!args[3] : false;
+
+      // 日本語モード名の変換
+      const modeMap: Record<string, BindingMode> = {
+        'mirror': 'mirror', '鏡像': 'mirror',
+        'inverse': 'inverse', '反転': 'inverse',
+        'resonance': 'resonance', '共鳴': 'resonance',
+        'entangle': 'entangle', 'もつれ': 'entangle',
+        'causal': 'causal', '因果': 'causal',
+      };
+      const bindMode: BindingMode = modeMap[modeArg] ?? 'mirror';
+
+      // ソース変数名の逆引き
+      const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
+
+      // ターゲットが環境に存在するか確認
+      if (!this.env.has(targetRef)) {
+        throw new Error(`bind: 変数 '${targetRef}' が見つかりません`);
+      }
+
+      const binding = this.bindingRegistry.bind(sourceRef, targetRef, bindMode, strength, bidir);
+      return {
+        reiType: 'BindResult' as const,
+        binding,
+        source: rawInput,
+        target: this.env.get(targetRef),
+      };
+    }
+
+    if (cmdName === "cause" || cmdName === "因果") {
+      // a |> cause("b") — causal一方向結合のショートカット
+      if (args.length < 1) throw new Error("cause: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const strength = args.length >= 2 ? this.toNumber(args[1]) : 1.0;
+      const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
+
+      if (!this.env.has(targetRef)) {
+        throw new Error(`cause: 変数 '${targetRef}' が見つかりません`);
+      }
+
+      const binding = this.bindingRegistry.bind(sourceRef, targetRef, 'causal', strength, false);
+      return {
+        reiType: 'BindResult' as const,
+        binding,
+        source: rawInput,
+        target: this.env.get(targetRef),
+      };
+    }
+
+    if (cmdName === "unbind" || cmdName === "解除") {
+      // a |> unbind("b")
+      if (args.length < 1) throw new Error("unbind: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const sourceRef = this.findRefByValue(input) ?? '';
+      const result = this.bindingRegistry.unbind(sourceRef, targetRef);
+      return result;
+    }
+
+    if (cmdName === "unbind_all" || cmdName === "全解除") {
+      // a |> unbind_all
+      const ref = this.findRefByValue(input) ?? '';
+      return this.bindingRegistry.unbindAll(ref);
+    }
+
+    if (cmdName === "bindings" || cmdName === "結合一覧") {
+      // a |> bindings — この値の全結合リスト
+      const ref = this.findRefByValue(input) ?? '';
+      return this.bindingRegistry.getBindingsFor(ref);
+    }
+
+    if (cmdName === "propagate_bindings" || cmdName === "伝播実行") {
+      // a |> propagate_bindings — この値の結合先に現在値を伝播
+      const ref = this.findRefByValue(input);
+      if (!ref) throw new Error("propagate_bindings: 変数参照を解決できません");
+      const count = this.triggerPropagation(ref, rawInput);
+      return { propagated: count, source: ref };
+    }
+
+    // ═══════════════════════════════════════════
+    // v0.4: 意志（Will）— 自律的目標指向
+    // ═══════════════════════════════════════════
+
+    if (cmdName === "intend" || cmdName === "意志") {
+      // 𝕄{5; 1,2,3} |> intend("seek", 10)
+      // 𝕄{5; 1,2,3} |> 意志("接近", 10)
+      if (args.length < 1) throw new Error("intend: 意志の種類が必要です");
+      const typeArg = String(args[0]);
+      const target = args.length >= 2 ? this.toNumber(args[1]) : undefined;
+      const patience = args.length >= 3 ? this.toNumber(args[2]) : 50;
+
+      // 日本語意志タイプの変換
+      const typeMap: Record<string, IntentionType> = {
+        'seek': 'seek', '接近': 'seek',
+        'avoid': 'avoid', '回避': 'avoid',
+        'stabilize': 'stabilize', '安定': 'stabilize',
+        'explore': 'explore', '探索': 'explore',
+        'harmonize': 'harmonize', '調和': 'harmonize',
+        'maximize': 'maximize', '最大化': 'maximize',
+        'minimize': 'minimize', '最小化': 'minimize',
+      };
+      const intentType: IntentionType = typeMap[typeArg] ?? 'seek';
+
+      const intention = createIntention(intentType, target, patience);
+
+      // harmonize の場合、結合先の値を目標に設定
+      if (intentType === 'harmonize') {
+        const ref = this.findRefByValue(input);
+        if (ref) {
+          const bindings = this.bindingRegistry.getBindingsFor(ref);
+          if (bindings.length > 0 && bindings[0].active) {
+            try {
+              const targetVal = this.env.get(bindings[0].target);
+              intention.target = toNumSafe(targetVal);
+            } catch { /* ignore */ }
+          }
+        }
+      }
+
+      // 値に意志を付与して返す
+      return attachIntention(rawInput, intention);
+    }
+
+    if (cmdName === "will_compute" || cmdName === "意志計算") {
+      // 𝕄{5; 1,2,3} |> intend("seek", 10) |> will_compute
+      const intention = getIntentionOf(rawInput);
+      if (!intention) throw new Error("will_compute: 意志が付与されていません（先に intend を使用してください）");
+
+      // harmonizeの場合、結合先の値をコンテキストに含める
+      let harmonizeTarget: number | undefined;
+      if (intention.type === 'harmonize' && intention.target !== undefined) {
+        harmonizeTarget = intention.target;
+      }
+
+      const md = this.isMDim(rawInput)
+        ? rawInput
+        : { reiType: 'MDim', center: this.toNumber(rawInput), neighbors: [], mode: 'weighted' };
+
+      return willCompute(md, intention, { harmonizeTarget });
+    }
+
+    if (cmdName === "will_iterate" || cmdName === "意志反復") {
+      // 𝕄{5; 1,2,3} |> intend("seek", 10) |> will_iterate
+      // 𝕄{5; 1,2,3} |> intend("seek", 10) |> will_iterate(20)  // 最大20ステップ
+      const intention = getIntentionOf(rawInput);
+      if (!intention) throw new Error("will_iterate: 意志が付与されていません");
+
+      const maxSteps = args.length >= 1 ? this.toNumber(args[0]) : undefined;
+      const md = this.isMDim(rawInput)
+        ? rawInput
+        : { reiType: 'MDim', center: this.toNumber(rawInput), neighbors: [], mode: 'weighted' };
+
+      return willIterate(md, intention, maxSteps);
+    }
+
+    if (cmdName === "intention" || cmdName === "意志確認") {
+      // 値の意志情報を取得
+      const intention = getIntentionOf(rawInput);
+      if (!intention) return null;
+      return buildWillSigma(intention);
+    }
+
+    if (cmdName === "satisfaction" || cmdName === "満足度") {
+      // 値の満足度を取得
+      const intention = getIntentionOf(rawInput);
+      return intention?.satisfaction ?? 0;
     }
 
     // ═══════════════════════════════════════════
@@ -3511,6 +3722,46 @@ export class Evaluator {
       }
     }
 
+    // ── v0.4: BindResult member access ──
+    if (this.isObj(obj) && obj.reiType === "BindResult") {
+      switch (ast.member) {
+        case "binding": return obj.binding;
+        case "source": return obj.source;
+        case "target": return obj.target;
+        case "mode": return obj.binding?.mode;
+        case "strength": return obj.binding?.strength;
+        case "id": return obj.binding?.id;
+        case "active": return obj.binding?.active;
+      }
+    }
+
+    // ── v0.4: WillComputeResult member access ──
+    if (this.isObj(obj) && obj.reiType === "WillComputeResult") {
+      switch (ast.member) {
+        case "value": return obj.value;
+        case "numericValue": return obj.numericValue;
+        case "chosenMode": return obj.chosenMode;
+        case "reason": return obj.reason;
+        case "satisfaction": return obj.satisfaction;
+        case "allCandidates": return obj.allCandidates;
+        case "intention": return obj.intention;
+      }
+    }
+
+    // ── v0.4: WillSigma member access ──
+    if (this.isObj(obj) && obj.reiType === undefined && obj.dominantMode !== undefined && obj.totalChoices !== undefined) {
+      switch (ast.member) {
+        case "type": return obj.type;
+        case "target": return obj.target;
+        case "satisfaction": return obj.satisfaction;
+        case "active": return obj.active;
+        case "step": return obj.step;
+        case "totalChoices": return obj.totalChoices;
+        case "dominantMode": return obj.dominantMode;
+        case "history": return obj.history;
+      }
+    }
+
     // ── v0.3: SigmaResult member access ──
     if (this.isObj(obj) && obj.reiType === "SigmaResult") {
       switch (ast.member) {
@@ -3725,4 +3976,30 @@ export class Evaluator {
   getSigmaMetadata(v: any): SigmaMetadata { return getSigmaOf(v); }
   /** ReiValを透過的にアンラップ */
   unwrap(v: any): any { return unwrapReiVal(v); }
+
+  // ── v0.4: 関係・意志ヘルパー ──
+
+  /** 値からその変数名を逆引きする（参照一致） */
+  findRefByValue(value: any): string | null {
+    const raw = unwrapReiVal(value);
+    for (const [name, binding] of this.env.allBindings()) {
+      const bv = unwrapReiVal(binding.value);
+      if (bv === raw) return name;
+      // オブジェクト参照が異なる場合もσメタデータで同一性を判定
+      if (raw !== null && typeof raw === 'object' && bv !== null && typeof bv === 'object') {
+        if (raw.__sigma__ && raw.__sigma__ === bv.__sigma__) return name;
+      }
+    }
+    return null;
+  }
+
+  /** 結合の伝播をトリガーする（変数名 + 新値） */
+  triggerPropagation(ref: string, newValue: any): number {
+    return this.bindingRegistry.propagate(
+      ref,
+      newValue,
+      (r: string) => { try { return this.env.get(r); } catch { return undefined; } },
+      (r: string, v: any) => { try { this.env.set(r, v); } catch { /* immutable */ } },
+    );
+  }
 }
