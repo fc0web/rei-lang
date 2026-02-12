@@ -2568,6 +2568,64 @@ export class Evaluator {
           }
           return results.length === 1 ? results[0] : results;
         }
+
+        // ═══════════════════════════════════════════
+        // Phase 3統合: Space × Auto-bind — 共鳴→自動結合
+        // ═══════════════════════════════════════════
+
+        // auto_bind / 自動結合: findResonancesの結果をBindingRegistryに登録
+        case "auto_bind": case "自動結合": {
+          const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.5;
+          const resonances = findResonances(sp, threshold);
+          let bindCount = 0;
+          for (const pair of resonances) {
+            const refA = `node_${pair.nodeA.layer}_${pair.nodeA.index}`;
+            const refB = `node_${pair.nodeB.layer}_${pair.nodeB.index}`;
+            // 既存の結合をチェック
+            const existing = this.bindingRegistry.getBindingsFor(refA);
+            if (existing.some(b => b.target === refB)) continue;
+            // 共鳴度に応じた結合強度で resonance 結合を作成
+            this.bindingRegistry.bind(refA, refB, 'resonance', pair.similarity, true);
+            bindCount++;
+          }
+          return {
+            reiType: 'AutoBindResult' as const,
+            resonancesFound: resonances.length,
+            bindingsCreated: bindCount,
+            threshold,
+            pairs: resonances.map(p => ({
+              nodeA: p.nodeA,
+              nodeB: p.nodeB,
+              similarity: p.similarity,
+            })),
+          };
+        }
+
+        // space_relations / 場関係: 全結合を照会
+        case "space_relations": case "場関係": {
+          const allBindings: any[] = [];
+          for (const [layerIdx, layer] of sp.layers) {
+            for (let i = 0; i < layer.nodes.length; i++) {
+              const ref = `node_${layerIdx}_${i}`;
+              const bindings = this.bindingRegistry.getBindingsFor(ref);
+              if (bindings.length > 0) {
+                allBindings.push({
+                  node: { layer: layerIdx, index: i },
+                  center: layer.nodes[i].center,
+                  bindings: bindings.map(b => ({
+                    target: b.target,
+                    mode: b.mode,
+                    strength: b.strength,
+                  })),
+                });
+              }
+            }
+          }
+          return {
+            totalBindings: allBindings.reduce((s, n) => s + n.bindings.length, 0),
+            nodes: allBindings,
+          };
+        }
       }
     }
 
@@ -3312,7 +3370,51 @@ export class Evaluator {
         config.maxIterations = args[2];
       }
 
-      return thinkLoop(rawInput, config);
+      // ═══ Phase 3統合: 意志付き思考 ═══
+      // 入力に __intention__ がある場合、思考ループに意志を反映
+      const inputIntention = getIntentionOf(rawInput);
+      if (inputIntention && !config.strategy) {
+        // 意志の種類から思考戦略を導出
+        switch (inputIntention.type) {
+          case 'seek':
+            config.strategy = 'seek';
+            if (inputIntention.target !== undefined) config.targetValue = inputIntention.target;
+            break;
+          case 'stabilize':
+            config.strategy = 'converge';
+            break;
+          case 'explore':
+            config.strategy = 'explore';
+            break;
+          case 'maximize':
+            config.strategy = 'explore'; // 全モード試行
+            break;
+          case 'minimize':
+            config.strategy = 'converge';
+            break;
+          case 'harmonize':
+            if (inputIntention.target !== undefined) {
+              config.strategy = 'seek';
+              config.targetValue = inputIntention.target;
+            }
+            break;
+          default:
+            config.strategy = 'converge';
+        }
+        if (inputIntention.patience && !config.maxIterations) {
+          config.maxIterations = inputIntention.patience;
+        }
+      }
+
+      const thinkResult = thinkLoop(rawInput, config);
+
+      // 意志付き思考の場合、結果に意志情報を付加
+      if (inputIntention) {
+        (thinkResult as any).__intention_guided__ = true;
+        (thinkResult as any).__original_intention__ = inputIntention;
+      }
+
+      return thinkResult;
     }
 
     // think_trajectory / 軌跡: 思考の数値軌跡を配列で返す
@@ -3451,6 +3553,143 @@ export class Evaluator {
           return gameAsMDim(gs);
         case "sigma": case "game_sigma":
           return getGameSigma(gs);
+
+        // ═══════════════════════════════════════════
+        // Phase 3統合: Game × Will — 意志駆動の戦略選択
+        // ═══════════════════════════════════════════
+
+        // game_intend / ゲーム意志: ゲームに意志を付与
+        case "game_intend": case "ゲーム意志": {
+          const intentTypeArg = args.length >= 1 ? String(args[0]) : 'maximize';
+          const typeMap: Record<string, IntentionType> = {
+            'maximize': 'maximize', '最大化': 'maximize',
+            'minimize': 'minimize', '最小化': 'minimize',
+            'seek': 'seek', '接近': 'seek',
+            'explore': 'explore', '探索': 'explore',
+            'stabilize': 'stabilize', '安定': 'stabilize',
+          };
+          const intentType = typeMap[intentTypeArg] ?? 'maximize';
+          const target = args.length >= 2 ? Number(args[1]) : undefined;
+          const intention = createIntention(intentType, target);
+          const result = { ...gs } as any;
+          result.__intention__ = intention;
+          return result;
+        }
+
+        // will_play / 意志打ち: 意志計算で最善手を選択して1手進める
+        case "will_play": case "意志打ち": {
+          const moves = getLegalMoves(gs);
+          if (moves.length === 0 || gs.state.status !== 'playing') return gs;
+
+          // 各合法手を𝕄のneighborとして表現
+          // center = 現在ターン数、neighbors = 各手の評価値
+          const evaluations = moves.map(move => {
+            const newState = gs.rules.applyMove(gs.state, move);
+            return gs.rules.evaluate(newState, gs.state.currentPlayer);
+          });
+
+          const gameMd = {
+            reiType: 'MDim' as const,
+            center: gs.state.turnCount,
+            neighbors: evaluations,
+            mode: 'weighted',
+          };
+
+          // 意志を決定（ゲームに付与済みの意志 or デフォルト maximize）
+          const gameIntention = (gs as any).__intention__
+            ?? createIntention('maximize');
+
+          const willResult = willCompute(gameMd, gameIntention);
+
+          // will_compute が選んだモードから最善手のインデックスを決定
+          // maximize → 最大評価の手、minimize → 最小評価の手
+          let bestIdx = 0;
+          if (gameIntention.type === 'maximize') {
+            bestIdx = evaluations.indexOf(Math.max(...evaluations));
+          } else if (gameIntention.type === 'minimize') {
+            bestIdx = evaluations.indexOf(Math.min(...evaluations));
+          } else if (gameIntention.type === 'seek' && gameIntention.target !== undefined) {
+            let minDist = Infinity;
+            evaluations.forEach((ev, i) => {
+              const dist = Math.abs(ev - (gameIntention.target ?? 0));
+              if (dist < minDist) { minDist = dist; bestIdx = i; }
+            });
+          } else if (gameIntention.type === 'explore') {
+            // ランダムに選択（探索意志）
+            bestIdx = Math.floor(Math.random() * moves.length);
+          } else {
+            bestIdx = evaluations.indexOf(Math.max(...evaluations));
+          }
+
+          const chosenMove = moves[bestIdx];
+          const result = playMove(gs, chosenMove);
+          // 意志計算の情報を付加
+          (result as any).__will_choice__ = {
+            chosenMove,
+            evaluation: evaluations[bestIdx],
+            allEvaluations: moves.map((m, i) => ({ move: m, score: evaluations[i] })),
+            willResult,
+            intentionType: gameIntention.type,
+          };
+          return result;
+        }
+
+        // will_auto_play / 意志対局: 意志駆動で自動対局
+        case "will_auto_play": case "意志対局": {
+          let current = { ...gs } as any;
+          const p1Intent = args.length >= 1 ? String(args[0]) : 'maximize';
+          const p2Intent = args.length >= 2 ? String(args[1]) : 'maximize';
+          let safetyCounter = 0;
+
+          while (current.state.status === 'playing' && safetyCounter < 200) {
+            safetyCounter++;
+            const currentIntent = current.state.currentPlayer === 1 ? p1Intent : p2Intent;
+            const typeMap: Record<string, IntentionType> = {
+              'maximize': 'maximize', 'minimize': 'minimize',
+              'seek': 'seek', 'explore': 'explore', 'stabilize': 'stabilize',
+              '最大化': 'maximize', '探索': 'explore',
+            };
+            const intentType = typeMap[currentIntent] ?? 'maximize';
+            current.__intention__ = createIntention(intentType);
+
+            // will_play と同じロジック
+            const moves = getLegalMoves(current);
+            if (moves.length === 0) break;
+
+            const evaluations = moves.map(move => {
+              const newState = current.rules.applyMove(current.state, move);
+              return current.rules.evaluate(newState, current.state.currentPlayer);
+            });
+
+            let bestIdx = 0;
+            if (intentType === 'maximize') {
+              bestIdx = evaluations.indexOf(Math.max(...evaluations));
+            } else if (intentType === 'explore') {
+              bestIdx = Math.floor(Math.random() * moves.length);
+            } else {
+              bestIdx = evaluations.indexOf(Math.max(...evaluations));
+            }
+
+            current = playMove(current, moves[bestIdx]);
+          }
+          return current;
+        }
+
+        // game_will_sigma / ゲーム意志σ: ゲームの意志情報を含むσ
+        case "game_will_sigma": case "ゲーム意志σ": {
+          const baseSigma = getGameSigma(gs);
+          const gameIntention = (gs as any).__intention__;
+          const willChoice = (gs as any).__will_choice__;
+          return {
+            ...baseSigma,
+            will: gameIntention ? {
+              type: gameIntention.type,
+              target: gameIntention.target,
+              satisfaction: gameIntention.satisfaction,
+            } : null,
+            lastWillChoice: willChoice ?? null,
+          };
+        }
       }
     }
 
@@ -3607,6 +3846,116 @@ export class Evaluator {
           const row = args.length > 0 ? Number(args[0]) : 0;
           const col = args.length > 1 ? Number(args[1]) : 0;
           return cellAsMDim(ps, row, col);
+        }
+
+        // ═══════════════════════════════════════════
+        // Phase 3統合: Puzzle × Bind — 制約を関係として表現
+        // ═══════════════════════════════════════════
+
+        // puzzle_bind_constraints / 制約結合: 制約グループをBindingRegistryに登録
+        case "puzzle_bind_constraints": case "制約結合": {
+          let bindCount = 0;
+          for (const group of ps.constraints) {
+            if (group.type !== 'all_different') continue;
+            // グループ内の各セルペアを causal 結合（制約 = 相互因果）
+            for (let i = 0; i < group.cells.length; i++) {
+              for (let j = i + 1; j < group.cells.length; j++) {
+                const [ri, ci] = group.cells[i];
+                const [rj, cj] = group.cells[j];
+                const refA = `cell_${ri}_${ci}`;
+                const refB = `cell_${rj}_${cj}`;
+                // 同じペアが既に登録済みならスキップ
+                const existing = this.bindingRegistry.getBindingsFor(refA);
+                if (existing.some(b => b.target === refB)) continue;
+                this.bindingRegistry.bind(refA, refB, 'entangle', 1.0, true);
+                bindCount++;
+              }
+            }
+          }
+          return {
+            reiType: 'PuzzleBindResult' as const,
+            constraintGroups: ps.constraints.length,
+            bindingsCreated: bindCount,
+            puzzleType: ps.puzzleType,
+            size: ps.size,
+          };
+        }
+
+        // cell_relations / セル関係: 指定セルの全関係を照会
+        case "cell_relations": case "セル関係": {
+          const row = args.length > 0 ? Number(args[0]) : 0;
+          const col = args.length > 1 ? Number(args[1]) : 0;
+          const cellRef = `cell_${row}_${col}`;
+          const bindings = this.bindingRegistry.getBindingsFor(cellRef);
+          // 関係の解読: cell_R_C → (R, C) に戻す
+          const relations = bindings.map(b => {
+            const targetMatch = b.target.match(/cell_(\d+)_(\d+)/);
+            if (!targetMatch) return null;
+            const tr = Number(targetMatch[1]);
+            const tc = Number(targetMatch[2]);
+            // どの制約グループに属するか特定
+            const groups: string[] = [];
+            for (const g of ps.constraints) {
+              const hasSource = g.cells.some(([r, c]) => r === row && c === col);
+              const hasTarget = g.cells.some(([r, c]) => r === tr && c === tc);
+              if (hasSource && hasTarget) groups.push(g.label);
+            }
+            return {
+              target: [tr, tc],
+              mode: b.mode,
+              strength: b.strength,
+              constraintGroups: groups,
+              targetValue: ps.cells[tr]?.[tc]?.value ?? 0,
+              targetCandidates: ps.cells[tr]?.[tc]?.candidates ?? [],
+            };
+          }).filter(Boolean);
+          return {
+            cell: [row, col],
+            value: ps.cells[row]?.[col]?.value ?? 0,
+            candidates: ps.cells[row]?.[col]?.candidates ?? [],
+            relatedCells: relations.length,
+            relations,
+          };
+        }
+
+        // puzzle_will_solve / 意志解法: 意志駆動でパズルを解く
+        case "puzzle_will_solve": case "意志解法": {
+          // 各未確定セルに「seek」意志を付与して候補を評価
+          const solveLog: string[] = [];
+          let confirms = 0;
+          for (let r = 0; r < ps.size; r++) {
+            for (let c = 0; c < ps.size; c++) {
+              const cell = ps.cells[r][c];
+              if (cell.value > 0 || cell.candidates.length !== 1) continue;
+              // 候補が1つのセルを確定（will的にはseek成功）
+              cell.value = cell.candidates[0];
+              cell.candidates = [];
+              confirms++;
+              solveLog.push(`(${r},${c})=${cell.value} [意志確定]`);
+            }
+          }
+          // 通常の伝播も実行
+          const propagated = propagateOnly(ps, 50);
+          // σ更新
+          let totalCandidates = 0;
+          let confirmedCells = 0;
+          for (let r = 0; r < ps.size; r++) {
+            for (let c = 0; c < ps.size; c++) {
+              if (ps.cells[r][c].value > 0) confirmedCells++;
+              else totalCandidates += ps.cells[r][c].candidates.length;
+            }
+          }
+          ps.totalCandidates = totalCandidates;
+          ps.confirmedCells = confirmedCells;
+          ps.solved = confirmedCells === ps.size * ps.size;
+          return {
+            reiType: 'PuzzleWillSolveResult' as const,
+            willConfirmations: confirms,
+            solved: ps.solved,
+            confirmedCells: ps.confirmedCells,
+            remainingCandidates: ps.totalCandidates,
+            log: solveLog,
+          };
         }
       }
     }
