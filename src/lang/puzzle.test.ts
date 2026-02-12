@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Rei v0.3 — Puzzle Unification テスト (柱③)
 // パズル統一エンジン + Rei構文統合
 // ============================================================
@@ -10,10 +10,10 @@ import {
   cellAsMDim, getGrid, getCandidates, getPuzzleSigma,
   formatSudoku, estimateDifficulty, generateSudoku, parseGrid,
   type PuzzleSpace,
-} from '../src/lang/puzzle';
-import { Lexer } from '../src/lang/lexer';
-import { Parser } from '../src/lang/parser';
-import { Evaluator } from '../src/lang/evaluator';
+} from './puzzle';
+import { Lexer } from './lexer';
+import { Parser } from './parser';
+import { Evaluator } from './evaluator';
 
 function rei(code: string): any {
   const tokens = new Lexer(code).tokenize();
