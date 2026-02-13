@@ -84,9 +84,9 @@ This clause does not restrict the following legitimate uses:
 
 ## 法的位置づけ / Legal Status
 
-本平和利用条項は、Apache License 2.0 の追加条件（Additional Terms）として適用されます。Apache License 2.0 第7条に基づき、本条項の違反はライセンス全体の自動終了事由となります。
+本平和利用条項は、MIT License の追加条件（Additional Terms）として適用されます。本条項の違反はライセンスに基づく権利の即時終了事由となります。
 
-This Peace Use Clause is applied as Additional Terms to the Apache License 2.0. Pursuant to Section 7 of the Apache License 2.0, violation of this clause constitutes grounds for automatic termination of the entire license.
+This Peace Use Clause is applied as Additional Terms to the MIT License. Violation of this clause constitutes grounds for immediate termination of the rights granted under the license.
 
 ---
 
