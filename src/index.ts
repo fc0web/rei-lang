@@ -7,6 +7,7 @@ export { Parser } from './lang/parser';
 export { Evaluator } from './lang/evaluator';
 export { ReiEventBus } from './lang/event-bus';
 export { ReiAgent, AgentRegistry } from './lang/entity-agent';
+export { ReiMediator } from './lang/mediator';
 
 function unwrapReiVal(v: any): any {
   if (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') {

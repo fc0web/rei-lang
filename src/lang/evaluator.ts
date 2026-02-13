@@ -58,6 +58,11 @@ import {
   ReiAgent, AgentRegistry,
   type AgentBehavior, type AgentSigma,
 } from './entity-agent';
+import {
+  ReiMediator,
+  type ConflictStrategy, type MediatorSigma,
+  type RoundResult, type RunResult,
+} from './mediator';
 // RCT方向3: API版はtheory/semantic-compressor.tsを直接使用
 // evaluator内はローカル同期版（下部のreiLocalSemantic*関数）を使用
 
@@ -161,13 +166,15 @@ export class Evaluator {
   env: Environment;
   // ── v0.4: 関係エンジン ──
   bindingRegistry: BindingRegistry = new BindingRegistry();
-  // ── v0.5: イベントバス + Agent ──
+  // ── v0.5: イベントバス + Agent + Mediator ──
   eventBus: ReiEventBus = new ReiEventBus();
   agentRegistry: AgentRegistry;
+  mediator: ReiMediator;
 
   constructor(parent?: Environment) {
     this.env = new Environment(parent ?? null);
     this.agentRegistry = new AgentRegistry(this.eventBus);
+    this.mediator = new ReiMediator(this.eventBus, this.agentRegistry);
     this.registerBuiltins();
   }
 
@@ -508,6 +515,11 @@ export class Evaluator {
         "agent_sigma", "自律σ", "agent_list", "自律一覧",
         "agent_dissolve", "自律消滅", "agents_tick_all", "全自律実行",
         "agent_registry_sigma", "自律統計",
+        // v0.5 Phase 2c: Mediator コマンド
+        "mediate", "調停", "mediate_run", "調停実行",
+        "mediator_sigma", "調停σ", "agent_priority", "優先度",
+        "mediate_strategy", "調停戦略",
+        "mediate_message", "調停通信", "mediate_broadcast", "調停放送",
       ];
       if (relationWillCommands.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
@@ -1497,6 +1509,155 @@ export class Evaluator {
 
     if (cmdName === "agent_registry_sigma" || cmdName === "自律統計") {
       return this.agentRegistry.sigma();
+    }
+
+    // ═══════════════════════════════════════════════════
+    // v0.5 Phase 2c: Mediator（調停）コマンド
+    // ═══════════════════════════════════════════════════
+
+    if (cmdName === "mediate" || cmdName === "調停") {
+      // any |> mediate            → 1ラウンド並行実行
+      // any |> mediate(3)         → 3ラウンド並行実行（収束検出付き）
+      // any |> mediate(10, 0.8)   → 最大10ラウンド、収束閾値0.8
+      const maxRounds = args.length >= 1 ? Number(args[0]) : 1;
+      const threshold = args.length >= 2 ? Number(args[1]) : 1.0;
+
+      const envMap = new Map<string, any>();
+      for (const [name, binding] of this.env.allBindings()) {
+        envMap.set(name, binding);
+      }
+
+      if (maxRounds <= 1) {
+        // 単一ラウンド
+        const round = this.mediator.runRound(envMap);
+        const actionSummary: Record<string, any> = {};
+        for (const [id, ar] of round.actions) {
+          actionSummary[id] = {
+            decision: round.resolvedDecisions.get(id)?.action ?? 'none',
+            success: ar.success,
+            reason: ar.reason,
+          };
+        }
+        return {
+          reiType: 'MediatorRoundResult' as const,
+          round: round.round,
+          activeAgents: round.metrics.activeAgents,
+          conflicts: round.conflicts.length,
+          resolutions: round.resolutions.map(r => ({
+            type: r.conflict.type,
+            strategy: r.strategy,
+            agents: r.conflict.agents,
+            reason: r.reason,
+          })),
+          actions: actionSummary,
+          convergence: round.metrics.convergenceRatio,
+        };
+      } else {
+        // 複数ラウンド
+        const result = this.mediator.run(maxRounds, threshold, envMap);
+        return {
+          reiType: 'MediatorRunResult' as const,
+          totalRounds: result.totalRounds,
+          converged: result.converged,
+          convergenceRound: result.convergenceRound,
+          finalAgents: result.finalState.agents,
+          roundSummaries: result.rounds.map(r => ({
+            round: r.round,
+            activeAgents: r.metrics.activeAgents,
+            conflicts: r.metrics.conflictCount,
+            convergence: r.metrics.convergenceRatio,
+          })),
+          flowMomentum: result.finalState.flowMomentum,
+        };
+      }
+    }
+
+    if (cmdName === "mediate_run" || cmdName === "調停実行") {
+      // any |> mediate_run(maxRounds, threshold)
+      // mediate(n)のエイリアス（常に複数ラウンドモード）
+      const maxRounds = args.length >= 1 ? Number(args[0]) : 10;
+      const threshold = args.length >= 2 ? Number(args[1]) : 1.0;
+
+      const envMap = new Map<string, any>();
+      for (const [name, binding] of this.env.allBindings()) {
+        envMap.set(name, binding);
+      }
+
+      const result = this.mediator.run(maxRounds, threshold, envMap);
+      return {
+        reiType: 'MediatorRunResult' as const,
+        totalRounds: result.totalRounds,
+        converged: result.converged,
+        convergenceRound: result.convergenceRound,
+        finalAgents: result.finalState.agents,
+        roundSummaries: result.rounds.map(r => ({
+          round: r.round,
+          activeAgents: r.metrics.activeAgents,
+          conflicts: r.metrics.conflictCount,
+          convergence: r.metrics.convergenceRatio,
+        })),
+        flowMomentum: result.finalState.flowMomentum,
+      };
+    }
+
+    if (cmdName === "mediator_sigma" || cmdName === "調停σ") {
+      return this.mediator.sigma();
+    }
+
+    if (cmdName === "agent_priority" || cmdName === "優先度") {
+      // agentId |> agent_priority(0.8)  → 優先度設定
+      // agentSigma |> agent_priority(0.8)
+      let agentId: string | undefined;
+      if (rawInput && typeof rawInput === 'object' && rawInput.reiType === 'AgentSigma') {
+        agentId = rawInput.id;
+      } else if (typeof rawInput === 'string') {
+        agentId = rawInput;
+      }
+      if (!agentId) throw new Error("agent_priority: Agent IDが必要です");
+
+      if (args.length >= 1) {
+        const priority = Number(args[0]);
+        this.mediator.setAgentPriority(agentId, priority);
+        return { agentId, priority };
+      }
+      return { agentId, priority: this.mediator.getAgentPriority(agentId) };
+    }
+
+    if (cmdName === "mediate_strategy" || cmdName === "調停戦略") {
+      // any |> mediate_strategy("cooperative") → デフォルト戦略変更
+      if (args.length >= 1) {
+        const strategyMap: Record<string, ConflictStrategy> = {
+          'priority': 'priority', '優先': 'priority',
+          'cooperative': 'cooperative', '協調': 'cooperative',
+          'sequential': 'sequential', '順次': 'sequential',
+          'cancel_both': 'cancel_both', '両方取消': 'cancel_both',
+          'mediator': 'mediator', '調停者': 'mediator',
+        };
+        const strategy = strategyMap[String(args[0])] ?? String(args[0]) as ConflictStrategy;
+        this.mediator.defaultStrategy = strategy;
+        return { strategy: this.mediator.defaultStrategy };
+      }
+      return { strategy: this.mediator.defaultStrategy };
+    }
+
+    if (cmdName === "mediate_message" || cmdName === "調停通信") {
+      // "from_id" |> mediate_message("to_id", data)
+      const fromId = typeof rawInput === 'string' ? rawInput
+        : (rawInput?.id ?? rawInput?.agentId ?? String(rawInput));
+      const toId = args.length >= 1 ? String(args[0]) : undefined;
+      if (!toId) throw new Error("mediate_message: 宛先Agent IDが必要です");
+      const data = args.length >= 2 ? (typeof args[1] === 'object' ? args[1] : { message: args[1] }) : {};
+      const event = this.mediator.sendMessage(fromId, toId, data);
+      return { sent: true, from: fromId, to: toId, event: event.type };
+    }
+
+    if (cmdName === "mediate_broadcast" || cmdName === "調停放送") {
+      // "agent_id" |> mediate_broadcast(data)
+      const fromId = typeof rawInput === 'string' ? rawInput
+        : (rawInput?.id ?? rawInput?.agentId ?? String(rawInput));
+      const data = args.length >= 1 ? (typeof args[0] === 'object' ? args[0] : { message: args[0] }) : {};
+      const event = this.mediator.broadcast(fromId, data);
+      return { broadcast: true, from: fromId, event: event.type };
     }
 
     // ???????????????????????????????????????????
