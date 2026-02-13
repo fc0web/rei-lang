@@ -1,152 +1,179 @@
-﻿/**
- * D-FUMT Theory #67 窶・譁ｹ蜷・: LLM騾｣謳ｺ縺ｮ諢丞袖逧・悸邵ｮ
+/**
+ * D-FUMT Theory #67 — 方向3: LLM連携の意味的圧縮
  * =====================================================
- * Rei Compression Theory (RCT) 窶・Semantic Compression Engine
+ * Rei Compression Theory (RCT) — Semantic Compression Engine
  *
- * 蠕捺擂縺ｮ蝨ｧ邵ｮ:  D(E(x)) = x     ・医ン繝・ヨ螳悟・荳閾ｴ・・ * 諢丞袖逧・悸邵ｮ:  D(E(x)) 竕・x     ・域э蜻ｳ繝ｻ讖溯・縺悟酔荳縲√ン繝・ヨ縺ｯ逡ｰ縺ｪ繧具ｼ・ *
- * K_Rei_Semantic(x) = min{ |ﾎｸ| : Meaning(G(ﾎｸ)) = Meaning(x) }
+ * 従来の圧縮:  D(E(x)) = x     （ビット完全一致）
+ * 意味的圧縮:  D(E(x)) ≈ x     （意味・機能が同一、ビットは異なる）
  *
- * 縲後さ繝ｼ繝峨・諢丞袖繧堤炊隗｣縺励※蝨ｧ邵ｮ縺吶ｋ縲・ * 窶・gzip縺ｫ蜴溽炊逧・↓荳榊庄閭ｽ縺ｪ谺｡蜈・・蝨ｧ邵ｮ
+ * K_Rei_Semantic(x) = min{ |θ| : Meaning(G(θ)) = Meaning(x) }
  *
- * 繝｢繝・Ν蟇ｾ蠢懆｡ｨ・・ei縺ｮ6螻樊ｧ縺ｨ縺ｮ蟇ｾ蠢懶ｼ・
- *   LLM        竊・險俶・・・emory・・ : 繝・く繧ｹ繝医・繧ｳ繝ｼ繝峨・譁・ц逧・э蜻ｳ
- *   CNN        竊・蝣ｴ・・ield・・    : 遨ｺ髢鍋噪讒矩繝ｻ逕ｻ蜒・ *   GNN        竊・髢｢菫ゑｼ・elation・・ 繝阪ャ繝医Ρ繝ｼ繧ｯ繝ｻ繧ｰ繝ｩ繝・ *   Symbolic   竊・諢丞ｿ暦ｼ・ill・・   : 隲也炊繝ｻ蜈ｬ逅・・險ｼ譏・ *   Diffusion  竊・豬√ｌ・・low・・   : 繝弱う繧ｺ竊呈ｧ矩縺ｮ驕ｷ遘ｻ
- *   Hybrid     竊・螻､・・ayer・・    : 隍・焚繝｢繝・Ν縺ｮ髫主ｱ､逧・ｵｱ蜷・ *
- * Author: Nobuki Fujimoto (阯､譛ｬ 莨ｸ讓ｹ) & Claude
+ * 「コードの意味を理解して圧縮する」
+ * — gzipに原理的に不可能な次元の圧縮
+ *
+ * モデル対応表（Reiの6属性との対応）:
+ *   LLM        → 記憶（memory）  : テキスト・コードの文脈的意味
+ *   CNN        → 場（field）     : 空間的構造・画像
+ *   GNN        → 関係（relation）: ネットワーク・グラフ
+ *   Symbolic   → 意志（will）    : 論理・公理・証明
+ *   Diffusion  → 流れ（flow）    : ノイズ→構造の遷移
+ *   Hybrid     → 層（layer）     : 複数モデルの階層的統合
+ *
+ * Author: Nobuki Fujimoto (藤本 伸樹) & Claude
  * Date: 2026-02-13
  */
 
 // ============================================================
-// Part 1: 諢丞袖逧・悸邵ｮ縺ｮ謨ｰ蟄ｦ逧・渕逶､
+// Part 1: 意味的圧縮の数学的基盤
 // ============================================================
 
 /**
- * 諢丞袖遲我ｾ｡諤ｧ縺ｮ蠖｢蠑冗噪螳夂ｾｩ:
+ * 意味等価性の形式的定義:
  *
- *   Meaning: Code 竊・Behavior
- *   Meaning(x) = { (input, output) | x(input) = output, 竏input 竏・Domain(x) }
+ *   Meaning: Code → Behavior
+ *   Meaning(x) = { (input, output) | x(input) = output, ∀input ∈ Domain(x) }
  *
- *   諢丞袖逧・ｭ我ｾ｡: x 竕｡_sem y  筺ｺ  Meaning(x) = Meaning(y)
+ *   意味的等価: x ≡_sem y  ⟺  Meaning(x) = Meaning(y)
  *
- *   諢丞袖逧・悸邵ｮ邇・
- *   ﾏ＼sem(x) = |ﾎｸ| / |x|  where G(ﾎｸ) 竕｡_sem x
+ *   意味的圧縮率:
+ *   ρ_sem(x) = |θ| / |x|  where G(θ) ≡_sem x
  *
- *   螳夂炊・域э蜻ｳ蝨ｧ邵ｮ縺ｮ蜆ｪ菴肴ｧ・・
- *   竏x with structure: K_semantic(x) 竕､ K_syntactic(x) 竕､ K_bitwise(x)
+ *   定理（意味圧縮の優位性）:
+ *   ∀x with structure: K_semantic(x) ≤ K_syntactic(x) ≤ K_bitwise(x)
  *
- *   險ｼ譏弱・逶ｴ諢・
- *   - 繝薙ャ繝亥ｮ悟・蝨ｧ邵ｮ: 繧ｳ繝｡繝ｳ繝医・遨ｺ逋ｽ繝ｻ螟画焚蜷阪ｂ菫晏ｭ・竊・譛螟ｧ
- *   - 讒区枚逧・悸邵ｮ:     AST讒矩繧剃ｿ晏ｭ・竊・荳ｭ髢・ *   - 諢丞袖逧・悸邵ｮ:     謖ｯ繧玖・縺・・縺ｿ菫晏ｭ・竊・譛蟆・ */
+ *   証明の直感:
+ *   - ビット完全圧縮: コメント・空白・変数名も保存 → 最大
+ *   - 構文的圧縮:     AST構造を保存 → 中間
+ *   - 意味的圧縮:     振る舞いのみ保存 → 最小
+ */
 
 // ============================================================
-// Part 2: 繝｢繝・Ν髱樔ｾ晏ｭ倥う繝ｳ繧ｿ繝ｼ繝輔ぉ繝ｼ繧ｹ
+// Part 2: モデル非依存インターフェース
 // ============================================================
 
 /**
- * 蝨ｧ邵ｮ繝｢繝・Ν縺ｮ遞ｮ鬘橸ｼ・ei縺ｮ6螻樊ｧ縺ｨ蟇ｾ蠢懶ｼ・ */
+ * 圧縮モデルの種類（Reiの6属性と対応）
+ */
 export type CompressorModelType =
-  | 'llm'        // 險俶・: 繝・く繧ｹ繝医・繧ｳ繝ｼ繝峨・諢丞袖蝨ｧ邵ｮ
-  | 'cnn'        // 蝣ｴ:   逕ｻ蜒上・遨ｺ髢薙ョ繝ｼ繧ｿ縺ｮ讒矩蝨ｧ邵ｮ
-  | 'gnn'        // 髢｢菫・ 繧ｰ繝ｩ繝輔・繝阪ャ繝医Ρ繝ｼ繧ｯ縺ｮ菴咲嶌蝨ｧ邵ｮ
-  | 'symbolic'   // 諢丞ｿ・ 隲也炊繝ｻ險ｼ譏弱・蜈ｬ逅・悸邵ｮ
-  | 'diffusion'  // 豬√ｌ: 貎懷惠遨ｺ髢薙∈縺ｮ蜀吝ワ蝨ｧ邵ｮ
-  | 'hybrid';    // 螻､:   隍・焚繝｢繝・Ν縺ｮ髫主ｱ､逧・ｵｱ蜷・
+  | 'llm'        // 記憶: テキスト・コードの意味圧縮
+  | 'cnn'        // 場:   画像・空間データの構造圧縮
+  | 'gnn'        // 関係: グラフ・ネットワークの位相圧縮
+  | 'symbolic'   // 意志: 論理・証明の公理圧縮
+  | 'diffusion'  // 流れ: 潜在空間への写像圧縮
+  | 'hybrid';    // 層:   複数モデルの階層的統合
+
 /**
- * 諢丞袖逧・悸邵ｮ繝代Λ繝｡繝ｼ繧ｿ ﾎｸ
- * 窶・繝・・繧ｿ縺昴・繧ゅ・縺ｧ縺ｯ縺ｪ縺上√ョ繝ｼ繧ｿ縺ｮ縲檎函謌仙・逅・・ */
+ * 意味的圧縮パラメータ θ
+ * — データそのものではなく、データの「生成公理」
+ */
 export interface SemanticTheta {
-  // 繝｡繧ｿ諠・ｱ
+  // メタ情報
   model_type: CompressorModelType;
   version: string;
   timestamp: string;
-  original_size: number;        // 蜈・ョ繝ｼ繧ｿ縺ｮ繝舌う繝域焚
-  theta_size: number;           // ﾎｸ縺ｮ繝舌う繝域焚
-  compression_ratio: number;    // ﾎｸ_size / original_size
+  original_size: number;        // 元データのバイト数
+  theta_size: number;           // θのバイト数
+  compression_ratio: number;    // θ_size / original_size
 
-  // 諢丞袖逧・ｱ､・亥・繝｢繝・Ν蜈ｱ騾夲ｼ・  intent: string;               // 逶ｮ逧・・諢丞峙縺ｮ險倩ｿｰ
-  structure: string;            // 讒矩縺ｮ鬪ｨ譬ｼ險倩ｿｰ
-  constraints: string[];        // 蛻ｶ邏・擅莉ｶ縺ｮ繝ｪ繧ｹ繝・
-  // 繝｢繝・Ν蝗ｺ譛峨ヱ繝ｩ繝｡繝ｼ繧ｿ
+  // 意味的層（全モデル共通）
+  intent: string;               // 目的・意図の記述
+  structure: string;            // 構造の骨格記述
+  constraints: string[];        // 制約条件のリスト
+
+  // モデル固有パラメータ
   model_params: Record<string, unknown>;
 
-  // 蜩∬ｳｪ繝｡繝医Μ繧ｯ繧ｹ
-  semantic_fidelity: number;    // 諢丞袖逧・ｿ螳溷ｺｦ (0-1)
-  reconstruction_confidence: number; // 蠕ｩ蜈・ｿ｡鬆ｼ蠎ｦ (0-1)
+  // 品質メトリクス
+  semantic_fidelity: number;    // 意味的忠実度 (0-1)
+  reconstruction_confidence: number; // 復元信頼度 (0-1)
 }
 
 /**
- * 諢丞袖逧・悸邵ｮ縺ｮ邨先棡
+ * 意味的圧縮の結果
  */
 export interface SemanticCompressionResult {
   theta: SemanticTheta;
   original: string;
-  compressed_json: string;      // ﾎｸ縺ｮJSON陦ｨ迴ｾ
+  compressed_json: string;      // θのJSON表現
   stats: {
     original_bytes: number;
     theta_bytes: number;
-    ratio: number;              // 蝨ｧ邵ｮ邇・    gzip_ratio: number;         // gzip豈碑ｼ・畑
-    improvement_over_gzip: number; // gzip豈疲隼蝟・紫
+    ratio: number;              // 圧縮率
+    gzip_ratio: number;         // gzip比較用
+    improvement_over_gzip: number; // gzip比改善率
   };
 }
 
 /**
- * 諢丞袖逧・ｾｩ蜈・・邨先棡
+ * 意味的復元の結果
  */
 export interface SemanticDecompressionResult {
   reconstructed: string;
   theta: SemanticTheta;
   quality: {
-    semantic_similarity: number;   // 諢丞袖逧・｡樔ｼｼ蠎ｦ (0-1)
-    structural_similarity: number; // 讒矩逧・｡樔ｼｼ蠎ｦ (0-1)
-    line_count_ratio: number;      // 陦梧焚豈・  };
+    semantic_similarity: number;   // 意味的類似度 (0-1)
+    structural_similarity: number; // 構造的類似度 (0-1)
+    line_count_ratio: number;      // 行数比
+  };
 }
 
 /**
- * 諢丞袖逧・悸邵ｮ蝎ｨ縺ｮ謚ｽ雎｡繧､繝ｳ繧ｿ繝ｼ繝輔ぉ繝ｼ繧ｹ
- * 窶・蜈ｨ繝｢繝・Ν・・LM/CNN/GNN/Symbolic/Diffusion・峨′縺薙ｌ繧貞ｮ溯｣・☆繧・ */
+ * 意味的圧縮器の抽象インターフェース
+ * — 全モデル（LLM/CNN/GNN/Symbolic/Diffusion）がこれを実装する
+ */
 export interface ISemanticCompressor {
   readonly model_type: CompressorModelType;
   readonly name: string;
 
   /**
-   * 隨ｦ蜿ｷ蛹・ 繝・・繧ｿ 竊・逕滓・繝代Λ繝｡繝ｼ繧ｿﾎｸ
-   * E: Data 竊・ﾎ・   */
+   * 符号化: データ → 生成パラメータθ
+   * E: Data → Θ
+   */
   compress(data: string, options?: CompressOptions): Promise<SemanticCompressionResult>;
 
   /**
-   * 蠕ｩ蜿ｷ: 逕滓・繝代Λ繝｡繝ｼ繧ｿﾎｸ 竊・繝・・繧ｿ'
-   * D: ﾎ・竊・Data'  where Meaning(Data') 竕・Meaning(Data)
+   * 復号: 生成パラメータθ → データ'
+   * D: Θ → Data'  where Meaning(Data') ≈ Meaning(Data)
    */
   decompress(theta: SemanticTheta): Promise<SemanticDecompressionResult>;
 
   /**
-   * 諢丞袖逧・ｭ我ｾ｡諤ｧ縺ｮ讀懆ｨｼ
-   * Verify: Meaning(Data) 竕・Meaning(Data')
+   * 意味的等価性の検証
+   * Verify: Meaning(Data) ≈ Meaning(Data')
    */
   verifySemantic(original: string, reconstructed: string): Promise<number>;
 }
 
 export interface CompressOptions {
-  fidelity?: 'high' | 'medium' | 'low';  // 蠢螳溷ｺｦ繝ｬ繝吶Ν
-  max_theta_size?: number;                // ﾎｸ縺ｮ譛螟ｧ繧ｵ繧､繧ｺ
-  preserve_comments?: boolean;            // 繧ｳ繝｡繝ｳ繝井ｿ晏ｭ・  preserve_variable_names?: boolean;      // 螟画焚蜷堺ｿ晏ｭ・  target_ratio?: number;                  // 逶ｮ讓吝悸邵ｮ邇・}
+  fidelity?: 'high' | 'medium' | 'low';  // 忠実度レベル
+  max_theta_size?: number;                // θの最大サイズ
+  preserve_comments?: boolean;            // コメント保存
+  preserve_variable_names?: boolean;      // 変数名保存
+  target_ratio?: number;                  // 目標圧縮率
+}
 
 // ============================================================
-// Part 3: LLM諢丞袖逧・悸邵ｮ蝎ｨ縺ｮ螳溯｣・// ============================================================
+// Part 3: LLM意味的圧縮器の実装
+// ============================================================
 
 /**
  * LLMSemanticCompressor
- * 窶・Claude繧堤函謌蝉ｽ懃畑邏G縺ｨ縺励※菴ｿ逕ｨ縺吶ｋ諢丞袖逧・悸邵ｮ蝎ｨ
+ * — Claudeを生成作用素Gとして使用する意味的圧縮器
  *
- * 蝨ｧ邵ｮ繝励Ο繧ｻ繧ｹ:
- *   1. LLM縺後さ繝ｼ繝峨ｒ隱ｭ縺ｿ縲√梧э蜻ｳ縺ｮ鬪ｨ譬ｼ縲阪ｒ謚ｽ蜃ｺ
- *   2. 鬪ｨ譬ｼ = { intent, structure, algorithms, dependencies, edge_cases }
- *   3. 鬪ｨ譬ｼ縺湖ｸ縺ｨ縺励※菫晏ｭ倥＆繧後ｋ
+ * 圧縮プロセス:
+ *   1. LLMがコードを読み、「意味の骨格」を抽出
+ *   2. 骨格 = { intent, structure, algorithms, dependencies, edge_cases }
+ *   3. 骨格がθとして保存される
  *
- * 蠕ｩ蜈・・繝ｭ繧ｻ繧ｹ:
- *   1. LLM縺湖ｸ繧定ｪｭ縺ｿ縲√さ繝ｼ繝峨ｒ蜀咲函謌・ *   2. 蜀咲函謌舌さ繝ｼ繝峨・諢丞袖逧・↓遲我ｾ｡・医ン繝・ヨ縺ｯ逡ｰ縺ｪ繧具ｼ・ *
- * Rei縺ｮ6螻樊ｧ縺ｨ縺ｮ蟇ｾ蠢・
- *   縺薙・繧ｳ繝ｳ繝励Ξ繝・し繝ｼ縺ｯ縲瑚ｨ俶・縲榊ｱ樊ｧ縺ｫ蟇ｾ蠢懊☆繧九・ *   LLM縺ｮ蟾ｨ螟ｧ縺ｪ繝代Λ繝｡繝ｼ繧ｿ遨ｺ髢薙′縲瑚ｨ俶・縲阪→縺励※讖溯・縺励・ *   ﾎｸ縺ｨ縺・≧縲檎ｨｮ縲阪°繧牙ｮ悟・縺ｪ繧ｳ繝ｼ繝峨ｒ縲梧昴＞蜃ｺ縺吶阪・ */
+ * 復元プロセス:
+ *   1. LLMがθを読み、コードを再生成
+ *   2. 再生成コードは意味的に等価（ビットは異なる）
+ *
+ * Reiの6属性との対応:
+ *   このコンプレッサーは「記憶」属性に対応する。
+ *   LLMの巨大なパラメータ空間が「記憶」として機能し、
+ *   θという「種」から完全なコードを「思い出す」。
+ */
 export class LLMSemanticCompressor implements ISemanticCompressor {
   readonly model_type: CompressorModelType = 'llm';
   readonly name = 'RCT-LLM Semantic Compressor v1.0';
@@ -163,24 +190,27 @@ export class LLMSemanticCompressor implements ISemanticCompressor {
   }
 
   /**
-   * 蝨ｧ邵ｮ: 繧ｳ繝ｼ繝・竊・諢丞袖逧・ヱ繝ｩ繝｡繝ｼ繧ｿﾎｸ
+   * 圧縮: コード → 意味的パラメータθ
    */
   async compress(data: string, options: CompressOptions = {}): Promise<SemanticCompressionResult> {
     const fidelity = options.fidelity || 'high';
     const preserveComments = options.preserve_comments ?? false;
     const preserveVarNames = options.preserve_variable_names ?? false;
 
-    // Phase 1: LLM縺ｫ諢丞袖謚ｽ蜃ｺ繧剃ｾ晞ｼ
+    // Phase 1: LLMに意味抽出を依頼
     const extractionPrompt = this.buildExtractionPrompt(data, fidelity, preserveComments, preserveVarNames);
     const thetaRaw = await this.callLLM(extractionPrompt);
 
-    // Phase 2: ﾎｸ繧呈ｧ矩蛹・    const theta = this.parseThetaResponse(thetaRaw, data);
+    // Phase 2: θを構造化
+    const theta = this.parseThetaResponse(thetaRaw, data);
 
-    // Phase 3: 蝨ｧ邵ｮ邨ｱ險医ｒ險育ｮ・    const compressedJson = JSON.stringify(theta, null, 0); // minified
+    // Phase 3: 圧縮統計を計算
+    const compressedJson = JSON.stringify(theta, null, 0); // minified
     const originalBytes = Buffer.byteLength(data, 'utf-8');
     const thetaBytes = Buffer.byteLength(compressedJson, 'utf-8');
 
-    // gzip豈碑ｼ・    const zlibModule = await import('zlib');
+    // gzip比較
+    const zlibModule = await import('zlib');
     const gzipBytes = zlibModule.gzipSync(Buffer.from(data, 'utf-8'), { level: 9 }).length;
 
     const ratio = thetaBytes / originalBytes;
@@ -205,13 +235,14 @@ export class LLMSemanticCompressor implements ISemanticCompressor {
   }
 
   /**
-   * 蠕ｩ蜈・ 諢丞袖逧・ヱ繝ｩ繝｡繝ｼ繧ｿﾎｸ 竊・繧ｳ繝ｼ繝・
+   * 復元: 意味的パラメータθ → コード'
    */
   async decompress(theta: SemanticTheta): Promise<SemanticDecompressionResult> {
     const reconstructionPrompt = this.buildReconstructionPrompt(theta);
     const reconstructed = await this.callLLM(reconstructionPrompt);
 
-    // 蜩∬ｳｪ繝｡繝医Μ繧ｯ繧ｹ繧定ｨ育ｮ暦ｼ・LM荳崎ｦ√・繝偵Η繝ｼ繝ｪ繧ｹ繝・ぅ繝・け・・    const quality = this.calculateQuality(theta, reconstructed);
+    // 品質メトリクスを計算（LLM不要のヒューリスティック）
+    const quality = this.calculateQuality(theta, reconstructed);
 
     return {
       reconstructed,
@@ -221,23 +252,25 @@ export class LLMSemanticCompressor implements ISemanticCompressor {
   }
 
   /**
-   * 諢丞袖逧・ｭ我ｾ｡諤ｧ縺ｮ讀懆ｨｼ
+   * 意味的等価性の検証
    */
   async verifySemantic(original: string, reconstructed: string): Promise<number> {
     const verificationPrompt = this.buildVerificationPrompt(original, reconstructed);
     const response = await this.callLLM(verificationPrompt);
 
-    // 繝ｬ繧ｹ繝昴Φ繧ｹ縺九ｉ鬘樔ｼｼ蠎ｦ繧ｹ繧ｳ繧｢繧呈歓蜃ｺ
+    // レスポンスから類似度スコアを抽出
     const match = response.match(/SCORE:\s*([\d.]+)/);
     return match ? parseFloat(match[1]) : 0.5;
   }
 
   // ============================================================
-  // 繝励Ο繝ｳ繝励ヨ讒狗ｯ会ｼ域э蜻ｳ蝨ｧ邵ｮ縺ｮ譬ｸ蠢・ｼ・  // ============================================================
+  // プロンプト構築（意味圧縮の核心）
+  // ============================================================
 
   /**
-   * 諢丞袖謚ｽ蜃ｺ繝励Ο繝ｳ繝励ヨ
-   * 窶・LLM縺ｫ縲後さ繝ｼ繝峨・譛ｬ雉ｪ縲阪ｒ謚ｽ蜃ｺ縺輔○繧・   */
+   * 意味抽出プロンプト
+   * — LLMに「コードの本質」を抽出させる
+   */
   private buildExtractionPrompt(
     code: string,
     fidelity: string,
@@ -250,12 +283,12 @@ export class LLMSemanticCompressor implements ISemanticCompressor {
       low: `Extract only the high-level intent and architecture. Function names and their purpose, but not implementation. Target ~90% compression.`,
     }[fidelity];
 
-    return `You are a Semantic Compression Engine (RCT 窶・Rei Compression Theory).
-Your task is to extract the "generative parameters ﾎｸ" from the given source code.
+    return `You are a Semantic Compression Engine (RCT — Rei Compression Theory).
+Your task is to extract the "generative parameters θ" from the given source code.
 
 MATHEMATICAL FOUNDATION:
-  x = G(ﾎｸ)  where x is the code, G is a code generator, ﾎｸ is the minimal description
-  Goal: minimize |ﾎｸ| while preserving Meaning(x)
+  x = G(θ)  where x is the code, G is a code generator, θ is the minimal description
+  Goal: minimize |θ| while preserving Meaning(x)
 
 EXTRACTION RULES:
 ${fidelityInstructions}
@@ -272,7 +305,7 @@ OUTPUT FORMAT (respond with ONLY this JSON, no other text):
   "edge_cases": ["Edge case 1: how it's handled", "..."],
   "constants": {"name": "value (with reason)"},
   "patterns": ["Design pattern used and how"],
-  "io_contract": "Input 竊・Output specification for each public function",
+  "io_contract": "Input → Output specification for each public function",
   "language": "Programming language and key idioms used"
 }
 
@@ -283,20 +316,20 @@ ${code}
   }
 
   /**
-   * 蠕ｩ蜈・・繝ｭ繝ｳ繝励ヨ
-   * 窶・ﾎｸ縺九ｉ諢丞袖逧・↓遲我ｾ｡縺ｪ繧ｳ繝ｼ繝峨ｒ蜀咲函謌舌＆縺帙ｋ
+   * 復元プロンプト
+   * — θから意味的に等価なコードを再生成させる
    */
   private buildReconstructionPrompt(theta: SemanticTheta): string {
     const params = theta.model_params as Record<string, unknown>;
 
-    return `You are a Code Generation Engine (RCT 窶・Rei Compression Theory).
-Your task is to reconstruct source code from generative parameters ﾎｸ.
+    return `You are a Code Generation Engine (RCT — Rei Compression Theory).
+Your task is to reconstruct source code from generative parameters θ.
 
 MATHEMATICAL FOUNDATION:
-  Given ﾎｸ, generate x' such that Meaning(x') = Meaning(original x)
+  Given θ, generate x' such that Meaning(x') = Meaning(original x)
   The reconstructed code should be FUNCTIONALLY EQUIVALENT to the original.
 
-GENERATIVE PARAMETERS ﾎｸ:
+GENERATIVE PARAMETERS θ:
 - Intent: ${theta.intent}
 - Structure: ${theta.structure}
 - Constraints: ${theta.constraints.join('; ')}
@@ -321,10 +354,11 @@ OUTPUT: Respond with ONLY the reconstructed source code, no explanations.`;
   }
 
   /**
-   * 讀懆ｨｼ繝励Ο繝ｳ繝励ヨ
-   * 窶・蜈・さ繝ｼ繝峨→蠕ｩ蜈・さ繝ｼ繝峨・諢丞袖逧・ｭ我ｾ｡諤ｧ繧貞愛螳・   */
+   * 検証プロンプト
+   * — 元コードと復元コードの意味的等価性を判定
+   */
   private buildVerificationPrompt(original: string, reconstructed: string): string {
-    return `You are a Semantic Equivalence Verifier (RCT 窶・Rei Compression Theory).
+    return `You are a Semantic Equivalence Verifier (RCT — Rei Compression Theory).
 
 Compare these two code files and determine their SEMANTIC SIMILARITY.
 Semantic similarity means: do they perform the same computation?
@@ -340,7 +374,7 @@ ${reconstructed.substring(0, 3000)}
 \`\`\`
 
 Evaluate on these dimensions:
-1. Functional equivalence (same inputs 竊・same outputs?)
+1. Functional equivalence (same inputs → same outputs?)
 2. Structural similarity (similar architecture?)
 3. Algorithm equivalence (same computational approach?)
 4. Type compatibility (same interfaces?)
@@ -355,15 +389,16 @@ NOTES: Brief explanation`;
   }
 
   // ============================================================
-  // LLM騾壻ｿ｡螻､
+  // LLM通信層
   // ============================================================
 
   /**
-   * Claude API蜻ｼ縺ｳ蜃ｺ縺・   */
+   * Claude API呼び出し
+   */
   private async callLLM(prompt: string): Promise<string> {
     const apiKey = process.env.ANTHROPIC_API_KEY || '';
     
-    // API key譛ｪ險ｭ螳壽凾縺ｯ蜊ｳ蠎ｧ縺ｫ繝ｭ繝ｼ繧ｫ繝ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ
+    // API key未設定時は即座にローカルフォールバック
     if (!apiKey) {
       return this.localFallbackCompress(prompt);
     }
@@ -390,16 +425,17 @@ NOTES: Brief explanation`;
       const data: any = await response.json();
       return data.content?.[0]?.text || '';
     } catch (error) {
-      // API蜻ｼ縺ｳ蜃ｺ縺怜､ｱ謨玲凾縺ｯ繝ｭ繝ｼ繧ｫ繝ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ
+      // API呼び出し失敗時はローカルフォールバック
       return this.localFallbackCompress(prompt);
     }
   }
 
   /**
-   * 繝ｭ繝ｼ繧ｫ繝ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ蝨ｧ邵ｮ
-   * 窶・API譛ｪ險ｭ螳壽凾縺ｧ繧３CT縺ｮ蝓ｺ譛ｬ讖溯・縺ｯ蜍穂ｽ懊☆繧・   */
+   * ローカルフォールバック圧縮
+   * — API未設定時でもRCTの基本機能は動作する
+   */
   private localFallbackCompress(prompt: string): string {
-    // 繝励Ο繝ｳ繝励ヨ縺九ｉ繧ｳ繝ｼ繝峨ｒ謚ｽ蜃ｺ
+    // プロンプトからコードを抽出
     const codeMatch = prompt.match(/```\n([\s\S]*?)\n```/);
     if (!codeMatch) return '{}';
 
@@ -408,15 +444,16 @@ NOTES: Brief explanation`;
   }
 
   /**
-   * 繝ｭ繝ｼ繧ｫ繝ｫﾎｸ謚ｽ蜃ｺ・・LM荳崎ｦ∫沿・・   * 窶・繝代ち繝ｼ繝ｳ繝槭ャ繝√Φ繧ｰ繝吶・繧ｹ縺ｮ鬮倬溷悸邵ｮ
+   * ローカルθ抽出（LLM不要版）
+   * — パターンマッチングベースの高速圧縮
    */
   private extractThetaLocally(code: string): string {
     const lines = code.split('\n');
 
-    // 1. 險隱樊､懷・
+    // 1. 言語検出
     const language = this.detectLanguage(code);
 
-    // 2. 讒矩謚ｽ蜃ｺ
+    // 2. 構造抽出
     const functions = this.extractFunctions(lines);
     const imports = this.extractImports(lines);
     const classes = this.extractClasses(lines);
@@ -424,10 +461,12 @@ NOTES: Brief explanation`;
     const exports = this.extractExports(lines);
     const constants = this.extractConstants(lines);
 
-    // 3. 諢丞峙謗ｨ螳夲ｼ磯未謨ｰ蜷阪・繧ｳ繝｡繝ｳ繝医°繧会ｼ・    const comments = lines.filter(l => l.trim().startsWith('//') || l.trim().startsWith('/*') || l.trim().startsWith('*'));
+    // 3. 意図推定（関数名・コメントから）
+    const comments = lines.filter(l => l.trim().startsWith('//') || l.trim().startsWith('/*') || l.trim().startsWith('*'));
     const intent = comments.slice(0, 5).map(c => c.replace(/^[\s/*]+/, '').trim()).filter(Boolean).join('. ');
 
-    // 4. ﾎｸ讒狗ｯ・    const classNames = classes.map(c => c.name);
+    // 4. θ構築
+    const classNames = classes.map(c => c.name);
     const interfaceNames = interfaces.map(i => i.name);
 
     const theta = {
@@ -439,7 +478,7 @@ NOTES: Brief explanation`;
       edge_cases: [],
       constants: Object.fromEntries(constants.map(c => [c.name, c.value])),
       patterns: classNames.length > 0 ? [`classes: ${classNames.join(', ')}`] : [],
-      io_contract: functions.map(f => `${f.name}(${f.params}) 竊・${f.returnType || 'void'}`).join('; '),
+      io_contract: functions.map(f => `${f.name}(${f.params}) → ${f.returnType || 'void'}`).join('; '),
       language,
     };
 
@@ -447,7 +486,7 @@ NOTES: Brief explanation`;
   }
 
   // ============================================================
-  // 繝ｭ繝ｼ繧ｫ繝ｫ隗｣譫舌Θ繝ｼ繝・ぅ繝ｪ繝・ぅ
+  // ローカル解析ユーティリティ
   // ============================================================
 
   private detectLanguage(code: string): string {
@@ -475,7 +514,8 @@ NOTES: Brief explanation`;
         });
         continue;
       }
-      // 繝｡繧ｽ繝・ラ・医う繝ｳ繝・Φ繝医＆繧後◆髢｢謨ｰ・・      if (line.match(/^\s{2,}/)) {
+      // メソッド（インデントされた関数）
+      if (line.match(/^\s{2,}/)) {
         const methodMatch = line.match(methodPattern);
         if (methodMatch && !['if', 'for', 'while', 'switch', 'catch', 'else'].includes(methodMatch[1])) {
           results.push({
@@ -560,21 +600,21 @@ NOTES: Brief explanation`;
   }
 
   // ============================================================
-  // ﾎｸ隗｣譫舌→蜩∬ｳｪ險域ｸｬ
+  // θ解析と品質計測
   // ============================================================
 
   /**
-   * LLM繝ｬ繧ｹ繝昴Φ繧ｹ繧担emanticTheta縺ｫ螟画鋤
+   * LLMレスポンスをSemanticThetaに変換
    */
   private parseThetaResponse(response: string, originalCode: string): SemanticTheta {
     let parsed: Record<string, unknown>;
 
     try {
-      // JSON驛ｨ蛻・ｒ謚ｽ蜃ｺ
+      // JSON部分を抽出
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
     } catch {
-      // JSON隗｣譫仙､ｱ謨玲凾縺ｯ繝ｭ繝ｼ繧ｫ繝ｫ謚ｽ蜃ｺ縺ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ
+      // JSON解析失敗時はローカル抽出にフォールバック
       const localTheta = this.extractThetaLocally(originalCode);
       parsed = JSON.parse(localTheta);
     }
@@ -584,7 +624,9 @@ NOTES: Brief explanation`;
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       original_size: Buffer.byteLength(originalCode, 'utf-8'),
-      theta_size: 0, // 蠕後〒險育ｮ・      compression_ratio: 0, // 蠕後〒險育ｮ・      intent: (parsed.intent as string) || 'Unknown',
+      theta_size: 0, // 後で計算
+      compression_ratio: 0, // 後で計算
+      intent: (parsed.intent as string) || 'Unknown',
       structure: (parsed.structure as string) || 'Unknown',
       constraints: (parsed.edge_cases as string[]) || [],
       model_params: {
@@ -603,7 +645,8 @@ NOTES: Brief explanation`;
   }
 
   /**
-   * 蠕ｩ蜈・刀雉ｪ縺ｮ繝偵Η繝ｼ繝ｪ繧ｹ繝・ぅ繝・け險育ｮ・   */
+   * 復元品質のヒューリスティック計算
+   */
   private calculateQuality(
     theta: SemanticTheta,
     reconstructed: string
@@ -612,7 +655,8 @@ NOTES: Brief explanation`;
     const algos = (params.algorithms as string[]) || [];
     const deps = (params.dependencies as string[]) || [];
 
-    // 讒矩逧・｡樔ｼｼ蠎ｦ: 髢｢謨ｰ蜷阪・萓晏ｭ倬未菫ゅ・荳閾ｴ邇・    let structScore = 0;
+    // 構造的類似度: 関数名・依存関係の一致率
+    let structScore = 0;
     let structTotal = 0;
 
     for (const algo of algos) {
@@ -628,7 +672,7 @@ NOTES: Brief explanation`;
     const structural = structTotal > 0 ? structScore / structTotal : 0.5;
 
     return {
-      semantic_similarity: 0.85, // LLM讀懆ｨｼ縺ｧ譖ｴ譁ｰ蜿ｯ閭ｽ
+      semantic_similarity: 0.85, // LLM検証で更新可能
       structural_similarity: structural,
       line_count_ratio: 1.0,
     };
@@ -636,10 +680,13 @@ NOTES: Brief explanation`;
 }
 
 // ============================================================
-// Part 4: 蟆・擂縺ｮ繝｢繝・Ν諡｡蠑ｵ逕ｨ繧ｹ繧ｿ繝・// ============================================================
+// Part 4: 将来のモデル拡張用スタブ
+// ============================================================
 
 /**
- * CNN蝨ｧ邵ｮ蝎ｨ繧ｹ繧ｿ繝厄ｼ育判蜒上・遨ｺ髢薙ョ繝ｼ繧ｿ逕ｨ・・ * 窶・Rei縺ｮ縲悟ｴ・・ield・峨榊ｱ樊ｧ縺ｫ蟇ｾ蠢・ */
+ * CNN圧縮器スタブ（画像・空間データ用）
+ * — Reiの「場（field）」属性に対応
+ */
 export class CNNSemanticCompressor implements ISemanticCompressor {
   readonly model_type: CompressorModelType = 'cnn';
   readonly name = 'RCT-CNN Spatial Compressor (stub)';
@@ -656,7 +703,9 @@ export class CNNSemanticCompressor implements ISemanticCompressor {
 }
 
 /**
- * GNN蝨ｧ邵ｮ蝎ｨ繧ｹ繧ｿ繝厄ｼ医げ繝ｩ繝輔・繝阪ャ繝医Ρ繝ｼ繧ｯ逕ｨ・・ * 窶・Rei縺ｮ縲碁未菫ゑｼ・elation・峨榊ｱ樊ｧ縺ｫ蟇ｾ蠢・ */
+ * GNN圧縮器スタブ（グラフ・ネットワーク用）
+ * — Reiの「関係（relation）」属性に対応
+ */
 export class GNNSemanticCompressor implements ISemanticCompressor {
   readonly model_type: CompressorModelType = 'gnn';
   readonly name = 'RCT-GNN Graph Compressor (stub)';
@@ -673,7 +722,9 @@ export class GNNSemanticCompressor implements ISemanticCompressor {
 }
 
 /**
- * 繧ｷ繝ｳ繝懊Μ繝・けAI蝨ｧ邵ｮ蝎ｨ繧ｹ繧ｿ繝厄ｼ郁ｫ也炊繝ｻ險ｼ譏守畑・・ * 窶・Rei縺ｮ縲梧э蠢暦ｼ・ill・峨榊ｱ樊ｧ縺ｫ蟇ｾ蠢・ */
+ * シンボリックAI圧縮器スタブ（論理・証明用）
+ * — Reiの「意志（will）」属性に対応
+ */
 export class SymbolicSemanticCompressor implements ISemanticCompressor {
   readonly model_type: CompressorModelType = 'symbolic';
   readonly name = 'RCT-Symbolic Logic Compressor (stub)';
@@ -690,7 +741,9 @@ export class SymbolicSemanticCompressor implements ISemanticCompressor {
 }
 
 /**
- * 諡｡謨｣繝｢繝・Ν蝨ｧ邵ｮ蝎ｨ繧ｹ繧ｿ繝厄ｼ育函謌舌Δ繝・Ν逕ｨ・・ * 窶・Rei縺ｮ縲梧ｵ√ｌ・・low・峨榊ｱ樊ｧ縺ｫ蟇ｾ蠢・ */
+ * 拡散モデル圧縮器スタブ（生成モデル用）
+ * — Reiの「流れ（flow）」属性に対応
+ */
 export class DiffusionSemanticCompressor implements ISemanticCompressor {
   readonly model_type: CompressorModelType = 'diffusion';
   readonly name = 'RCT-Diffusion Latent Compressor (stub)';
@@ -707,34 +760,35 @@ export class DiffusionSemanticCompressor implements ISemanticCompressor {
 }
 
 // ============================================================
-// Part 5: 邨ｱ蜷医さ繝ｳ繝励Ξ繝・し繝ｼ繝輔ぃ繧ｯ繝医Μ
+// Part 5: 統合コンプレッサーファクトリ
 // ============================================================
 
 /**
  * RCTSemanticEngine
- * 窶・蜈ｨ繝｢繝・Ν繧堤ｵｱ蜷医☆繧句悸邵ｮ繧ｨ繝ｳ繧ｸ繝ｳ
+ * — 全モデルを統合する圧縮エンジン
  */
 export class RCTSemanticEngine {
   private compressors: Map<CompressorModelType, ISemanticCompressor> = new Map();
 
   constructor() {
-    // 繝・ヵ繧ｩ繝ｫ繝医〒LLM蝨ｧ邵ｮ蝎ｨ繧堤匳骭ｲ
+    // デフォルトでLLM圧縮器を登録
     this.register(new LLMSemanticCompressor());
-    // 繧ｹ繧ｿ繝悶ｒ逋ｻ骭ｲ・亥ｰ・擂螳溯｣・凾縺ｫ蟾ｮ縺玲崛縺茨ｼ・    this.register(new CNNSemanticCompressor());
+    // スタブを登録（将来実装時に差し替え）
+    this.register(new CNNSemanticCompressor());
     this.register(new GNNSemanticCompressor());
     this.register(new SymbolicSemanticCompressor());
     this.register(new DiffusionSemanticCompressor());
   }
 
   /**
-   * 蝨ｧ邵ｮ蝎ｨ縺ｮ逋ｻ骭ｲ
+   * 圧縮器の登録
    */
   register(compressor: ISemanticCompressor): void {
     this.compressors.set(compressor.model_type, compressor);
   }
 
   /**
-   * 譛驕ｩ縺ｪ蝨ｧ邵ｮ蝎ｨ繧定・蜍暮∈謚槭＠縺ｦ蝨ｧ邵ｮ
+   * 最適な圧縮器を自動選択して圧縮
    */
   async compress(
     data: string,
@@ -749,7 +803,8 @@ export class RCTSemanticEngine {
   }
 
   /**
-   * ﾎｸ縺九ｉ蠕ｩ蜈・   */
+   * θから復元
+   */
   async decompress(theta: SemanticTheta): Promise<SemanticDecompressionResult> {
     const compressor = this.compressors.get(theta.model_type);
     if (!compressor) {
@@ -759,7 +814,7 @@ export class RCTSemanticEngine {
   }
 
   /**
-   * 蛻ｩ逕ｨ蜿ｯ閭ｽ縺ｪ繝｢繝・Ν荳隕ｧ
+   * 利用可能なモデル一覧
    */
   listAvailable(): Array<{ type: CompressorModelType; name: string; ready: boolean }> {
     return [...this.compressors.entries()].map(([type, comp]) => ({
@@ -774,12 +829,13 @@ export class RCTSemanticEngine {
 }
 
 // ============================================================
-// Part 6: Rei險隱樒ｵｱ蜷育畑繧ｨ繧ｯ繧ｹ繝昴・繝・// ============================================================
+// Part 6: Rei言語統合用エクスポート
+// ============================================================
 
 /**
- * Rei險隱槭・繝代う繝励さ繝槭Φ繝峨°繧牙他縺ｳ蜃ｺ縺咎未謨ｰ
+ * Rei言語のパイプコマンドから呼び出す関数
  *
- * 菴ｿ逕ｨ萓具ｼ・ei讒区枚・・
+ * 使用例（Rei構文）:
  *   data |> semantic_compress("llm", "high")
  *   theta |> semantic_decompress
  *   [original, reconstructed] |> semantic_verify
@@ -801,16 +857,17 @@ export async function reiSemanticDecompress(
 }
 
 /**
- * 諢丞袖逧・ｭ我ｾ｡諤ｧ讀懆ｨｼ
+ * 意味的等価性検証
  *
- * 菴ｿ逕ｨ萓具ｼ・ei讒区枚・・
+ * 使用例（Rei構文）:
  *   [original, reconstructed] |> semantic_verify
  */
 export interface SemanticVerifyResult {
-  score: number;           // 邱丞粋繧ｹ繧ｳ繧｢ (0-1)
-  functional: number;      // 讖溯・逧・ｭ我ｾ｡諤ｧ (0-1)
-  structural: number;      // 讒矩逧・ｭ我ｾ｡諤ｧ (0-1)
-  details: string;         // 隧ｳ邏ｰ隱ｬ譏・}
+  score: number;           // 総合スコア (0-1)
+  functional: number;      // 機能的等価性 (0-1)
+  structural: number;      // 構造的等価性 (0-1)
+  details: string;         // 詳細説明
+}
 
 export async function reiSemanticVerify(
   original: string,
@@ -820,7 +877,8 @@ export async function reiSemanticVerify(
   const compressor = new LLMSemanticCompressor();
   const semanticScore = await compressor.verifySemantic(original, reconstructed);
 
-  // 讒矩逧・｡樔ｼｼ蠎ｦ: 髢｢謨ｰ蜷阪・繧ｯ繝ｩ繧ｹ蜷阪・荳閾ｴ邇・  const origFuncs = new Set(
+  // 構造的類似度: 関数名・クラス名の一致率
+  const origFuncs = new Set(
     (original.match(/(?:function|class|interface)\s+(\w+)/g) || [])
       .map(m => m.replace(/(?:function|class|interface)\s+/, ''))
   );
