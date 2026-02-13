@@ -1,0 +1,531 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index da99e75..f44268e 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,51 @@
+ # Changelog
+ 
++## [0.5.0] — 2026-02-14
++
++### 🤖 自律Agent実行エンジン（v0.5ロードマップ全完了）
++v0.5の全Phase（Phase 1〜3）完了。エンティティが自律的に知覚・判断・行動する実行エンジンを導入。
++
++### Phase 1: evaluator.tsモジュール分割
++- evaluator.ts (2,908行) を安定的にモジュール管理
++
++### Phase 2a: EventBus — イベント駆動基盤
++- `ReiEventBus` クラス: 型安全なイベントシステム (`event-bus.ts`, 353行)
++- イベント型: `category:action` パターン (entity/binding/will/space/agent/system)
++- FlowMomentum: 六属性「流れ」との概念的接続 (rest/expanding/contracting/converged/pulsing)
++- パイプコマンド: `emit` / `発火`, `subscribe` / `購読`, `flow_momentum` / `流勢`
++
++### Phase 2b: Entity Agent — 自律エンティティ
++- `ReiAgent` クラス: 六属性を持つ自律Agent (`entity-agent.ts`, 1,153行)
++- perceive → decide → act ライフサイクル
++- 5つの行動パターン: reactive / proactive / cooperative / competitive / contemplative
++- `AgentRegistry`: Agentのスポーン・検索・ライフサイクル管理
++- パイプコマンド: `spawn` / `生成`, `perceive` / `知覚`, `decide` / `判断`, `act` / `行動`, `agent_sigma` / `自律σ`
++
++### Phase 2c: Mediator — 並行実行エンジン
++- `ReiMediator` クラス: 並行実行 + 競合解決 (`mediator.ts`, 770行)
++- ラウンドベース並行実行: perceive all → decide all → 競合検出 → 解決 → act all
++- 4種の競合検出: target_contention / resource_conflict / mutual_fuse / contradictory
++- 5種の解決戦略: priority(優先) / cooperative(協調) / sequential(順次) / cancel_both(両方取消) / mediator(調停者)
++- 収束検出付き連続実行 (`run()`)
++- Agent間メッセージング: sendMessage / broadcast
++- パイプコマンド: `mediate` / `調停`, `mediate_run` / `調停実行`, `mediator_sigma` / `調停σ`, `mediate_strategy` / `調停戦略`, `mediate_message` / `調停通信`, `mediate_broadcast` / `調停放送`
++
++### Phase 3: 統合・安定化
++- DTSビルドエラー修正 (KANJI_DB export, entity-agent型整合)
++- README全面更新 (v0.5新機能ドキュメント)
++- npm v0.5.0パッケージ公開
++
++### テスト
++- **721テスト通過**（21テストファイル）
++  - 661: Phase 2b以前（リグレッションゼロ）
++  - 25: Mediator単体テスト
++  - 35: Mediator×Evaluator統合テスト
++
++### パブリックAPI
++- `ReiEventBus`, `ReiAgent`, `AgentRegistry`, `ReiMediator` をexport
++
++---
++
+ ## [0.4.0] — 2026-02-14
+ 
+ ### ☮️ Peace Use Clause（平和利用条項）
+diff --git a/README.md b/README.md
+index 7e91fad..48eb259 100644
+--- a/README.md
++++ b/README.md
+@@ -1,8 +1,8 @@
+ # Rei (0₀式) — D-FUMT Computational Language
+ 
+ [![npm version](https://img.shields.io/npm/v/rei-lang)](https://www.npmjs.com/package/rei-lang)
+-[![License: MIT](https://img.shields.io/badge/License-MIT-gold.svg)](./LICENSE)
+-[![Tests](https://img.shields.io/badge/tests-85%2F85-brightgreen)]()
++[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-gold.svg)](./LICENSE)
++[![Tests](https://img.shields.io/badge/tests-721%2F721-brightgreen)]()
+ 
+ **Rei** (0₀式 / れいしき) is a mathematical computation language based on **D-FUMT** (Dimensional Fujimoto Universal Mathematical Theory). Its center-periphery patterns as language primitives achieve an **average 74% code reduction** over equivalent implementations in general-purpose languages.
+ 
+@@ -10,6 +10,16 @@
+ 
+ ---
+ 
++## What's New in v0.5
++
++v0.5 introduces a **self-organizing agent runtime** — entities perceive, decide, and act autonomously, coordinated by a conflict-resolving mediator.
++
++- **EventBus** — Type-safe event-driven architecture with flow momentum tracking
++- **Entity Agent** — Six-attribute autonomous agents (perceive → decide → act cycle)
++- **Mediator** — Concurrent execution engine with conflict detection and resolution strategies
++
++---
++
+ ## Install
+ 
+ ```bash
+@@ -51,8 +61,8 @@ npx rei
+ 
+ ```
+  ╔══════════════════════════════════════════╗
+- ║  Rei (0₀式) REPL v0.2.0                  ║
+- ║  D-FUMT Computational Language           ║
++ ║  Rei (0₀式) REPL v0.5.0                ║
++ ║  D-FUMT Computational Language          ║
+  ╚══════════════════════════════════════════╝
+ 
+ 零 > 𝕄{5; 1, 2, 3, 4} |> compute :weighted
+@@ -71,13 +81,6 @@ compress karma(i, e, r)
+ npx rei program.rei
+ ```
+ 
+-### Inline Evaluation
+-
+-```bash
+-npx rei -e "2 + 3 * 4"
+-# → 14
+-```
+-
+ ---
+ 
+ ## Language Features
+@@ -146,17 +149,9 @@ g |> forward        // solid → omega (Ω)
+ g.omega             // 1
+ ```
+ 
+-Or from the primordial dot (・):
+-
+-```rei
+-let g = ・
+-g |> forward        // dot
+-g |> forward        // line
+-```
+-
+ ### Four-Valued Logic (四価0π)
+ 
+-Beyond true/false — Theory #21:
++Beyond true/false — based on D-FUMT Theory #21:
+ 
+ ```rei
+ ⊤           // true
+@@ -169,11 +164,177 @@ Beyond true/false — Theory #21:
+ ⊥ ∨ ⊤      // ⊤
+ ```
+ 
+-### Variable Binding
++---
++
++## v0.5 Agent Runtime
++
++### EventBus (イベントバス)
++
++Type-safe event system with flow momentum tracking. Events follow a `category:action` pattern (e.g., `entity:fuse`, `agent:act`, `space:diffuse`).
++
++```typescript
++import { rei, ReiEventBus } from 'rei-lang';
++
++// Access via Evaluator
++const ev = rei.evaluator();
++const bus = ev.eventBus;
++
++// Subscribe to events
++bus.on('entity:fuse', (event) => {
++  console.log('Fusion occurred:', event.data);
++});
++
++// Subscribe with filter
++bus.subscribe(
++  (e) => e.category === 'agent',
++  (e) => console.log(`Agent ${e.data.agentId}: ${e.action}`)
++);
++```
++
++In Rei syntax with pipe commands:
++
++```rei
++// Emit a custom event
++"mySource" |> emit("entity:transform", "data")
++
++// Subscribe to events
++"entity:*" |> subscribe
++
++// Check flow momentum state
++0 |> flow_momentum    // → { state: "expanding", rate: 12.5, ... }
++```
++
++### Entity Agent (自律エンティティ)
++
++Entities in Rei are autonomous agents with the six D-FUMT attributes (場・流れ・記憶・層・関係・意志), executing a perceive → decide → act lifecycle.
+ 
+ ```rei
+-let x = 42           // immutable
+-let mut y = 10       // mutable
++// Spawn an agent from a value
++let a = 𝕄{10; 1, 2, 3} |> spawn
++
++// Agent lifecycle
++a |> perceive       // observe environment → Perception
++a |> decide         // choose action → Decision
++a |> act            // execute decision → ActionResult
++
++// Agent introspection
++a |> agent_sigma    // σ metadata: state, step, memory, bindings
++a |> 自律σ          // 日本語版
++
++// Agent behaviors: reactive / proactive / cooperative / competitive / contemplative
++```
++
++```typescript
++// Programmatic API
++import { ReiAgent, AgentRegistry } from 'rei-lang';
++
++const registry = new AgentRegistry();
++const agent = registry.spawn(42, {
++  behavior: 'cooperative',
++  autonomyLevel: 0.8,
++});
++
++const perception = agent.perceive(registry);
++const decision = agent.decide(perception);
++const result = agent.act(registry, decision);
++```
++
++### Mediator (調停エンジン)
++
++The Mediator coordinates multiple agents running concurrently, detecting and resolving conflicts with configurable strategies.
++
++```rei
++// Concurrent execution — all agents perceive → decide → resolve conflicts → act
++0 |> mediate              // 1 round of concurrent execution
++0 |> mediate(5)           // 5 rounds with convergence detection
++0 |> mediate(10, 0.8)    // max 10 rounds, convergence threshold 0.8
++
++// Strategies: priority / cooperative / sequential / cancel_both / mediator
++0 |> mediate_strategy("cooperative")   // 協調 — merge conflicting intentions
++0 |> 調停戦略("協調")                   // 日本語版
++
++// Inter-agent messaging
++"agent_a" |> mediate_message("agent_b", "hello")   // point-to-point
++"agent_a" |> mediate_broadcast("共有データ")          // broadcast to all
++
++// Mediator σ — statistics and convergence history
++0 |> mediator_sigma   // → { totalRounds, conflicts, convergenceHistory, ... }
++0 |> 調停σ            // 日本語版
++```
++
++Conflict types detected automatically: **target contention** (same target), **resource conflict** (shared resource), **mutual fuse** (A↔B fusion), **contradictory** (fuse vs separate).
++
++Resolution strategies:
++
++| Strategy | Japanese | Behavior |
++|----------|----------|----------|
++| `priority` | 優先 | Highest confidence × priority wins |
++| `cooperative` | 協調 | Merge intentions into compromise |
++| `sequential` | 順次 | Execute in priority order |
++| `cancel_both` | 両方取消 | Cancel conflicting actions |
++| `mediator` | 調停者 | Mediator's own judgment (中道) |
++
++```typescript
++// Programmatic API
++import { ReiMediator, AgentRegistry } from 'rei-lang';
++
++const registry = new AgentRegistry();
++const mediator = new ReiMediator(registry);
++
++// Spawn agents
++registry.spawn(10, { behavior: 'cooperative' });
++registry.spawn(20, { behavior: 'competitive' });
++
++// Run concurrent rounds with convergence detection
++const result = mediator.run({
++  maxRounds: 10,
++  convergenceThreshold: 0.8,
++});
++console.log(result.converged, result.totalRounds);
++```
++
++---
++
++## Six Attributes (六属性)
++
++Every entity in Rei carries six attributes from D-FUMT theory:
++
++| Attribute | Japanese | Role |
++|-----------|----------|------|
++| Field (場) | ば | Spatial context and neighbors |
++| Flow (流れ) | ながれ | Temporal momentum and EventBus connection |
++| Memory (記憶) | きおく | History of observations and actions |
++| Layer (層) | そう | Hierarchical depth and nesting |
++| Relation (関係) | かんけい | Bindings between entities |
++| Will (意志) | いし | Intention-driven computation strategy |
++
++```rei
++// Relation binding
++let x = 42
++let y = 100
++x |> bind(y, "collaborator")   // create a relation
++
++// Will-driven computation
++let m = 𝕄{5; 1, 2, 3}
++m |> intend("maximize")        // set intention
++m |> will_compute              // compute guided by will
++```
++
++---
++
++## RCT Compression (Rei Compression Theory)
++
++D-FUMT Theory #67 — generative compression outperforming gzip on structured data:
++
++```rei
++// Core compression (Direction 1-2)
++let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
++data |> compress           // → compact θ representation
++data |> compress |> decompress   // → lossless round-trip
++
++// Semantic compression (Direction 3)
++"let x = 𝕄{5; 1, 2, 3}" |> semantic_compress    // → θ parameters
++"let x = 𝕄{5; 1, 2, 3}" |> 意味圧縮              // 日本語版
+ ```
+ 
+ ---
+@@ -199,39 +360,66 @@ Evaluate a string of Rei code. State persists across calls.
+ 
+ Clear all variable and function bindings.
+ 
+-### `rei.parse(code: string): ASTNode`
+-
+-Parse code and return the AST without evaluating.
++### `rei.evaluator(): Evaluator`
+ 
+-### `rei.tokenize(code: string): Token[]`
+-
+-Tokenize code and return the token stream.
++Access the underlying Evaluator instance (for EventBus, AgentRegistry, etc.).
+ 
+ ### Classes
+ 
+-- `Lexer` — Tokenizer
+-- `Parser` — Recursive descent parser
+-- `Evaluator` — AST evaluator with environment/scope chain
+-- `Environment` — Scope management
++| Class | Description |
++|-------|-------------|
++| `Lexer` | Tokenizer |
++| `Parser` | Recursive descent parser |
++| `Evaluator` | AST evaluator with environment/scope chain |
++| `ReiEventBus` | Type-safe event system with flow momentum |
++| `ReiAgent` | Autonomous entity with six attributes |
++| `AgentRegistry` | Agent lifecycle management |
++| `ReiMediator` | Concurrent execution engine with conflict resolution |
+ 
+ ### Types
+ 
+-- `MultiDimNumber` — `{ center, neighbors, mode, weights? }`
+-- `ReiExtended` — `{ base, order, subscripts, valStar() }`
+-- `GenesisState` — `{ state, omega, history }`
+-- `ReiFunction` — `{ name, params, body, closure }`
+-- `Quad` — `{ value: 'top' | 'bottom' | 'topPi' | 'bottomPi' }`
++| Type | Shape |
++|------|-------|
++| `MultiDimNumber` | `{ center, neighbors, mode, weights? }` |
++| `ReiExtended` | `{ base, order, subscripts, valStar() }` |
++| `GenesisState` | `{ state, omega, history }` |
++| `ReiFunction` | `{ name, params, body, closure }` |
++| `Quad` | `{ value: 'top' \| 'bottom' \| 'topPi' \| 'bottomPi' }` |
++| `ReiEvent` | `{ type, category, action, timestamp, data, source?, depth }` |
++| `AgentSigma` | `{ state, kind, behavior, step, perception, decisions, memory }` |
++| `MediatorSigma` | `{ totalRounds, conflicts, convergenceHistory, agentCount }` |
+ 
+ ---
+ 
+-## BNF Specification
++## Bilingual Pipe Commands (日本語対応)
++
++All pipe commands have Japanese aliases:
++
++| English | 日本語 | Description |
++|---------|--------|-------------|
++| `spawn` | `生成` | Create agent from value |
++| `perceive` | `知覚` | Agent observes environment |
++| `decide` | `判断` | Agent chooses action |
++| `act` | `行動` | Agent executes decision |
++| `agent_sigma` | `自律σ` | Agent metadata |
++| `mediate` | `調停` | Concurrent round execution |
++| `mediate_run` | `調停実行` | Multi-round execution |
++| `mediator_sigma` | `調停σ` | Mediator statistics |
++| `mediate_strategy` | `調停戦略` | Set conflict strategy |
++| `mediate_message` | `調停通信` | Point-to-point message |
++| `mediate_broadcast` | `調停放送` | Broadcast to all agents |
++| `emit` | `発火` | Emit event |
++| `subscribe` | `購読` | Subscribe to events |
++| `bind` | `結合` | Create relation binding |
++| `intend` | `意図` | Set entity intention |
++| `compress` | `圧縮` | RCT compression |
++| `decompress` | `復元` | RCT decompression |
+ 
+-The complete BNF v0.2 specification is available in the repository.
++---
++
++## BNF Specification
+ 
+-Key features integrated from 21 D-FUMT theories:
+-- 45 keywords, 10 operators, 9 types
+-- Full backward compatibility with v0.1
+-- Complete operator precedence table
++The complete BNF v0.3 specification is available in [`spec/`](./spec/).
+ 
+ ---
+ 
+@@ -239,10 +427,15 @@ Key features integrated from 21 D-FUMT theories:
+ 
+ Rei is grounded in **D-FUMT** (Dimensional Fujimoto Universal Mathematical Theory), a framework of 66 interconnected theories spanning pure mathematics to philosophy and AI consciousness. The language's core innovation — **center-periphery patterns as language primitives** — derives from D-FUMT's multi-dimensional number system theory.
+ 
++See [`theory/`](./theory/) for the complete theoretical documentation.
++
+ ---
+-☮️ Peace Use Clause / 平和利用条項
++
++## ☮️ Peace Use Clause / 平和利用条項
++
+ Rei is licensed under Apache 2.0 with an additional Peace Use Clause.
+ Rei は Apache 2.0 ライセンスに加え、平和利用条項が適用されます。
++
+ Rooted in the Buddhist concept of "Kū" (空, Emptiness) and D-FUMT's consciousness mathematics, Rei is designed exclusively for the peaceful advancement of humanity. This software may not be used for:
+ 仏教の「空」の概念と D-FUMT の意識数学に基づき、Rei は人類の平和的発展のためにのみ設計されています。以下の目的での使用は禁止されています：
+ 
+@@ -252,6 +445,7 @@ Rooted in the Buddhist concept of "Kū" (空, Emptiness) and D-FUMT's consciousn
+ 
+ ✅ Education, research, humanitarian aid, and creative endeavors are encouraged.
+ ✅ 教育・研究・人道支援・創造的活動での使用を推奨します。
+-See PEACE_USE_CLAUSE.md for full details.
+ 
+-MIT © Nobuki Fujimoto
++See [PEACE_USE_CLAUSE.md](./PEACE_USE_CLAUSE.md) for full details.
++
++Apache 2.0 © Nobuki Fujimoto
+diff --git a/bin/rei.js b/bin/rei.js
+index dce144d..8908dbf 100644
+--- a/bin/rei.js
++++ b/bin/rei.js
+@@ -13,7 +13,7 @@ const fs = require('fs');
+ const path = require('path');
+ const readline = require('readline');
+ 
+-const VERSION = '0.3.0';
++const VERSION = '0.5.0';
+ 
+ // --- Result formatting ---
+ function formatResult(val) {
+diff --git a/package.json b/package.json
+index f2c81fa..862b619 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "rei-lang",
+-  "version": "0.4.0",
+-  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. Now with RCT semantic compression and 6-attribute system.",
++  "version": "0.5.0",
++  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. v0.5: Self-organizing agent runtime with EventBus, Entity Agent, and Mediator.",
+   "main": "dist/index.js",
+   "module": "dist/index.mjs",
+   "types": "dist/index.d.ts",
+@@ -45,6 +45,11 @@
+     "compress",
+     "semantic-compression",
+     "rct",
++    "event-bus",
++    "autonomous-agent",
++    "mediator",
++    "multi-agent",
++    "six-attributes",
+     "peace-use",
+     "ethical-source",
+     "nobuki-fujimoto"
+diff --git a/src/lang/entity-agent.ts b/src/lang/entity-agent.ts
+index 54c9d16..c84b4da 100644
+--- a/src/lang/entity-agent.ts
++++ b/src/lang/entity-agent.ts
+@@ -505,7 +505,7 @@ export class ReiAgent {
+       `${result.action}: ${result.success ? '成功' : '失敗'} — ${result.reason}`
+     );
+ 
+-    this._state = this._state === 'dissolved' ? 'dissolved' : 'active';
++    this._state = (this._state as string) === 'dissolved' ? 'dissolved' : 'active';
+ 
+     this._eventBus?.emit('agent:act', {
+       agentId: this.id,
+diff --git a/src/lang/evaluator.ts b/src/lang/evaluator.ts
+index 45f1f87..1db59b5 100644
+--- a/src/lang/evaluator.ts
++++ b/src/lang/evaluator.ts
+@@ -150,6 +150,7 @@ import {
+ import {
+   kanjiToStringMDim, wordToStringMDim, sentenceToStringMDim,
+   toneToStringMDim, kanjiSimilarity, reverseKanjiLookup, getPhoneticGroup,
++  KANJI_DB,
+   type StringMDim, type KanjiInfo,
+ } from './string-mdim';
+ import {
+diff --git a/src/lang/evolve.ts b/src/lang/evolve.ts
+index 850c3bd..7f09b9d 100644
+--- a/src/lang/evolve.ts
++++ b/src/lang/evolve.ts
+@@ -5,7 +5,7 @@
+ // ============================================================
+ 
+ import { toNumSafe, unwrapReiVal, type SigmaMetadata } from './sigma';
+-import { computeMDim, ALL_COMPUTE_MODES, computeAwareness, AWAKENING_THRESHOLD } from './mdim-core';
++import { computeMDim, ALL_COMPUTE_MODES, computeAwareness, AWAKENING_THRESHOLD, projectToMDim } from './mdim-core';
+ 
+ export interface EvolveCandidate {
+   mode: string;
+diff --git a/src/lang/rct-local.ts b/src/lang/rct-local.ts
+index db80309..a73ec12 100644
+--- a/src/lang/rct-local.ts
++++ b/src/lang/rct-local.ts
+@@ -7,7 +7,7 @@
+ import { toNumSafe, unwrapReiVal } from './sigma';
+ import { computeMDim } from './mdim-core';
+ import { REI_SERIAL_VERSION } from './serializer';
+-import { compressToGenerativeParams, generate } from '../../theory/theories-67';
++import { compressToGenerativeParams, generate, type GenerativeParams } from '../../theory/theories-67';
+ 
+ export function reiSerialize(value: any, pretty: boolean = false): string {
+   const type = detectSerialType(value);
+diff --git a/src/lang/string-mdim.ts b/src/lang/string-mdim.ts
+index 1ee9a1a..ccb3d75 100644
+--- a/src/lang/string-mdim.ts
++++ b/src/lang/string-mdim.ts
+@@ -27,7 +27,7 @@ export interface KanjiInfo {
+ // ─────────────────────────────────────
+ // 漢字構成要素辞書（六書分類付き）
+ // ─────────────────────────────────────
+-const KANJI_DB: Record<string, KanjiInfo> = {
++export const KANJI_DB: Record<string, KanjiInfo> = {
+   // ??? 象形（しょうけい）? 物の形を象る ???
+   "日": { components: [], radical: "日", radicalName: "にち", strokes: 4, on: ["ニチ","ジツ"], kun: ["ひ","か"], category: "象形", meaning: "sun/day" },
+   "月": { components: [], radical: "月", radicalName: "つき", strokes: 4, on: ["ゲツ","ガツ"], kun: ["つき"], category: "象形", meaning: "moon/month" },

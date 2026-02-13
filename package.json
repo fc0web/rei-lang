@@ -1,7 +1,7 @@
 {
   "name": "rei-lang",
-  "version": "0.4.0",
-  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. Now with RCT semantic compression and 6-attribute system.",
+  "version": "0.5.0",
+  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. v0.5: Self-organizing agent runtime with EventBus, Entity Agent, and Mediator.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -45,6 +45,11 @@
     "compress",
     "semantic-compression",
     "rct",
+    "event-bus",
+    "autonomous-agent",
+    "mediator",
+    "multi-agent",
+    "six-attributes",
     "peace-use",
     "ethical-source",
     "nobuki-fujimoto"

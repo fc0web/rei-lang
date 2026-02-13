@@ -505,7 +505,7 @@ export class ReiAgent {
       `${result.action}: ${result.success ? '成功' : '失敗'} — ${result.reason}`
     );
 
-    this._state = this._state === 'dissolved' ? 'dissolved' : 'active';
+    this._state = (this._state as string) === 'dissolved' ? 'dissolved' : 'active';
 
     this._eventBus?.emit('agent:act', {
       agentId: this.id,

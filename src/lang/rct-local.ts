@@ -7,7 +7,7 @@
 import { toNumSafe, unwrapReiVal } from './sigma';
 import { computeMDim } from './mdim-core';
 import { REI_SERIAL_VERSION } from './serializer';
-import { compressToGenerativeParams, generate } from '../../theory/theories-67';
+import { compressToGenerativeParams, generate, type GenerativeParams } from '../../theory/theories-67';
 
 export function reiSerialize(value: any, pretty: boolean = false): string {
   const type = detectSerialType(value);

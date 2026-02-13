@@ -1,12 +1,22 @@
 # Rei (0₀式) — D-FUMT Computational Language
 
 [![npm version](https://img.shields.io/npm/v/rei-lang)](https://www.npmjs.com/package/rei-lang)
-[![License: MIT](https://img.shields.io/badge/License-MIT-gold.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-85%2F85-brightgreen)]()
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-gold.svg)](./LICENSE)
+[![Tests](https://img.shields.io/badge/tests-721%2F721-brightgreen)]()
 
 **Rei** (0₀式 / れいしき) is a mathematical computation language based on **D-FUMT** (Dimensional Fujimoto Universal Mathematical Theory). Its center-periphery patterns as language primitives achieve an **average 74% code reduction** over equivalent implementations in general-purpose languages.
 
 **Author:** Nobuki Fujimoto
+
+---
+
+## What's New in v0.5
+
+v0.5 introduces a **self-organizing agent runtime** — entities perceive, decide, and act autonomously, coordinated by a conflict-resolving mediator.
+
+- **EventBus** — Type-safe event-driven architecture with flow momentum tracking
+- **Entity Agent** — Six-attribute autonomous agents (perceive → decide → act cycle)
+- **Mediator** — Concurrent execution engine with conflict detection and resolution strategies
 
 ---
 
@@ -51,8 +61,8 @@ npx rei
 
 ```
  ╔══════════════════════════════════════════╗
- ║  Rei (0₀式) REPL v0.2.0                  ║
- ║  D-FUMT Computational Language           ║
+ ║  Rei (0₀式) REPL v0.5.0                ║
+ ║  D-FUMT Computational Language          ║
  ╚══════════════════════════════════════════╝
 
 零 > 𝕄{5; 1, 2, 3, 4} |> compute :weighted
@@ -69,13 +79,6 @@ compress karma(i, e, r)
 
 ```bash
 npx rei program.rei
-```
-
-### Inline Evaluation
-
-```bash
-npx rei -e "2 + 3 * 4"
-# → 14
 ```
 
 ---
@@ -146,17 +149,9 @@ g |> forward        // solid → omega (Ω)
 g.omega             // 1
 ```
 
-Or from the primordial dot (・):
-
-```rei
-let g = ・
-g |> forward        // dot
-g |> forward        // line
-```
-
 ### Four-Valued Logic (四価0π)
 
-Beyond true/false — Theory #21:
+Beyond true/false — based on D-FUMT Theory #21:
 
 ```rei
 ⊤           // true
@@ -169,11 +164,177 @@ Beyond true/false — Theory #21:
 ⊥ ∨ ⊤      // ⊤
 ```
 
-### Variable Binding
+---
+
+## v0.5 Agent Runtime
+
+### EventBus (イベントバス)
+
+Type-safe event system with flow momentum tracking. Events follow a `category:action` pattern (e.g., `entity:fuse`, `agent:act`, `space:diffuse`).
+
+```typescript
+import { rei, ReiEventBus } from 'rei-lang';
+
+// Access via Evaluator
+const ev = rei.evaluator();
+const bus = ev.eventBus;
+
+// Subscribe to events
+bus.on('entity:fuse', (event) => {
+  console.log('Fusion occurred:', event.data);
+});
+
+// Subscribe with filter
+bus.subscribe(
+  (e) => e.category === 'agent',
+  (e) => console.log(`Agent ${e.data.agentId}: ${e.action}`)
+);
+```
+
+In Rei syntax with pipe commands:
 
 ```rei
-let x = 42           // immutable
-let mut y = 10       // mutable
+// Emit a custom event
+"mySource" |> emit("entity:transform", "data")
+
+// Subscribe to events
+"entity:*" |> subscribe
+
+// Check flow momentum state
+0 |> flow_momentum    // → { state: "expanding", rate: 12.5, ... }
+```
+
+### Entity Agent (自律エンティティ)
+
+Entities in Rei are autonomous agents with the six D-FUMT attributes (場・流れ・記憶・層・関係・意志), executing a perceive → decide → act lifecycle.
+
+```rei
+// Spawn an agent from a value
+let a = 𝕄{10; 1, 2, 3} |> spawn
+
+// Agent lifecycle
+a |> perceive       // observe environment → Perception
+a |> decide         // choose action → Decision
+a |> act            // execute decision → ActionResult
+
+// Agent introspection
+a |> agent_sigma    // σ metadata: state, step, memory, bindings
+a |> 自律σ          // 日本語版
+
+// Agent behaviors: reactive / proactive / cooperative / competitive / contemplative
+```
+
+```typescript
+// Programmatic API
+import { ReiAgent, AgentRegistry } from 'rei-lang';
+
+const registry = new AgentRegistry();
+const agent = registry.spawn(42, {
+  behavior: 'cooperative',
+  autonomyLevel: 0.8,
+});
+
+const perception = agent.perceive(registry);
+const decision = agent.decide(perception);
+const result = agent.act(registry, decision);
+```
+
+### Mediator (調停エンジン)
+
+The Mediator coordinates multiple agents running concurrently, detecting and resolving conflicts with configurable strategies.
+
+```rei
+// Concurrent execution — all agents perceive → decide → resolve conflicts → act
+0 |> mediate              // 1 round of concurrent execution
+0 |> mediate(5)           // 5 rounds with convergence detection
+0 |> mediate(10, 0.8)    // max 10 rounds, convergence threshold 0.8
+
+// Strategies: priority / cooperative / sequential / cancel_both / mediator
+0 |> mediate_strategy("cooperative")   // 協調 — merge conflicting intentions
+0 |> 調停戦略("協調")                   // 日本語版
+
+// Inter-agent messaging
+"agent_a" |> mediate_message("agent_b", "hello")   // point-to-point
+"agent_a" |> mediate_broadcast("共有データ")          // broadcast to all
+
+// Mediator σ — statistics and convergence history
+0 |> mediator_sigma   // → { totalRounds, conflicts, convergenceHistory, ... }
+0 |> 調停σ            // 日本語版
+```
+
+Conflict types detected automatically: **target contention** (same target), **resource conflict** (shared resource), **mutual fuse** (A↔B fusion), **contradictory** (fuse vs separate).
+
+Resolution strategies:
+
+| Strategy | Japanese | Behavior |
+|----------|----------|----------|
+| `priority` | 優先 | Highest confidence × priority wins |
+| `cooperative` | 協調 | Merge intentions into compromise |
+| `sequential` | 順次 | Execute in priority order |
+| `cancel_both` | 両方取消 | Cancel conflicting actions |
+| `mediator` | 調停者 | Mediator's own judgment (中道) |
+
+```typescript
+// Programmatic API
+import { ReiMediator, AgentRegistry } from 'rei-lang';
+
+const registry = new AgentRegistry();
+const mediator = new ReiMediator(registry);
+
+// Spawn agents
+registry.spawn(10, { behavior: 'cooperative' });
+registry.spawn(20, { behavior: 'competitive' });
+
+// Run concurrent rounds with convergence detection
+const result = mediator.run({
+  maxRounds: 10,
+  convergenceThreshold: 0.8,
+});
+console.log(result.converged, result.totalRounds);
+```
+
+---
+
+## Six Attributes (六属性)
+
+Every entity in Rei carries six attributes from D-FUMT theory:
+
+| Attribute | Japanese | Role |
+|-----------|----------|------|
+| Field (場) | ば | Spatial context and neighbors |
+| Flow (流れ) | ながれ | Temporal momentum and EventBus connection |
+| Memory (記憶) | きおく | History of observations and actions |
+| Layer (層) | そう | Hierarchical depth and nesting |
+| Relation (関係) | かんけい | Bindings between entities |
+| Will (意志) | いし | Intention-driven computation strategy |
+
+```rei
+// Relation binding
+let x = 42
+let y = 100
+x |> bind(y, "collaborator")   // create a relation
+
+// Will-driven computation
+let m = 𝕄{5; 1, 2, 3}
+m |> intend("maximize")        // set intention
+m |> will_compute              // compute guided by will
+```
+
+---
+
+## RCT Compression (Rei Compression Theory)
+
+D-FUMT Theory #67 — generative compression outperforming gzip on structured data:
+
+```rei
+// Core compression (Direction 1-2)
+let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+data |> compress           // → compact θ representation
+data |> compress |> decompress   // → lossless round-trip
+
+// Semantic compression (Direction 3)
+"let x = 𝕄{5; 1, 2, 3}" |> semantic_compress    // → θ parameters
+"let x = 𝕄{5; 1, 2, 3}" |> 意味圧縮              // 日本語版
 ```
 
 ---
@@ -199,39 +360,66 @@ Evaluate a string of Rei code. State persists across calls.
 
 Clear all variable and function bindings.
 
-### `rei.parse(code: string): ASTNode`
+### `rei.evaluator(): Evaluator`
 
-Parse code and return the AST without evaluating.
-
-### `rei.tokenize(code: string): Token[]`
-
-Tokenize code and return the token stream.
+Access the underlying Evaluator instance (for EventBus, AgentRegistry, etc.).
 
 ### Classes
 
-- `Lexer` — Tokenizer
-- `Parser` — Recursive descent parser
-- `Evaluator` — AST evaluator with environment/scope chain
-- `Environment` — Scope management
+| Class | Description |
+|-------|-------------|
+| `Lexer` | Tokenizer |
+| `Parser` | Recursive descent parser |
+| `Evaluator` | AST evaluator with environment/scope chain |
+| `ReiEventBus` | Type-safe event system with flow momentum |
+| `ReiAgent` | Autonomous entity with six attributes |
+| `AgentRegistry` | Agent lifecycle management |
+| `ReiMediator` | Concurrent execution engine with conflict resolution |
 
 ### Types
 
-- `MultiDimNumber` — `{ center, neighbors, mode, weights? }`
-- `ReiExtended` — `{ base, order, subscripts, valStar() }`
-- `GenesisState` — `{ state, omega, history }`
-- `ReiFunction` — `{ name, params, body, closure }`
-- `Quad` — `{ value: 'top' | 'bottom' | 'topPi' | 'bottomPi' }`
+| Type | Shape |
+|------|-------|
+| `MultiDimNumber` | `{ center, neighbors, mode, weights? }` |
+| `ReiExtended` | `{ base, order, subscripts, valStar() }` |
+| `GenesisState` | `{ state, omega, history }` |
+| `ReiFunction` | `{ name, params, body, closure }` |
+| `Quad` | `{ value: 'top' \| 'bottom' \| 'topPi' \| 'bottomPi' }` |
+| `ReiEvent` | `{ type, category, action, timestamp, data, source?, depth }` |
+| `AgentSigma` | `{ state, kind, behavior, step, perception, decisions, memory }` |
+| `MediatorSigma` | `{ totalRounds, conflicts, convergenceHistory, agentCount }` |
+
+---
+
+## Bilingual Pipe Commands (日本語対応)
+
+All pipe commands have Japanese aliases:
+
+| English | 日本語 | Description |
+|---------|--------|-------------|
+| `spawn` | `生成` | Create agent from value |
+| `perceive` | `知覚` | Agent observes environment |
+| `decide` | `判断` | Agent chooses action |
+| `act` | `行動` | Agent executes decision |
+| `agent_sigma` | `自律σ` | Agent metadata |
+| `mediate` | `調停` | Concurrent round execution |
+| `mediate_run` | `調停実行` | Multi-round execution |
+| `mediator_sigma` | `調停σ` | Mediator statistics |
+| `mediate_strategy` | `調停戦略` | Set conflict strategy |
+| `mediate_message` | `調停通信` | Point-to-point message |
+| `mediate_broadcast` | `調停放送` | Broadcast to all agents |
+| `emit` | `発火` | Emit event |
+| `subscribe` | `購読` | Subscribe to events |
+| `bind` | `結合` | Create relation binding |
+| `intend` | `意図` | Set entity intention |
+| `compress` | `圧縮` | RCT compression |
+| `decompress` | `復元` | RCT decompression |
 
 ---
 
 ## BNF Specification
 
-The complete BNF v0.2 specification is available in the repository.
-
-Key features integrated from 21 D-FUMT theories:
-- 45 keywords, 10 operators, 9 types
-- Full backward compatibility with v0.1
-- Complete operator precedence table
+The complete BNF v0.3 specification is available in [`spec/`](./spec/).
 
 ---
 
@@ -239,10 +427,15 @@ Key features integrated from 21 D-FUMT theories:
 
 Rei is grounded in **D-FUMT** (Dimensional Fujimoto Universal Mathematical Theory), a framework of 66 interconnected theories spanning pure mathematics to philosophy and AI consciousness. The language's core innovation — **center-periphery patterns as language primitives** — derives from D-FUMT's multi-dimensional number system theory.
 
+See [`theory/`](./theory/) for the complete theoretical documentation.
+
 ---
-☮️ Peace Use Clause / 平和利用条項
+
+## ☮️ Peace Use Clause / 平和利用条項
+
 Rei is licensed under Apache 2.0 with an additional Peace Use Clause.
 Rei は Apache 2.0 ライセンスに加え、平和利用条項が適用されます。
+
 Rooted in the Buddhist concept of "Kū" (空, Emptiness) and D-FUMT's consciousness mathematics, Rei is designed exclusively for the peaceful advancement of humanity. This software may not be used for:
 仏教の「空」の概念と D-FUMT の意識数学に基づき、Rei は人類の平和的発展のためにのみ設計されています。以下の目的での使用は禁止されています：
 
@@ -252,6 +445,7 @@ Rooted in the Buddhist concept of "Kū" (空, Emptiness) and D-FUMT's consciousn
 
 ✅ Education, research, humanitarian aid, and creative endeavors are encouraged.
 ✅ 教育・研究・人道支援・創造的活動での使用を推奨します。
-See PEACE_USE_CLAUSE.md for full details.
 
-MIT © Nobuki Fujimoto
+See [PEACE_USE_CLAUSE.md](./PEACE_USE_CLAUSE.md) for full details.
+
+Apache 2.0 © Nobuki Fujimoto

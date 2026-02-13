@@ -27,7 +27,7 @@ export interface KanjiInfo {
 // ─────────────────────────────────────
 // 漢字構成要素辞書（六書分類付き）
 // ─────────────────────────────────────
-const KANJI_DB: Record<string, KanjiInfo> = {
+export const KANJI_DB: Record<string, KanjiInfo> = {
   // ??? 象形（しょうけい）? 物の形を象る ???
   "日": { components: [], radical: "日", radicalName: "にち", strokes: 4, on: ["ニチ","ジツ"], kun: ["ひ","か"], category: "象形", meaning: "sun/day" },
   "月": { components: [], radical: "月", radicalName: "つき", strokes: 4, on: ["ゲツ","ガツ"], kun: ["つき"], category: "象形", meaning: "moon/month" },

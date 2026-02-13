@@ -150,6 +150,7 @@ import {
 import {
   kanjiToStringMDim, wordToStringMDim, sentenceToStringMDim,
   toneToStringMDim, kanjiSimilarity, reverseKanjiLookup, getPhoneticGroup,
+  KANJI_DB,
   type StringMDim, type KanjiInfo,
 } from './string-mdim';
 import {

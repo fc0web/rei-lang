@@ -5,7 +5,7 @@
 // ============================================================
 
 import { toNumSafe, unwrapReiVal, type SigmaMetadata } from './sigma';
-import { computeMDim, ALL_COMPUTE_MODES, computeAwareness, AWAKENING_THRESHOLD } from './mdim-core';
+import { computeMDim, ALL_COMPUTE_MODES, computeAwareness, AWAKENING_THRESHOLD, projectToMDim } from './mdim-core';
 
 export interface EvolveCandidate {
   mode: string;
