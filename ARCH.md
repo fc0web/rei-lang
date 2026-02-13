@@ -310,8 +310,7 @@ rei-lang/
 │   ├── adr/               ← Architecture Decision Records
 │   ├── spec/              ← Spec世代のドラフト
 │   └── axioms/            ← 25公理のドキュメント
-└── tools/
-    └── mcp-server/        ← Index Tree Layer 2
+└── mcp-server/        ← Index Tree Layer 2
 ```
 
 ---
