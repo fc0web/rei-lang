@@ -240,7 +240,24 @@ Key features integrated from 21 D-FUMT theories:
 Rei is grounded in **D-FUMT** (Dimensional Fujimoto Universal Mathematical Theory), a framework of 66 interconnected theories spanning pure mathematics to philosophy and AI consciousness. The language's core innovation — **center-periphery patterns as language primitives** — derives from D-FUMT's multi-dimensional number system theory.
 
 ---
+## ☮️ Peace Use Clause / 平和利用条項
 
+Rei is licensed under Apache 2.0 with an additional **Peace Use Clause**.
+
+Rei は Apache 2.0 ライセンスに加え、**平和利用条項**が適用されます。
+
+Rooted in the Buddhist concept of "Kū" (空, Emptiness) and D-FUMT's consciousness mathematics, Rei is designed exclusively for the peaceful advancement of humanity. This software **may not** be used for:
+
+仏教の「空」の概念と D-FUMT の意識数学に基づき、Rei は人類の平和的発展のためにのみ設計されています。以下の目的での使用は**禁止**されています：
+
+- 🚫 Weapons, military systems, or LAWS / 兵器・軍事システム・自律型致死兵器
+- 🚫 Human rights violations / 人権侵害
+- 🚫 Intentional environmental destruction / 意図的な環境破壊
+
+✅ Education, research, humanitarian aid, and creative endeavors are encouraged.
+✅ 教育・研究・人道支援・創造的活動での使用を推奨します。
+
+See [PEACE_USE_CLAUSE.md](./PEACE_USE_CLAUSE.md) for full details.
 ## License
 
 MIT © Nobuki Fujimoto
