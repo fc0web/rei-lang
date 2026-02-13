@@ -40,6 +40,10 @@ import {
   buildWillSigma, getIntentionOf, attachIntention,
   type ReiIntention, type IntentionType, type WillComputeResult,
 } from './will';
+import {
+  compressToGenerativeParams, generate,
+  type GenerativeParams,
+} from '../../theory/theories-67';
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2064,6 +2068,113 @@ function cleanSerialPayload(value: any): any {
   return clean;
 }
 
+// ============================================================
+// RCT Compress / Decompress — D-FUMT Theory #67
+// ============================================================
+// 「データを保存するのではなく、データを生成する公理を保存する」
+// Rei言語の組込みパイプコマンド:
+//   data |> compress         → CompressedRei
+//   compressed |> decompress → 元データ
+//   data |> compress_info    → 圧縮メタデータ
+//   data |> 圧縮             → CompressedRei (日本語)
+//   compressed |> 復元       → 元データ (日本語)
+
+interface CompressedRei {
+  reiType: 'CompressedRei';
+  params: GenerativeParams;
+  originalLength: number;
+  originalType: 'array' | 'string' | 'number' | 'object';
+  compressionRatio: number;
+  exactMatch: boolean;
+}
+
+function reiCompress(value: any): CompressedRei {
+  const originalType = typeof value === 'string' ? 'string'
+    : typeof value === 'number' ? 'number'
+    : Array.isArray(value) ? 'array'
+    : 'object';
+
+  const data = valueToNumberArray(value);
+  const result = compressToGenerativeParams(data);
+
+  return {
+    reiType: 'CompressedRei',
+    params: result.params,
+    originalLength: data.length,
+    originalType,
+    compressionRatio: result.compressionRatio,
+    exactMatch: result.exactMatch,
+  };
+}
+
+function reiDecompress(value: any): any {
+  if (value && typeof value === 'object' && value.reiType === 'CompressedRei') {
+    const comp = value as CompressedRei;
+    const restored = generate(comp.params, comp.originalLength);
+
+    // 元のデータ型に復元
+    if (comp.originalType === 'string') {
+      try {
+        return Buffer.from(restored).toString('utf-8');
+      } catch (_) { return restored; }
+    }
+    if (comp.originalType === 'number' && restored.length === 1) {
+      return restored[0];
+    }
+    if (comp.originalType === 'object') {
+      try {
+        return JSON.parse(Buffer.from(restored).toString('utf-8'));
+      } catch (_) { return restored; }
+    }
+
+    // 数値配列として復元
+    return restored;
+  }
+  throw new Error('復元: CompressedRei型のデータが必要です');
+}
+
+function reiCompressInfo(value: any): any {
+  const data = valueToNumberArray(value);
+  const result = compressToGenerativeParams(data);
+
+  return {
+    reiType: 'CompressInfo',
+    type: result.params.type,
+    originalSize: data.length,
+    compressedSize: result.params.size,
+    compressionRatio: result.compressionRatio,
+    exactMatch: result.exactMatch,
+    kolmogorovEstimate: result.kolmogorovEstimate,
+    improvement: `${((1 - result.compressionRatio) * 100).toFixed(1)}% 削減`,
+  };
+}
+
+/** Rei値を数値配列に変換（圧縮入力の正規化） */
+function valueToNumberArray(value: any): number[] {
+  // 数値配列
+  if (Array.isArray(value)) {
+    return value.map((v: any) => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') return v.charCodeAt(0);
+      return 0;
+    });
+  }
+  // 文字列 → UTF-8バイト列
+  if (typeof value === 'string') {
+    return Array.from(Buffer.from(value, 'utf-8'));
+  }
+  // 数値 → 単一要素配列
+  if (typeof value === 'number') {
+    return [value];
+  }
+  // オブジェクト → JSON文字列 → バイト列
+  if (typeof value === 'object' && value !== null) {
+    const json = JSON.stringify(value);
+    return Array.from(Buffer.from(json, 'utf-8'));
+  }
+  throw new Error('圧縮: 対応していないデータ型です');
+}
+
 function quadNot(v: string): string {
   switch (v) {
     case "top": return "bottom";
@@ -2316,6 +2427,16 @@ export class Evaluator {
       }
       if (cmd.cmd === "deserialize") {
         return reiDeserialize(rawInput);
+      }
+      // ── RCT: compress/decompress/compress_info もラップしない ──
+      if (cmd.cmd === "compress" || cmd.cmd === "圧縮") {
+        return reiCompress(rawInput);
+      }
+      if (cmd.cmd === "decompress" || cmd.cmd === "復元") {
+        return reiDecompress(rawInput);
+      }
+      if (cmd.cmd === "compress_info" || cmd.cmd === "圧縮情報") {
+        return reiCompressInfo(rawInput);
       }
       // ── Evolve: evolve_value はラップしない（直値返却） ──
       if (cmd.cmd === "evolve_value") {
