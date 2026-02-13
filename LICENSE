@@ -19,3 +19,41 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+=======================================================================
+ADDITIONAL TERMS — PEACE USE CLAUSE (平和利用条項)
+=======================================================================
+
+In addition to the terms and conditions of the MIT License above,
+the following Peace Use Clause applies to this software.
+
+MIT License の条件に加え、本ソフトウェアには以下の平和利用条項が適用されます。
+
+1. PEACEFUL USE ONLY / 平和利用の原則:
+   This software shall be used only for peaceful purposes. Use for
+   development, manufacture, or operation of weapons, military systems,
+   weapons of mass destruction, or Lethal Autonomous Weapons Systems
+   (LAWS) is expressly prohibited.
+   本ソフトウェアは平和的目的にのみ使用されなければなりません。兵器・
+   軍事システム・大量破壊兵器・自律型致死兵器システム（LAWS）への使用を
+   禁止します。
+
+2. RESPECT FOR HUMAN RIGHTS / 人権の尊重:
+   This software shall not be used to violate fundamental human rights
+   as set forth in the United Nations Universal Declaration of Human Rights.
+   国際連合世界人権宣言に定められた基本的人権を侵害する目的での使用を
+   禁止します。
+
+3. ENVIRONMENTAL CONSIDERATION / 環境への配慮:
+   This software shall not be used in systems that intentionally cause
+   environmental destruction.
+   意図的な環境破壊を引き起こすシステムへの使用を禁止します。
+
+Violation of these additional terms shall immediately terminate the
+rights granted under this license.
+本追加条項への違反は、本ライセンスに基づく権利の即時終了事由となります。
+
+For the full Peace Use Clause, see PEACE_USE_CLAUSE.md.
+完全な平和利用条項は PEACE_USE_CLAUSE.md を参照してください。
+
+=======================================================================
