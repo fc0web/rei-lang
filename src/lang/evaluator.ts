@@ -53,6 +53,11 @@ import {
   type RecognitionResult, type FusionResult, type SeparationResult,
   type TransformResult, type EntitySigma,
 } from './autonomy';
+import { ReiEventBus, type ReiEvent, type EventBusSigma } from './event-bus';
+import {
+  ReiAgent, AgentRegistry,
+  type AgentBehavior, type AgentSigma,
+} from './entity-agent';
 // RCT方向3: API版はtheory/semantic-compressor.tsを直接使用
 // evaluator内はローカル同期版（下部のreiLocalSemantic*関数）を使用
 
@@ -156,9 +161,13 @@ export class Evaluator {
   env: Environment;
   // ── v0.4: 関係エンジン ──
   bindingRegistry: BindingRegistry = new BindingRegistry();
+  // ── v0.5: イベントバス + Agent ──
+  eventBus: ReiEventBus = new ReiEventBus();
+  agentRegistry: AgentRegistry;
 
   constructor(parent?: Environment) {
     this.env = new Environment(parent ?? null);
+    this.agentRegistry = new AgentRegistry(this.eventBus);
     this.registerBuiltins();
   }
 
@@ -492,6 +501,13 @@ export class Evaluator {
         "separate", "分離", "transform_to", "変容",
         "entity_sigma", "存在σ",
         "auto_recognize", "自動認識_全体",
+        // v0.5: EventBus + Agent コマンド
+        "events", "イベント", "event_sigma", "イベントσ",
+        "event_count", "イベント数", "event_flow", "流れ状態",
+        "agent", "エージェント", "agent_tick", "自律実行",
+        "agent_sigma", "自律σ", "agent_list", "自律一覧",
+        "agent_dissolve", "自律消滅", "agents_tick_all", "全自律実行",
+        "agent_registry_sigma", "自律統計",
       ];
       if (relationWillCommands.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
@@ -1199,7 +1215,13 @@ export class Evaluator {
       for (const [k, v] of this.env.allBindings()) {
         envMap.set(k, v);
       }
-      return recognize(rawInput, envMap, selfName ?? undefined, threshold);
+      const recResult = recognize(rawInput, envMap, selfName ?? undefined, threshold);
+      this.eventBus.emit('entity:recognize', {
+        source: selfName,
+        compatibleCount: recResult.compatibleCount,
+        totalScanned: recResult.totalScanned,
+      });
+      return recResult;
     }
 
     if (cmdName === "fuse_with" || cmdName === "融合") {
@@ -1225,12 +1247,23 @@ export class Evaluator {
         ? (strategyMap[strategyArg] ?? strategyArg as FusionStrategy)
         : undefined;
 
-      return fuse(rawInput, targetValue, strategy);
+      const fuseResult = fuse(rawInput, targetValue, strategy);
+      this.eventBus.emit('entity:fuse', {
+        source: this.findRefByValue(input),
+        target: targetRef,
+        strategy: fuseResult.strategy,
+      });
+      return fuseResult;
     }
 
     if (cmdName === "separate" || cmdName === "分離") {
       // fused_value |> separate ? 融合を解除して分離
-      return separate(rawInput);
+      const sepResult = separate(rawInput);
+      this.eventBus.emit('entity:separate', {
+        source: this.findRefByValue(input),
+        partsCount: sepResult.parts.length,
+      });
+      return sepResult;
     }
 
     if (cmdName === "transform_to" || cmdName === "変容") {
@@ -1247,7 +1280,13 @@ export class Evaluator {
       const dirArg = args.length >= 1 ? String(args[0]) : 'optimal';
       const direction: TransformDirection = directionMap[dirArg] ?? 'optimal';
 
-      return transform(rawInput, direction);
+      const txResult = transform(rawInput, direction);
+      this.eventBus.emit('entity:transform', {
+        source: this.findRefByValue(input),
+        direction,
+        confidence: txResult.confidence,
+      });
+      return txResult;
     }
 
     if (cmdName === "entity_sigma" || cmdName === "存在σ") {
@@ -1301,6 +1340,163 @@ export class Evaluator {
         };
       }
       throw new Error("auto_recognize: Space型の値が必要です");
+    }
+
+    // ═══════════════════════════════════════════════════
+    // v0.5 EventBus + Agent コマンド
+    // ═══════════════════════════════════════════════════
+
+    if (cmdName === "events" || cmdName === "イベント") {
+      // any |> events           → 全イベントログ取得
+      // any |> events("entity") → カテゴリ別ログ取得
+      const category = args.length >= 1 ? String(args[0]) : undefined;
+      return this.eventBus.getLog(category as any);
+    }
+
+    if (cmdName === "event_sigma" || cmdName === "イベントσ") {
+      return this.eventBus.getSigma();
+    }
+
+    if (cmdName === "event_count" || cmdName === "イベント数") {
+      return this.eventBus.getEventCount();
+    }
+
+    if (cmdName === "event_flow" || cmdName === "流れ状態") {
+      return this.eventBus.getFlowMomentum();
+    }
+
+    if (cmdName === "agent" || cmdName === "エージェント") {
+      // value |> agent                                  → reactiveで生成
+      // value |> agent("autonomous")                    → behavior指定
+      // value |> agent("autonomous", "my_agent")        → behavior + ID指定
+      const behavior = (args.length >= 1 ? String(args[0]) : 'reactive') as AgentBehavior;
+      const agentId = args.length >= 2 ? String(args[1]) : undefined;
+
+      // 日本語behaviorマッピング
+      const behaviorMap: Record<string, AgentBehavior> = {
+        '受動': 'reactive', '自律': 'autonomous',
+        '協調': 'cooperative', '探索': 'explorative',
+      };
+      const resolvedBehavior = behaviorMap[behavior] ?? behavior;
+
+      const agent = this.agentRegistry.spawn(rawInput, {
+        id: agentId,
+        behavior: resolvedBehavior as AgentBehavior,
+      });
+
+      this.eventBus.emit('entity:recognize', {
+        agentId: agent.id,
+        kind: agent.kind,
+        behavior: agent.behavior,
+      }, agent.id);
+
+      return agent.sigma();
+    }
+
+    if (cmdName === "agent_tick" || cmdName === "自律実行") {
+      // value |> agent("autonomous", "a1") |> agent_tick
+      // agent_id |> agent_tick
+      let agentId: string | undefined;
+
+      // σからagentIdを取得
+      if (rawInput && typeof rawInput === 'object' && rawInput.reiType === 'AgentSigma') {
+        agentId = rawInput.id;
+      } else if (typeof rawInput === 'string') {
+        agentId = rawInput;
+      }
+
+      if (!agentId) throw new Error("agent_tick: Agent IDが必要です");
+
+      const agent = this.agentRegistry.get(agentId);
+      if (!agent) throw new Error(`agent_tick: Agent '${agentId}' が見つかりません`);
+
+      // 環境を構築
+      const envMap = new Map<string, any>();
+      for (const [name, binding] of this.env.allBindings()) {
+        envMap.set(name, binding);
+      }
+
+      const result = agent.tick({
+        environment: envMap,
+        agentRegistry: this.agentRegistry,
+        selfName: agentId,
+      });
+
+      return {
+        reiType: 'AgentTickResult' as const,
+        agentId,
+        step: agent.step,
+        perception: {
+          eventCount: result.perception.events.length,
+          recognizedCount: result.perception.recognized?.compatibleCount ?? 0,
+          flowState: result.perception.flowState.state,
+        },
+        decision: {
+          action: result.decision.action,
+          confidence: result.decision.confidence,
+          reason: result.decision.reason,
+        },
+        action: {
+          success: result.action.success,
+          reason: result.action.reason,
+        },
+      };
+    }
+
+    if (cmdName === "agent_sigma" || cmdName === "自律σ") {
+      // agent_id |> agent_sigma
+      let agentId: string | undefined;
+      if (rawInput && typeof rawInput === 'object' && rawInput.reiType === 'AgentSigma') {
+        agentId = rawInput.id;
+      } else if (typeof rawInput === 'string') {
+        agentId = rawInput;
+      }
+      if (!agentId) throw new Error("agent_sigma: Agent IDが必要です");
+      const agent = this.agentRegistry.get(agentId);
+      if (!agent) throw new Error(`agent_sigma: Agent '${agentId}' が見つかりません`);
+      return agent.sigma();
+    }
+
+    if (cmdName === "agent_list" || cmdName === "自律一覧") {
+      return this.agentRegistry.list();
+    }
+
+    if (cmdName === "agent_dissolve" || cmdName === "自律消滅") {
+      // agent_id |> agent_dissolve
+      let agentId: string | undefined;
+      if (rawInput && typeof rawInput === 'object' && rawInput.reiType === 'AgentSigma') {
+        agentId = rawInput.id;
+      } else if (typeof rawInput === 'string') {
+        agentId = rawInput;
+      }
+      if (!agentId) throw new Error("agent_dissolve: Agent IDが必要です");
+      const dissolved = this.agentRegistry.dissolve(agentId);
+      return { dissolved, agentId };
+    }
+
+    if (cmdName === "agents_tick_all" || cmdName === "全自律実行") {
+      // any |> agents_tick_all → 全Agentを一括tick
+      const envMap = new Map<string, any>();
+      for (const [name, binding] of this.env.allBindings()) {
+        envMap.set(name, binding);
+      }
+      const results = this.agentRegistry.tickAll(envMap);
+      const summary: Record<string, any> = {};
+      for (const [id, r] of results) {
+        summary[id] = {
+          decision: r.decision.action,
+          success: r.action.success,
+        };
+      }
+      return {
+        reiType: 'AgentTickAllResult' as const,
+        count: results.size,
+        results: summary,
+      };
+    }
+
+    if (cmdName === "agent_registry_sigma" || cmdName === "自律統計") {
+      return this.agentRegistry.sigma();
     }
 
     // ???????????????????????????????????????????
