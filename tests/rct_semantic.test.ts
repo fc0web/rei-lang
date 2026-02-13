@@ -15,7 +15,7 @@ import {
   type SemanticTheta,
   type SemanticCompressionResult,
   type CompressorModelType,
-} from '../src/semantic-compressor';
+} from '../theory/semantic-compressor';
 
 // ============================================================
 // テストデータ
