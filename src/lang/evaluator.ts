@@ -1,7 +1,8 @@
 ﻿// ============================================================
-// Rei v0.3 Evaluator — Integrated with Space-Layer-Diffusion
+// Rei v0.4 Evaluator — Integrated with Space-Layer-Diffusion
 // Original: v0.2.1 by Nobuki Fujimoto
 // Extended: v0.3 Space-Layer-Diffusion (collaborative design)
+// Extended: v0.4 RCT Semantic Compression + 6-Attribute Activation
 // ============================================================
 
 import { TokenType } from './lexer';
@@ -31,6 +32,29 @@ import {
   formatSudoku, estimateDifficulty, generateSudoku, parseGrid,
   type PuzzleSpace,
 } from './puzzle';
+import {
+  BindingRegistry, getBindingSimilarity,
+  type ReiBinding, type BindingMode, type BindingSummary,
+} from './relation';
+import {
+  createIntention, willCompute, willIterate,
+  buildWillSigma, getIntentionOf, attachIntention,
+  type ReiIntention, type IntentionType, type WillComputeResult,
+} from './will';
+import {
+  compressToGenerativeParams, generate,
+  type GenerativeParams,
+} from '../../theory/theories-67';
+import {
+  recognize, fuse, separate, transform, buildEntitySigma,
+  attachEntityMeta, getEntityMeta, unwrapAutonomousEntity,
+  inferEntityKind, evaluateCompatibility, spaceAutoRecognize,
+  type EntityKind, type FusionStrategy, type TransformDirection,
+  type RecognitionResult, type FusionResult, type SeparationResult,
+  type TransformResult, type EntitySigma,
+} from './autonomy';
+// RCT方向3: API版はtheory/semantic-compressor.tsを直接使用
+// evaluator内はローカル同期版（下部のreiLocalSemantic*関数）を使用
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2055,6 +2079,306 @@ function cleanSerialPayload(value: any): any {
   return clean;
 }
 
+// ============================================================
+// RCT Compress / Decompress — D-FUMT Theory #67
+// ============================================================
+// 「データを保存するのではなく、データを生成する公理を保存する」
+// Rei言語の組込みパイプコマンド:
+//   data |> compress         → CompressedRei
+//   compressed |> decompress → 元データ
+//   data |> compress_info    → 圧縮メタデータ
+//   data |> 圧縮             → CompressedRei (日本語)
+//   compressed |> 復元       → 元データ (日本語)
+
+interface CompressedRei {
+  reiType: 'CompressedRei';
+  params: GenerativeParams;
+  originalLength: number;
+  originalType: 'array' | 'string' | 'number' | 'object';
+  compressionRatio: number;
+  exactMatch: boolean;
+}
+
+function reiCompress(value: any): CompressedRei {
+  const originalType = typeof value === 'string' ? 'string'
+    : typeof value === 'number' ? 'number'
+    : Array.isArray(value) ? 'array'
+    : 'object';
+
+  const data = valueToNumberArray(value);
+  const result = compressToGenerativeParams(data);
+
+  return {
+    reiType: 'CompressedRei',
+    params: result.params,
+    originalLength: data.length,
+    originalType,
+    compressionRatio: result.compressionRatio,
+    exactMatch: result.exactMatch,
+  };
+}
+
+function reiDecompress(value: any): any {
+  if (value && typeof value === 'object' && value.reiType === 'CompressedRei') {
+    const comp = value as CompressedRei;
+    const restored = generate(comp.params, comp.originalLength);
+
+    // 元のデータ型に復元
+    if (comp.originalType === 'string') {
+      try {
+        return Buffer.from(restored).toString('utf-8');
+      } catch (_) { return restored; }
+    }
+    if (comp.originalType === 'number' && restored.length === 1) {
+      return restored[0];
+    }
+    if (comp.originalType === 'object') {
+      try {
+        return JSON.parse(Buffer.from(restored).toString('utf-8'));
+      } catch (_) { return restored; }
+    }
+
+    // 数値配列として復元
+    return restored;
+  }
+  throw new Error('復元: CompressedRei型のデータが必要です');
+}
+
+function reiCompressInfo(value: any): any {
+  const data = valueToNumberArray(value);
+  const result = compressToGenerativeParams(data);
+
+  return {
+    reiType: 'CompressInfo',
+    type: result.params.type,
+    originalSize: data.length,
+    compressedSize: result.params.size,
+    compressionRatio: result.compressionRatio,
+    exactMatch: result.exactMatch,
+    kolmogorovEstimate: result.kolmogorovEstimate,
+    improvement: `${((1 - result.compressionRatio) * 100).toFixed(1)}% 削減`,
+  };
+}
+
+/** Rei値を数値配列に変換（圧縮入力の正規化） */
+function valueToNumberArray(value: any): number[] {
+  // 数値配列
+  if (Array.isArray(value)) {
+    return value.map((v: any) => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') return v.charCodeAt(0);
+      return 0;
+    });
+  }
+  // 文字列 → UTF-8バイト列
+  if (typeof value === 'string') {
+    return Array.from(Buffer.from(value, 'utf-8'));
+  }
+  // 数値 → 単一要素配列
+  if (typeof value === 'number') {
+    return [value];
+  }
+  // オブジェクト → JSON文字列 → バイト列
+  if (typeof value === 'object' && value !== null) {
+    const json = JSON.stringify(value);
+    return Array.from(Buffer.from(json, 'utf-8'));
+  }
+  throw new Error('圧縮: 対応していないデータ型です');
+}
+
+// ============================================================
+// RCT 方向3: Semantic Compress / Decompress / Verify (ローカル同期版)
+// ============================================================
+// Evaluator内での同期実行用。API接続版はtheory/semantic-compressor.tsを使用。
+// Rei構文:
+//   data |> semantic_compress           → SemanticThetaLocal
+//   theta |> semantic_decompress        → 復元文字列
+//   [orig, recon] |> semantic_verify    → 検証結果
+//   data |> 意味圧縮 / theta |> 意味復元 / [a,b] |> 意味検証 （日本語版）
+
+interface SemanticThetaLocal {
+  reiType: 'SemanticTheta';
+  version: '3.0';
+  fidelity: string;
+  intent: string;
+  structure: string;
+  functions: string[];
+  imports: string[];
+  types: string[];
+  patterns: string[];
+  language: string;
+  originalSize: number;
+  thetaSize: number;
+  compressionRatio: number;
+}
+
+function reiLocalSemanticCompress(data: string, fidelity: string = 'high'): SemanticThetaLocal {
+  const lines = data.split('\n');
+  const originalSize = Buffer.byteLength(data, 'utf-8');
+
+  // 関数シグネチャ抽出
+  const functions: string[] = [];
+  for (const line of lines) {
+    const funcMatch = line.match(/(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)(?:\s*:\s*([^\s{]+))?/);
+    if (funcMatch) {
+      functions.push(`${funcMatch[1]}(${funcMatch[2].replace(/\s+/g, '')})${funcMatch[3] ? ':' + funcMatch[3] : ''}`);
+    }
+    const methodMatch = line.match(/^\s{2,}(?:async\s+)?(\w+)\s*\(([^)]*)\)(?:\s*:\s*([^\s{]+))?\s*\{/);
+    if (methodMatch && !['if','for','while','switch','catch','else'].includes(methodMatch[1])) {
+      functions.push(`.${methodMatch[1]}(${methodMatch[2].replace(/\s+/g, '')})`);
+    }
+  }
+
+  // import抽出
+  const imports: string[] = [];
+  for (const line of lines) {
+    const impMatch = line.match(/from\s+['"]([^'"]+)['"]/);
+    if (impMatch) imports.push(impMatch[1]);
+  }
+
+  // interface/class/type 抽出
+  const types: string[] = [];
+  for (const line of lines) {
+    const typeMatch = line.match(/(?:export\s+)?(?:interface|class|type)\s+(\w+)/);
+    if (typeMatch) types.push(typeMatch[1]);
+  }
+
+  // パターン検出
+  const patterns: string[] = [];
+  if (data.includes('async')) patterns.push('async/await');
+  if (data.includes('extends') || data.includes('implements')) patterns.push('inheritance');
+  if (data.match(/\.map\(|\.filter\(|\.reduce\(/)) patterns.push('functional');
+  if (data.includes('try') && data.includes('catch')) patterns.push('error-handling');
+
+  // コメントから意図を抽出
+  const comments = lines
+    .filter(l => l.trim().startsWith('//') || l.trim().startsWith('*'))
+    .slice(0, 5)
+    .map(c => c.replace(/^[\s/*]+/, '').trim())
+    .filter(Boolean);
+
+  // 言語検出
+  const language = data.includes('interface ') || data.includes(': string') ? 'TypeScript'
+    : data.includes('def ') ? 'Python'
+    : data.includes('fn ') ? 'Rust'
+    : 'JavaScript';
+
+  // fidelityによって詳細度を調整
+  const funcsToInclude = fidelity === 'low' ? functions.slice(0, 3)
+    : fidelity === 'medium' ? functions.slice(0, 8)
+    : functions;
+
+  const theta: SemanticThetaLocal = {
+    reiType: 'SemanticTheta',
+    version: '3.0',
+    fidelity,
+    intent: comments.join('. ').substring(0, 120) || 'code module',
+    structure: `${types.length}types, ${functions.length}fns, ${imports.length}deps`,
+    functions: funcsToInclude,
+    imports,
+    types,
+    patterns,
+    language,
+    originalSize,
+    thetaSize: 0,
+    compressionRatio: 0,
+  };
+
+  const thetaJson = JSON.stringify(theta);
+  theta.thetaSize = Buffer.byteLength(thetaJson, 'utf-8');
+  theta.compressionRatio = theta.thetaSize / originalSize;
+
+  return theta;
+}
+
+function reiLocalSemanticDecompress(input: any): string {
+  if (!input || typeof input !== 'object' || input.reiType !== 'SemanticTheta') {
+    throw new Error('semantic_decompress: SemanticTheta型のデータが必要です (data |> semantic_compress の結果を渡してください)');
+  }
+
+  const theta = input as SemanticThetaLocal;
+
+  // θから概要コードを再生成（ローカルモード）
+  const lines: string[] = [];
+
+  lines.push(`// ${theta.intent}`);
+  lines.push(`// Structure: ${theta.structure}`);
+  lines.push('');
+
+  // imports
+  for (const dep of theta.imports) {
+    lines.push(`import { /* ... */ } from '${dep}';`);
+  }
+  if (theta.imports.length > 0) lines.push('');
+
+  // types
+  for (const t of theta.types) {
+    lines.push(`interface ${t} { /* ... */ }`);
+  }
+  if (theta.types.length > 0) lines.push('');
+
+  // functions
+  for (const fn of theta.functions) {
+    if (fn.startsWith('.')) {
+      lines.push(`  ${fn.slice(1)} { /* ... */ }`);
+    } else {
+      lines.push(`export function ${fn} {`);
+      lines.push('  // TODO: implement');
+      lines.push('}');
+      lines.push('');
+    }
+  }
+
+  lines.push(`// RCT Semantic Reconstruction (local mode)`);
+  lines.push(`// Connect ANTHROPIC_API_KEY for full LLM-powered reconstruction`);
+
+  return lines.join('\n');
+}
+
+function reiLocalSemanticVerify(original: string, reconstructed: string): {
+  reiType: string; score: number; functional: number; structural: number; details: string;
+} {
+  // 関数名の一致率
+  const extractNames = (code: string) => new Set(
+    (code.match(/(?:function|class|interface)\s+(\w+)/g) || [])
+      .map(m => m.replace(/(?:function|class|interface)\s+/, ''))
+  );
+
+  const origNames = extractNames(original);
+  const reconNames = extractNames(reconstructed);
+
+  let matches = 0;
+  for (const name of origNames) {
+    if (reconNames.has(name)) matches++;
+  }
+
+  const structural = origNames.size > 0 ? matches / origNames.size : 0;
+
+  // import一致率
+  const extractImports = (code: string) => new Set(
+    (code.match(/from\s+['"]([^'"]+)['"]/g) || []).map(m => m.replace(/from\s+['"]|['"]/g, ''))
+  );
+  const origImports = extractImports(original);
+  const reconImports = extractImports(reconstructed);
+  let importMatches = 0;
+  for (const imp of origImports) {
+    if (reconImports.has(imp)) importMatches++;
+  }
+  const importScore = origImports.size > 0 ? importMatches / origImports.size : 1;
+
+  // 総合スコア
+  const score = structural * 0.6 + importScore * 0.2 + 0.2;
+  const functional = structural * 0.7;
+
+  return {
+    reiType: 'SemanticVerify',
+    score: Math.round(score * 1000) / 1000,
+    functional: Math.round(functional * 1000) / 1000,
+    structural: Math.round(structural * 1000) / 1000,
+    details: `${matches}/${origNames.size} identifiers, ${importMatches}/${origImports.size} imports matched`,
+  };
+}
+
 function quadNot(v: string): string {
   switch (v) {
     case "top": return "bottom";
@@ -2100,6 +2424,8 @@ function genesisForward(g: any) {
 
 export class Evaluator {
   env: Environment;
+  // ── v0.4: 関係エンジン ──
+  bindingRegistry: BindingRegistry = new BindingRegistry();
 
   constructor(parent?: Environment) {
     this.env = new Environment(parent ?? null);
@@ -2306,6 +2632,34 @@ export class Evaluator {
       if (cmd.cmd === "deserialize") {
         return reiDeserialize(rawInput);
       }
+      // ── RCT: compress/decompress/compress_info もラップしない ──
+      if (cmd.cmd === "compress" || cmd.cmd === "圧縮") {
+        return reiCompress(rawInput);
+      }
+      if (cmd.cmd === "decompress" || cmd.cmd === "復元") {
+        return reiDecompress(rawInput);
+      }
+      if (cmd.cmd === "compress_info" || cmd.cmd === "圧縮情報") {
+        return reiCompressInfo(rawInput);
+      }
+      // ── RCT 方向3: semantic_compress/decompress/verify ──
+      if (cmd.cmd === "semantic_compress" || cmd.cmd === "意味圧縮") {
+        const data = typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
+        const evalArgs = (cmd.args || []).map((a: any) => this.eval(a));
+        const fidelity = (evalArgs.length > 1 && typeof evalArgs[1] === 'string' ? evalArgs[1] : 'high');
+        return reiLocalSemanticCompress(data, fidelity);
+      }
+      if (cmd.cmd === "semantic_decompress" || cmd.cmd === "意味復元") {
+        return reiLocalSemanticDecompress(rawInput);
+      }
+      if (cmd.cmd === "semantic_verify" || cmd.cmd === "意味検証") {
+        if (!Array.isArray(rawInput) || rawInput.length < 2) {
+          throw new Error('semantic_verify expects [original, reconstructed] array');
+        }
+        const orig = typeof rawInput[0] === 'string' ? rawInput[0] : JSON.stringify(rawInput[0]);
+        const recon = typeof rawInput[1] === 'string' ? rawInput[1] : JSON.stringify(rawInput[1]);
+        return reiLocalSemanticVerify(orig, recon);
+      }
       // ── Evolve: evolve_value はラップしない（直値返却） ──
       if (cmd.cmd === "evolve_value") {
         return this.execPipeCmd(rawInput, cmd);
@@ -2395,6 +2749,23 @@ export class Evaluator {
       if (stringMDimAccessors.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
+      // ── v0.4: 関係・意志コマンド — ラップしない（直値返却） ──
+      const relationWillCommands = [
+        "bind", "結合", "unbind", "解除", "unbind_all", "全解除",
+        "bindings", "結合一覧", "cause", "因果",
+        "propagate_bindings", "伝播実行",
+        "intend", "意志", "will_compute", "意志計算",
+        "will_iterate", "意志反復",
+        "intention", "意志確認", "satisfaction", "満足度",
+        // v0.4+: 自律的相互認識コマンド
+        "recognize", "認識", "fuse_with", "融合",
+        "separate", "分離", "transform_to", "変容",
+        "entity_sigma", "存在σ",
+        "auto_recognize", "自動認識_全体",
+      ];
+      if (relationWillCommands.includes(cmd.cmd)) {
+        return this.execPipeCmd(rawInput, cmd);
+      }
       const result = this.execPipeCmd(rawInput, cmd);
       // パイプ通過時にσメタデータを付与
       const prevMeta = getSigmaOf(rawInput);
@@ -2456,7 +2827,17 @@ export class Evaluator {
         return getPuzzleSigma(rawInput as PuzzleSpace);
       }
       // 全値型 — C1公理のσ関数
-      return buildSigmaResult(rawInput, sigmaMetadata);
+      const sigmaResult = buildSigmaResult(rawInput, sigmaMetadata);
+      // ── v0.4: σにrelation/will情報を注入 ──
+      const ref = this.findRefByValue(input);
+      if (ref) {
+        sigmaResult.relation = this.bindingRegistry.buildRelationSigma(ref);
+      }
+      const intention = getIntentionOf(rawInput);
+      if (intention) {
+        sigmaResult.will = buildWillSigma(intention);
+      }
+      return sigmaResult;
     }
 
     // ═══════════════════════════════════════════
@@ -2534,6 +2915,64 @@ export class Evaluator {
             for (const n of layer.nodes) results.push(computeNodeValue(n));
           }
           return results.length === 1 ? results[0] : results;
+        }
+
+        // ═══════════════════════════════════════════
+        // Phase 3統合: Space × Auto-bind — 共鳴→自動結合
+        // ═══════════════════════════════════════════
+
+        // auto_bind / 自動結合: findResonancesの結果をBindingRegistryに登録
+        case "auto_bind": case "自動結合": {
+          const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.5;
+          const resonances = findResonances(sp, threshold);
+          let bindCount = 0;
+          for (const pair of resonances) {
+            const refA = `node_${pair.nodeA.layer}_${pair.nodeA.index}`;
+            const refB = `node_${pair.nodeB.layer}_${pair.nodeB.index}`;
+            // 既存の結合をチェック
+            const existing = this.bindingRegistry.getBindingsFor(refA);
+            if (existing.some(b => b.target === refB)) continue;
+            // 共鳴度に応じた結合強度で resonance 結合を作成
+            this.bindingRegistry.bind(refA, refB, 'resonance', pair.similarity, true);
+            bindCount++;
+          }
+          return {
+            reiType: 'AutoBindResult' as const,
+            resonancesFound: resonances.length,
+            bindingsCreated: bindCount,
+            threshold,
+            pairs: resonances.map(p => ({
+              nodeA: p.nodeA,
+              nodeB: p.nodeB,
+              similarity: p.similarity,
+            })),
+          };
+        }
+
+        // space_relations / 場関係: 全結合を照会
+        case "space_relations": case "場関係": {
+          const allBindings: any[] = [];
+          for (const [layerIdx, layer] of sp.layers) {
+            for (let i = 0; i < layer.nodes.length; i++) {
+              const ref = `node_${layerIdx}_${i}`;
+              const bindings = this.bindingRegistry.getBindingsFor(ref);
+              if (bindings.length > 0) {
+                allBindings.push({
+                  node: { layer: layerIdx, index: i },
+                  center: layer.nodes[i].center,
+                  bindings: bindings.map(b => ({
+                    target: b.target,
+                    mode: b.mode,
+                    strength: b.strength,
+                  })),
+                });
+              }
+            }
+          }
+          return {
+            totalBindings: allBindings.reduce((s, n) => s + n.bindings.length, 0),
+            nodes: allBindings,
+          };
         }
       }
     }
@@ -2838,6 +3277,303 @@ export class Evaluator {
     }
 
     // ═══════════════════════════════════════════
+    // v0.4: 関係（Relation）— 非局所的結合
+    // ═══════════════════════════════════════════
+
+    if (cmdName === "bind" || cmdName === "結合") {
+      // a |> bind("b", "mirror")  or  a |> bind("b", "mirror", 0.8)
+      // a |> 結合("b", "鏡像")
+      if (args.length < 1) throw new Error("bind: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const modeArg = args.length >= 2 ? String(args[1]) : 'mirror';
+      const strength = args.length >= 3 ? this.toNumber(args[2]) : 1.0;
+      const bidir = args.length >= 4 ? !!args[3] : false;
+
+      // 日本語モード名の変換
+      const modeMap: Record<string, BindingMode> = {
+        'mirror': 'mirror', '鏡像': 'mirror',
+        'inverse': 'inverse', '反転': 'inverse',
+        'resonance': 'resonance', '共鳴': 'resonance',
+        'entangle': 'entangle', 'もつれ': 'entangle',
+        'causal': 'causal', '因果': 'causal',
+      };
+      const bindMode: BindingMode = modeMap[modeArg] ?? 'mirror';
+
+      // ソース変数名の逆引き
+      const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
+
+      // ターゲットが環境に存在するか確認
+      if (!this.env.has(targetRef)) {
+        throw new Error(`bind: 変数 '${targetRef}' が見つかりません`);
+      }
+
+      const binding = this.bindingRegistry.bind(sourceRef, targetRef, bindMode, strength, bidir);
+      return {
+        reiType: 'BindResult' as const,
+        binding,
+        source: rawInput,
+        target: this.env.get(targetRef),
+      };
+    }
+
+    if (cmdName === "cause" || cmdName === "因果") {
+      // a |> cause("b") — causal一方向結合のショートカット
+      if (args.length < 1) throw new Error("cause: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const strength = args.length >= 2 ? this.toNumber(args[1]) : 1.0;
+      const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
+
+      if (!this.env.has(targetRef)) {
+        throw new Error(`cause: 変数 '${targetRef}' が見つかりません`);
+      }
+
+      const binding = this.bindingRegistry.bind(sourceRef, targetRef, 'causal', strength, false);
+      return {
+        reiType: 'BindResult' as const,
+        binding,
+        source: rawInput,
+        target: this.env.get(targetRef),
+      };
+    }
+
+    if (cmdName === "unbind" || cmdName === "解除") {
+      // a |> unbind("b")
+      if (args.length < 1) throw new Error("unbind: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const sourceRef = this.findRefByValue(input) ?? '';
+      const result = this.bindingRegistry.unbind(sourceRef, targetRef);
+      return result;
+    }
+
+    if (cmdName === "unbind_all" || cmdName === "全解除") {
+      // a |> unbind_all
+      const ref = this.findRefByValue(input) ?? '';
+      return this.bindingRegistry.unbindAll(ref);
+    }
+
+    if (cmdName === "bindings" || cmdName === "結合一覧") {
+      // a |> bindings — この値の全結合リスト
+      const ref = this.findRefByValue(input) ?? '';
+      return this.bindingRegistry.getBindingsFor(ref);
+    }
+
+    if (cmdName === "propagate_bindings" || cmdName === "伝播実行") {
+      // a |> propagate_bindings — この値の結合先に現在値を伝播
+      const ref = this.findRefByValue(input);
+      if (!ref) throw new Error("propagate_bindings: 変数参照を解決できません");
+      const count = this.triggerPropagation(ref, rawInput);
+      return { propagated: count, source: ref };
+    }
+
+    // ═══════════════════════════════════════════
+    // v0.4: 意志（Will）— 自律的目標指向
+    // ═══════════════════════════════════════════
+
+    if (cmdName === "intend" || cmdName === "意志") {
+      // 𝕄{5; 1,2,3} |> intend("seek", 10)
+      // 𝕄{5; 1,2,3} |> 意志("接近", 10)
+      if (args.length < 1) throw new Error("intend: 意志の種類が必要です");
+      const typeArg = String(args[0]);
+      const target = args.length >= 2 ? this.toNumber(args[1]) : undefined;
+      const patience = args.length >= 3 ? this.toNumber(args[2]) : 50;
+
+      // 日本語意志タイプの変換
+      const typeMap: Record<string, IntentionType> = {
+        'seek': 'seek', '接近': 'seek',
+        'avoid': 'avoid', '回避': 'avoid',
+        'stabilize': 'stabilize', '安定': 'stabilize',
+        'explore': 'explore', '探索': 'explore',
+        'harmonize': 'harmonize', '調和': 'harmonize',
+        'maximize': 'maximize', '最大化': 'maximize',
+        'minimize': 'minimize', '最小化': 'minimize',
+      };
+      const intentType: IntentionType = typeMap[typeArg] ?? 'seek';
+
+      const intention = createIntention(intentType, target, patience);
+
+      // harmonize の場合、結合先の値を目標に設定
+      if (intentType === 'harmonize') {
+        const ref = this.findRefByValue(input);
+        if (ref) {
+          const bindings = this.bindingRegistry.getBindingsFor(ref);
+          if (bindings.length > 0 && bindings[0].active) {
+            try {
+              const targetVal = this.env.get(bindings[0].target);
+              intention.target = toNumSafe(targetVal);
+            } catch { /* ignore */ }
+          }
+        }
+      }
+
+      // 値に意志を付与して返す
+      return attachIntention(rawInput, intention);
+    }
+
+    if (cmdName === "will_compute" || cmdName === "意志計算") {
+      // 𝕄{5; 1,2,3} |> intend("seek", 10) |> will_compute
+      const intention = getIntentionOf(rawInput);
+      if (!intention) throw new Error("will_compute: 意志が付与されていません（先に intend を使用してください）");
+
+      // harmonizeの場合、結合先の値をコンテキストに含める
+      let harmonizeTarget: number | undefined;
+      if (intention.type === 'harmonize' && intention.target !== undefined) {
+        harmonizeTarget = intention.target;
+      }
+
+      const md = this.isMDim(rawInput)
+        ? rawInput
+        : { reiType: 'MDim', center: this.toNumber(rawInput), neighbors: [], mode: 'weighted' };
+
+      return willCompute(md, intention, { harmonizeTarget });
+    }
+
+    if (cmdName === "will_iterate" || cmdName === "意志反復") {
+      // 𝕄{5; 1,2,3} |> intend("seek", 10) |> will_iterate
+      // 𝕄{5; 1,2,3} |> intend("seek", 10) |> will_iterate(20)  // 最大20ステップ
+      const intention = getIntentionOf(rawInput);
+      if (!intention) throw new Error("will_iterate: 意志が付与されていません");
+
+      const maxSteps = args.length >= 1 ? this.toNumber(args[0]) : undefined;
+      const md = this.isMDim(rawInput)
+        ? rawInput
+        : { reiType: 'MDim', center: this.toNumber(rawInput), neighbors: [], mode: 'weighted' };
+
+      return willIterate(md, intention, maxSteps);
+    }
+
+    if (cmdName === "intention" || cmdName === "意志確認") {
+      // 値の意志情報を取得
+      const intention = getIntentionOf(rawInput);
+      if (!intention) return null;
+      return buildWillSigma(intention);
+    }
+
+    if (cmdName === "satisfaction" || cmdName === "満足度") {
+      // 値の満足度を取得
+      const intention = getIntentionOf(rawInput);
+      return intention?.satisfaction ?? 0;
+    }
+
+    // ═══════════════════════════════════════════
+    // v0.4+: 自律的相互認識（Autonomy Engine）
+    // 数値・記号・言語の統一的エンティティ認識
+    // ═══════════════════════════════════════════
+
+    if (cmdName === "recognize" || cmdName === "認識") {
+      // value |> recognize         — 環境内の全変数を認識
+      // value |> recognize(0.5)    — しきい値指定
+      const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.1;
+      const selfName = this.findRefByValue(input);
+      // 環境の全変数を収集
+      const envMap = new Map<string, any>();
+      for (const [k, v] of this.env.allBindings()) {
+        envMap.set(k, v);
+      }
+      return recognize(rawInput, envMap, selfName ?? undefined, threshold);
+    }
+
+    if (cmdName === "fuse_with" || cmdName === "融合") {
+      // a |> fuse_with("b")              — 変数bとの融合（戦略自動選択）
+      // a |> fuse_with("b", "resonate")  — 戦略指定
+      if (args.length < 1) throw new Error("fuse_with: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      if (!this.env.has(targetRef)) {
+        throw new Error(`fuse_with: 変数 '${targetRef}' が見つかりません`);
+      }
+      const targetValue = this.env.get(targetRef);
+
+      // 融合戦略の日本語マッピング
+      const strategyMap: Record<string, FusionStrategy> = {
+        'absorb': 'absorb', '吸収': 'absorb',
+        'merge': 'merge', '統合': 'merge',
+        'overlay': 'overlay', '重畳': 'overlay',
+        'resonate': 'resonate', '共鳴': 'resonate',
+        'cascade': 'cascade', '連鎖': 'cascade',
+      };
+      const strategyArg = args.length >= 2 ? String(args[1]) : undefined;
+      const strategy: FusionStrategy | undefined = strategyArg
+        ? (strategyMap[strategyArg] ?? strategyArg as FusionStrategy)
+        : undefined;
+
+      return fuse(rawInput, targetValue, strategy);
+    }
+
+    if (cmdName === "separate" || cmdName === "分離") {
+      // fused_value |> separate — 融合を解除して分離
+      return separate(rawInput);
+    }
+
+    if (cmdName === "transform_to" || cmdName === "変容") {
+      // value |> transform_to("numeric")    — 数値表現へ
+      // value |> transform_to("symbolic")   — 記号表現へ
+      // value |> transform_to("linguistic") — 言語表現へ
+      // value |> transform_to              — 最適な形態へ（optimal）
+      const directionMap: Record<string, TransformDirection> = {
+        'numeric': 'to_numeric', '数値': 'to_numeric',
+        'symbolic': 'to_symbolic', '記号': 'to_symbolic',
+        'linguistic': 'to_linguistic', '言語': 'to_linguistic',
+        'optimal': 'optimal', '最適': 'optimal',
+      };
+      const dirArg = args.length >= 1 ? String(args[0]) : 'optimal';
+      const direction: TransformDirection = directionMap[dirArg] ?? 'optimal';
+
+      return transform(rawInput, direction);
+    }
+
+    if (cmdName === "entity_sigma" || cmdName === "存在σ") {
+      // value |> entity_sigma — エンティティの自律的自己記述
+      return buildEntitySigma(rawInput);
+    }
+
+    if (cmdName === "auto_recognize" || cmdName === "自動認識_全体") {
+      // space |> auto_recognize       — Space内の全ノード間で相互認識
+      // space |> auto_recognize(0.5)  — しきい値指定
+      if (this.isSpace(rawInput)) {
+        const sp = rawInput as ReiSpace;
+        const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.3;
+        const nodes: Array<{ center: number; neighbors: number[]; layer: number; index: number }> = [];
+        for (const [layerIdx, layer] of sp.layers) {
+          for (let i = 0; i < layer.nodes.length; i++) {
+            const node = layer.nodes[i];
+            nodes.push({
+              center: node.center,
+              neighbors: [...node.neighbors],
+              layer: layerIdx,
+              index: i,
+            });
+          }
+        }
+        const recognitions = spaceAutoRecognize(nodes, threshold);
+
+        // 認識結果に基づいてBindingRegistryに自動登録
+        let bindCount = 0;
+        let fuseCount = 0;
+        for (const rec of recognitions) {
+          const refA = `node_${rec.nodeA.layer}_${rec.nodeA.index}`;
+          const refB = `node_${rec.nodeB.layer}_${rec.nodeB.index}`;
+          if (rec.suggestedAction === 'bind' || rec.suggestedAction === 'fuse') {
+            const existing = this.bindingRegistry.getBindingsFor(refA);
+            if (!existing.some(b => b.target === refB)) {
+              this.bindingRegistry.bind(refA, refB, 'resonance', rec.score, true);
+              bindCount++;
+            }
+          }
+          if (rec.suggestedAction === 'fuse') fuseCount++;
+        }
+
+        return {
+          reiType: 'SpaceAutoRecognizeResult' as const,
+          totalPairs: recognitions.length,
+          bindingsCreated: bindCount,
+          fusionCandidates: fuseCount,
+          threshold,
+          recognitions: recognitions.slice(0, 20), // 上位20件
+        };
+      }
+      throw new Error("auto_recognize: Space型の値が必要です");
+    }
+
+    // ═══════════════════════════════════════════
     // v0.2.1 Original pipe commands (rawInputを使用)
     // ═══════════════════════════════════════════
     if (this.isMDim(rawInput)) {
@@ -3101,7 +3837,51 @@ export class Evaluator {
         config.maxIterations = args[2];
       }
 
-      return thinkLoop(rawInput, config);
+      // ═══ Phase 3統合: 意志付き思考 ═══
+      // 入力に __intention__ がある場合、思考ループに意志を反映
+      const inputIntention = getIntentionOf(rawInput);
+      if (inputIntention && !config.strategy) {
+        // 意志の種類から思考戦略を導出
+        switch (inputIntention.type) {
+          case 'seek':
+            config.strategy = 'seek';
+            if (inputIntention.target !== undefined) config.targetValue = inputIntention.target;
+            break;
+          case 'stabilize':
+            config.strategy = 'converge';
+            break;
+          case 'explore':
+            config.strategy = 'explore';
+            break;
+          case 'maximize':
+            config.strategy = 'explore'; // 全モード試行
+            break;
+          case 'minimize':
+            config.strategy = 'converge';
+            break;
+          case 'harmonize':
+            if (inputIntention.target !== undefined) {
+              config.strategy = 'seek';
+              config.targetValue = inputIntention.target;
+            }
+            break;
+          default:
+            config.strategy = 'converge';
+        }
+        if (inputIntention.patience && !config.maxIterations) {
+          config.maxIterations = inputIntention.patience;
+        }
+      }
+
+      const thinkResult = thinkLoop(rawInput, config);
+
+      // 意志付き思考の場合、結果に意志情報を付加
+      if (inputIntention) {
+        (thinkResult as any).__intention_guided__ = true;
+        (thinkResult as any).__original_intention__ = inputIntention;
+      }
+
+      return thinkResult;
     }
 
     // think_trajectory / 軌跡: 思考の数値軌跡を配列で返す
@@ -3240,6 +4020,143 @@ export class Evaluator {
           return gameAsMDim(gs);
         case "sigma": case "game_sigma":
           return getGameSigma(gs);
+
+        // ═══════════════════════════════════════════
+        // Phase 3統合: Game × Will — 意志駆動の戦略選択
+        // ═══════════════════════════════════════════
+
+        // game_intend / ゲーム意志: ゲームに意志を付与
+        case "game_intend": case "ゲーム意志": {
+          const intentTypeArg = args.length >= 1 ? String(args[0]) : 'maximize';
+          const typeMap: Record<string, IntentionType> = {
+            'maximize': 'maximize', '最大化': 'maximize',
+            'minimize': 'minimize', '最小化': 'minimize',
+            'seek': 'seek', '接近': 'seek',
+            'explore': 'explore', '探索': 'explore',
+            'stabilize': 'stabilize', '安定': 'stabilize',
+          };
+          const intentType = typeMap[intentTypeArg] ?? 'maximize';
+          const target = args.length >= 2 ? Number(args[1]) : undefined;
+          const intention = createIntention(intentType, target);
+          const result = { ...gs } as any;
+          result.__intention__ = intention;
+          return result;
+        }
+
+        // will_play / 意志打ち: 意志計算で最善手を選択して1手進める
+        case "will_play": case "意志打ち": {
+          const moves = getLegalMoves(gs);
+          if (moves.length === 0 || gs.state.status !== 'playing') return gs;
+
+          // 各合法手を𝕄のneighborとして表現
+          // center = 現在ターン数、neighbors = 各手の評価値
+          const evaluations = moves.map(move => {
+            const newState = gs.rules.applyMove(gs.state, move);
+            return gs.rules.evaluate(newState, gs.state.currentPlayer);
+          });
+
+          const gameMd = {
+            reiType: 'MDim' as const,
+            center: gs.state.turnCount,
+            neighbors: evaluations,
+            mode: 'weighted',
+          };
+
+          // 意志を決定（ゲームに付与済みの意志 or デフォルト maximize）
+          const gameIntention = (gs as any).__intention__
+            ?? createIntention('maximize');
+
+          const willResult = willCompute(gameMd, gameIntention);
+
+          // will_compute が選んだモードから最善手のインデックスを決定
+          // maximize → 最大評価の手、minimize → 最小評価の手
+          let bestIdx = 0;
+          if (gameIntention.type === 'maximize') {
+            bestIdx = evaluations.indexOf(Math.max(...evaluations));
+          } else if (gameIntention.type === 'minimize') {
+            bestIdx = evaluations.indexOf(Math.min(...evaluations));
+          } else if (gameIntention.type === 'seek' && gameIntention.target !== undefined) {
+            let minDist = Infinity;
+            evaluations.forEach((ev, i) => {
+              const dist = Math.abs(ev - (gameIntention.target ?? 0));
+              if (dist < minDist) { minDist = dist; bestIdx = i; }
+            });
+          } else if (gameIntention.type === 'explore') {
+            // ランダムに選択（探索意志）
+            bestIdx = Math.floor(Math.random() * moves.length);
+          } else {
+            bestIdx = evaluations.indexOf(Math.max(...evaluations));
+          }
+
+          const chosenMove = moves[bestIdx];
+          const result = playMove(gs, chosenMove);
+          // 意志計算の情報を付加
+          (result as any).__will_choice__ = {
+            chosenMove,
+            evaluation: evaluations[bestIdx],
+            allEvaluations: moves.map((m, i) => ({ move: m, score: evaluations[i] })),
+            willResult,
+            intentionType: gameIntention.type,
+          };
+          return result;
+        }
+
+        // will_auto_play / 意志対局: 意志駆動で自動対局
+        case "will_auto_play": case "意志対局": {
+          let current = { ...gs } as any;
+          const p1Intent = args.length >= 1 ? String(args[0]) : 'maximize';
+          const p2Intent = args.length >= 2 ? String(args[1]) : 'maximize';
+          let safetyCounter = 0;
+
+          while (current.state.status === 'playing' && safetyCounter < 200) {
+            safetyCounter++;
+            const currentIntent = current.state.currentPlayer === 1 ? p1Intent : p2Intent;
+            const typeMap: Record<string, IntentionType> = {
+              'maximize': 'maximize', 'minimize': 'minimize',
+              'seek': 'seek', 'explore': 'explore', 'stabilize': 'stabilize',
+              '最大化': 'maximize', '探索': 'explore',
+            };
+            const intentType = typeMap[currentIntent] ?? 'maximize';
+            current.__intention__ = createIntention(intentType);
+
+            // will_play と同じロジック
+            const moves = getLegalMoves(current);
+            if (moves.length === 0) break;
+
+            const evaluations = moves.map(move => {
+              const newState = current.rules.applyMove(current.state, move);
+              return current.rules.evaluate(newState, current.state.currentPlayer);
+            });
+
+            let bestIdx = 0;
+            if (intentType === 'maximize') {
+              bestIdx = evaluations.indexOf(Math.max(...evaluations));
+            } else if (intentType === 'explore') {
+              bestIdx = Math.floor(Math.random() * moves.length);
+            } else {
+              bestIdx = evaluations.indexOf(Math.max(...evaluations));
+            }
+
+            current = playMove(current, moves[bestIdx]);
+          }
+          return current;
+        }
+
+        // game_will_sigma / ゲーム意志σ: ゲームの意志情報を含むσ
+        case "game_will_sigma": case "ゲーム意志σ": {
+          const baseSigma = getGameSigma(gs);
+          const gameIntention = (gs as any).__intention__;
+          const willChoice = (gs as any).__will_choice__;
+          return {
+            ...baseSigma,
+            will: gameIntention ? {
+              type: gameIntention.type,
+              target: gameIntention.target,
+              satisfaction: gameIntention.satisfaction,
+            } : null,
+            lastWillChoice: willChoice ?? null,
+          };
+        }
       }
     }
 
@@ -3397,6 +4314,116 @@ export class Evaluator {
           const col = args.length > 1 ? Number(args[1]) : 0;
           return cellAsMDim(ps, row, col);
         }
+
+        // ═══════════════════════════════════════════
+        // Phase 3統合: Puzzle × Bind — 制約を関係として表現
+        // ═══════════════════════════════════════════
+
+        // puzzle_bind_constraints / 制約結合: 制約グループをBindingRegistryに登録
+        case "puzzle_bind_constraints": case "制約結合": {
+          let bindCount = 0;
+          for (const group of ps.constraints) {
+            if (group.type !== 'all_different') continue;
+            // グループ内の各セルペアを causal 結合（制約 = 相互因果）
+            for (let i = 0; i < group.cells.length; i++) {
+              for (let j = i + 1; j < group.cells.length; j++) {
+                const [ri, ci] = group.cells[i];
+                const [rj, cj] = group.cells[j];
+                const refA = `cell_${ri}_${ci}`;
+                const refB = `cell_${rj}_${cj}`;
+                // 同じペアが既に登録済みならスキップ
+                const existing = this.bindingRegistry.getBindingsFor(refA);
+                if (existing.some(b => b.target === refB)) continue;
+                this.bindingRegistry.bind(refA, refB, 'entangle', 1.0, true);
+                bindCount++;
+              }
+            }
+          }
+          return {
+            reiType: 'PuzzleBindResult' as const,
+            constraintGroups: ps.constraints.length,
+            bindingsCreated: bindCount,
+            puzzleType: ps.puzzleType,
+            size: ps.size,
+          };
+        }
+
+        // cell_relations / セル関係: 指定セルの全関係を照会
+        case "cell_relations": case "セル関係": {
+          const row = args.length > 0 ? Number(args[0]) : 0;
+          const col = args.length > 1 ? Number(args[1]) : 0;
+          const cellRef = `cell_${row}_${col}`;
+          const bindings = this.bindingRegistry.getBindingsFor(cellRef);
+          // 関係の解読: cell_R_C → (R, C) に戻す
+          const relations = bindings.map(b => {
+            const targetMatch = b.target.match(/cell_(\d+)_(\d+)/);
+            if (!targetMatch) return null;
+            const tr = Number(targetMatch[1]);
+            const tc = Number(targetMatch[2]);
+            // どの制約グループに属するか特定
+            const groups: string[] = [];
+            for (const g of ps.constraints) {
+              const hasSource = g.cells.some(([r, c]) => r === row && c === col);
+              const hasTarget = g.cells.some(([r, c]) => r === tr && c === tc);
+              if (hasSource && hasTarget) groups.push(g.label);
+            }
+            return {
+              target: [tr, tc],
+              mode: b.mode,
+              strength: b.strength,
+              constraintGroups: groups,
+              targetValue: ps.cells[tr]?.[tc]?.value ?? 0,
+              targetCandidates: ps.cells[tr]?.[tc]?.candidates ?? [],
+            };
+          }).filter(Boolean);
+          return {
+            cell: [row, col],
+            value: ps.cells[row]?.[col]?.value ?? 0,
+            candidates: ps.cells[row]?.[col]?.candidates ?? [],
+            relatedCells: relations.length,
+            relations,
+          };
+        }
+
+        // puzzle_will_solve / 意志解法: 意志駆動でパズルを解く
+        case "puzzle_will_solve": case "意志解法": {
+          // 各未確定セルに「seek」意志を付与して候補を評価
+          const solveLog: string[] = [];
+          let confirms = 0;
+          for (let r = 0; r < ps.size; r++) {
+            for (let c = 0; c < ps.size; c++) {
+              const cell = ps.cells[r][c];
+              if (cell.value > 0 || cell.candidates.length !== 1) continue;
+              // 候補が1つのセルを確定（will的にはseek成功）
+              cell.value = cell.candidates[0];
+              cell.candidates = [];
+              confirms++;
+              solveLog.push(`(${r},${c})=${cell.value} [意志確定]`);
+            }
+          }
+          // 通常の伝播も実行
+          const propagated = propagateOnly(ps, 50);
+          // σ更新
+          let totalCandidates = 0;
+          let confirmedCells = 0;
+          for (let r = 0; r < ps.size; r++) {
+            for (let c = 0; c < ps.size; c++) {
+              if (ps.cells[r][c].value > 0) confirmedCells++;
+              else totalCandidates += ps.cells[r][c].candidates.length;
+            }
+          }
+          ps.totalCandidates = totalCandidates;
+          ps.confirmedCells = confirmedCells;
+          ps.solved = confirmedCells === ps.size * ps.size;
+          return {
+            reiType: 'PuzzleWillSolveResult' as const,
+            willConfirmations: confirms,
+            solved: ps.solved,
+            confirmedCells: ps.confirmedCells,
+            remainingCandidates: ps.totalCandidates,
+            log: solveLog,
+          };
+        }
       }
     }
 
@@ -3508,6 +4535,46 @@ export class Evaluator {
         case "sameCategory": return obj.sameCategory;
         case "strokeDiff": return obj.strokeDiff;
         case "sharedPhoneticGroup": return obj.sharedPhoneticGroup;
+      }
+    }
+
+    // ── v0.4: BindResult member access ──
+    if (this.isObj(obj) && obj.reiType === "BindResult") {
+      switch (ast.member) {
+        case "binding": return obj.binding;
+        case "source": return obj.source;
+        case "target": return obj.target;
+        case "mode": return obj.binding?.mode;
+        case "strength": return obj.binding?.strength;
+        case "id": return obj.binding?.id;
+        case "active": return obj.binding?.active;
+      }
+    }
+
+    // ── v0.4: WillComputeResult member access ──
+    if (this.isObj(obj) && obj.reiType === "WillComputeResult") {
+      switch (ast.member) {
+        case "value": return obj.value;
+        case "numericValue": return obj.numericValue;
+        case "chosenMode": return obj.chosenMode;
+        case "reason": return obj.reason;
+        case "satisfaction": return obj.satisfaction;
+        case "allCandidates": return obj.allCandidates;
+        case "intention": return obj.intention;
+      }
+    }
+
+    // ── v0.4: WillSigma member access ──
+    if (this.isObj(obj) && obj.reiType === undefined && obj.dominantMode !== undefined && obj.totalChoices !== undefined) {
+      switch (ast.member) {
+        case "type": return obj.type;
+        case "target": return obj.target;
+        case "satisfaction": return obj.satisfaction;
+        case "active": return obj.active;
+        case "step": return obj.step;
+        case "totalChoices": return obj.totalChoices;
+        case "dominantMode": return obj.dominantMode;
+        case "history": return obj.history;
       }
     }
 
@@ -3725,4 +4792,30 @@ export class Evaluator {
   getSigmaMetadata(v: any): SigmaMetadata { return getSigmaOf(v); }
   /** ReiValを透過的にアンラップ */
   unwrap(v: any): any { return unwrapReiVal(v); }
+
+  // ── v0.4: 関係・意志ヘルパー ──
+
+  /** 値からその変数名を逆引きする（参照一致） */
+  findRefByValue(value: any): string | null {
+    const raw = unwrapReiVal(value);
+    for (const [name, binding] of this.env.allBindings()) {
+      const bv = unwrapReiVal(binding.value);
+      if (bv === raw) return name;
+      // オブジェクト参照が異なる場合もσメタデータで同一性を判定
+      if (raw !== null && typeof raw === 'object' && bv !== null && typeof bv === 'object') {
+        if (raw.__sigma__ && raw.__sigma__ === bv.__sigma__) return name;
+      }
+    }
+    return null;
+  }
+
+  /** 結合の伝播をトリガーする（変数名 + 新値） */
+  triggerPropagation(ref: string, newValue: any): number {
+    return this.bindingRegistry.propagate(
+      ref,
+      newValue,
+      (r: string) => { try { return this.env.get(r); } catch { return undefined; } },
+      (r: string, v: any) => { try { this.env.set(r, v); } catch { /* immutable */ } },
+    );
+  }
 }

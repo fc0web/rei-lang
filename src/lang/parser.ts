@@ -134,7 +134,8 @@ export class Parser {
 
   private parsePipeCommand(): any {
     if (this.check(TokenType.IDENT) || this.check(TokenType.GENESIS)
-        || this.check(TokenType.SPACE) || this.check(TokenType.LAYER)) {
+        || this.check(TokenType.SPACE) || this.check(TokenType.LAYER)
+        || this.check(TokenType.COMPRESS)) {
       const cmd = this.advance().value;
       let mode: string | null = null;
       let args: any[] = [];
