@@ -1,4 +1,4 @@
-{
+﻿{
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -16,6 +16,10 @@
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["src/**/*", "theory/**/*"],
+  "include": [
+    "src/**/*",
+    "theory/theories-67.ts",
+    "theory/semantic-compressor.ts"
+  ],
   "exclude": ["node_modules", "dist", "tests"]
 }
