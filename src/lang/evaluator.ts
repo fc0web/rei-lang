@@ -53,189 +53,16 @@ import {
   type RecognitionResult, type FusionResult, type SeparationResult,
   type TransformResult, type EntitySigma,
 } from './autonomy';
-// RCT•ûŒü3: API”Å‚Ítheory/semantic-compressor.ts‚ğ’¼Úg—p
-// evaluator“à‚Íƒ[ƒJƒ‹“¯Šú”Åi‰º•”‚ÌreiLocalSemantic*ŠÖ”j‚ğg—p
+// RCTæ–¹å‘3: APIç‰ˆã¯theory/semantic-compressor.tsã‚’ç›´æ¥ä½¿ç”¨
+// evaluatorå†…ã¯ãƒ­ãƒ¼ã‚«ãƒ«åŒæœŸç‰ˆï¼ˆä¸‹éƒ¨ã®reiLocalSemantic*é–¢æ•°ï¼‰ã‚’ä½¿ç”¨
 
-// --- Tier 1: Sigma Metadata (Œö—C1 ? ‘S’lŒ^‚Ì©ŒÈQÆ) ---
-
-export interface SigmaMetadata {
-  memory: any[];           // —ˆ—ğ: ƒpƒCƒv’Ê‰ß‘O‚Ì’l‚Ì”z—ñ
-  tendency: string;        // ŒXŒü«: 'rest' | 'expand' | 'contract' | 'spiral'
-  pipeCount: number;       // ƒpƒCƒv’Ê‰ß‰ñ”
-}
-
-/** ‘S’lŒ^‚ÌƒĞƒ‰ƒbƒp[ ? ’l‚ÉƒĞƒƒ^ƒf[ƒ^‚ğ•t—^ */
-export interface ReiVal {
-  reiType: 'ReiVal';
-  value: any;
-  __sigma__: SigmaMetadata;
-}
-
-function createSigmaMeta(): SigmaMetadata {
-  return { memory: [], tendency: 'rest', pipeCount: 0 };
-}
-
-/** ReiVal‚Åƒ‰ƒbƒviŠù‚Éƒ‰ƒbƒvÏ‚İ‚È‚ç“à•”’l‚ğXVj */
-function wrapWithSigma(value: any, prevValue: any, prevMeta?: SigmaMetadata): any {
-  // ReiVal‚ğƒlƒXƒg‚µ‚È‚¢
-  const rawValue = unwrapReiVal(value);
-  const rawPrev = unwrapReiVal(prevValue);
-
-  const meta: SigmaMetadata = prevMeta
-    ? { ...prevMeta, memory: [...prevMeta.memory, rawPrev], pipeCount: prevMeta.pipeCount + 1 }
-    : { memory: [rawPrev], tendency: 'rest', pipeCount: 1 };
-
-  // ŒXŒü«‚Ì”»’èiC2: ƒÑj
-  meta.tendency = computeTendency(meta.memory, rawValue);
-
-  // ƒvƒŠƒ~ƒeƒBƒu’l‚Íƒ‰ƒbƒv‚µ‚Ä•Ô‚·
-  if (rawValue === null || typeof rawValue !== 'object') {
-    return { reiType: 'ReiVal' as const, value: rawValue, __sigma__: meta };
-  }
-
-  // ƒIƒuƒWƒFƒNƒg’l‚Í __sigma__ ƒvƒƒpƒeƒB‚ğ’¼Ú•t—^iŒ^‚ğ‰ó‚³‚È‚¢j
-  rawValue.__sigma__ = meta;
-  return rawValue;
-}
-
-/** ŒXŒü«‚ğŒvZiC2: ƒÑ ? ’l‚Ì•ÏŠ·•ûŒü‚©‚ç”»’èj */
-function computeTendency(memory: any[], currentValue: any): string {
-  if (memory.length < 2) return 'rest';
-  const recent = memory.slice(-5).map(toNumSafe);
-  const current = toNumSafe(currentValue);
-  
-  let expandCount = 0, contractCount = 0, alternating = 0;
-  
-  for (let i = 0; i < recent.length; i++) {
-    const prev = i === 0 ? recent[0] : recent[i - 1];
-    const cur = i === recent.length - 1 ? current : recent[i + 1];
-    if (cur > prev) expandCount++;
-    else if (cur < prev) contractCount++;
-    if (i > 0 && ((cur > prev) !== (recent[i] > recent[i - 1]))) alternating++;
-  }
-
-  if (alternating >= recent.length - 1) return 'spiral';
-  if (expandCount > contractCount) return 'expand';
-  if (contractCount > expandCount) return 'contract';
-  return 'rest';
-}
-
-function toNumSafe(v: any): number {
-  if (typeof v === 'number') return v;
-  if (v === null || v === undefined) return 0;
-  if (typeof v === 'boolean') return v ? 1 : 0;
-  if (typeof v === 'object' && v.reiType === 'ReiVal') return toNumSafe(v.value);
-  if (typeof v === 'object' && v.reiType === 'Ext') return v.valStar();
-  if (typeof v === 'object' && v.reiType === 'MDim') {
-    const { center, neighbors, mode } = v;
-    const weights = v.weights ?? neighbors.map(() => 1);
-    const n = neighbors.length;
-    if (n === 0) return center;
-    const wSum = weights.reduce((a: number, b: number) => a + b, 0);
-    const wAvg = neighbors.reduce((sum: number, vi: number, i: number) => sum + (weights[i] ?? 1) * vi, 0) / (wSum || 1);
-    return center + wAvg;
-  }
-  return 0;
-}
-
-/** ReiVal‚ğ“§‰ß“I‚ÉƒAƒ“ƒ‰ƒbƒv */
-function unwrapReiVal(v: any): any {
-  if (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') return v.value;
-  return v;
-}
-
-/** ’l‚©‚çSigmaMetadata‚ğæ“¾ */
-function getSigmaOf(v: any): SigmaMetadata {
-  if (v !== null && typeof v === 'object') {
-    if (v.reiType === 'ReiVal') return v.__sigma__;
-    if (v.__sigma__) return v.__sigma__;
-  }
-  return createSigmaMeta();
-}
-
-/** ‘S’lŒ^‚©‚çSigmaResultiC1Œö—‚ÌƒĞŠÖ”j‚ğ\’z */
-function buildSigmaResult(rawVal: any, meta: SigmaMetadata): any {
-  const val = unwrapReiVal(rawVal);
-
-  // „Ÿ„Ÿ field: ’l‚ÌŒ^‚É‰‚¶‚½êî•ñ „Ÿ„Ÿ
-  let field: any;
-  let layer = 0;
-  let flow: any = { direction: meta.tendency === 'rest' ? 'rest' : meta.tendency, momentum: meta.pipeCount, velocity: 0 };
-
-  if (val !== null && typeof val === 'object') {
-    if (val.reiType === 'MDim') {
-      field = { center: val.center, neighbors: [...val.neighbors], mode: val.mode, dim: val.neighbors.length };
-    } else if (val.reiType === 'Ext') {
-      field = { base: val.base, order: val.order, subscripts: val.subscripts };
-      layer = val.order;
-    } else if (val.reiType === 'State') {
-      field = { state: val.state, omega: val.omega };
-      flow = { direction: 'forward', momentum: val.history.length - 1, velocity: 1 };
-    } else if (val.reiType === 'Quad') {
-      field = { value: val.value };
-    } else if (val.reiType === 'DNode') {
-      // DNode ? Šù‘¶‚Ìspace.ts‚ÌƒĞ‚Æ“‡
-      field = { center: val.center, neighbors: [...val.neighbors], layer: val.layerIndex, index: val.nodeIndex };
-      layer = val.layerIndex;
-      flow = { stage: val.stage, directions: val.neighbors.length, momentum: val.momentum, velocity: 0 };
-      if (val.diffusionHistory.length >= 2) {
-        flow.velocity = Math.abs(
-          val.diffusionHistory[val.diffusionHistory.length - 1].result -
-          val.diffusionHistory[val.diffusionHistory.length - 2].result
-        );
-      }
-    } else if (val.reiType === 'Space') {
-      // Space ? Šù‘¶‚ÌgetSpaceSigma‚ÉˆÏ÷ievalPipe‘¤‚Åˆ—j
-      field = { type: 'space' };
-    } else if (Array.isArray(val)) {
-      field = { length: val.length, first: val[0] ?? null, last: val[val.length - 1] ?? null };
-    } else {
-      field = { type: typeof val };
-    }
-  } else if (typeof val === 'number') {
-    field = { center: val, neighbors: [] };
-  } else if (typeof val === 'string') {
-    field = { value: val, length: val.length };
-  } else if (typeof val === 'boolean') {
-    field = { value: val };
-  } else {
-    field = { value: null };
-  }
-
-  // „Ÿ„Ÿ memory: —ˆ—ğ „Ÿ„Ÿ
-  const memory = [...meta.memory];
-
-  // Genesis ‚Ì—ˆ—ğ‚Æ‚Ì“‡
-  if (val !== null && typeof val === 'object' && val.reiType === 'State' && val.history) {
-    if (memory.length === 0 && val.history.length > 1) {
-      for (let i = 0; i < val.history.length - 1; i++) {
-        memory.push(val.history[i]);
-      }
-    }
-  }
-
-  // „Ÿ„Ÿ will: ŒXŒü«iC2j „Ÿ„Ÿ
-  const will = {
-    tendency: meta.tendency as any,
-    strength: meta.pipeCount > 0 ? Math.min(meta.pipeCount / 5, 1) : 0,
-    history: meta.memory.map((_: any, i: number) => {
-      if (i === 0) return 'rest';
-      const prev = toNumSafe(meta.memory[i - 1]);
-      const cur = toNumSafe(meta.memory[i]);
-      return cur > prev ? 'expand' : cur < prev ? 'contract' : 'rest';
-    }),
-  };
-
-  return {
-    reiType: 'SigmaResult',
-    field,
-    flow,
-    memory,
-    layer,
-    will,
-    relation: [],
-  };
-}
+// --- Tier 1: Sigma Metadata (imported from sigma.ts) ---
+import {
+  createSigmaMeta, wrapWithSigma, computeTendency,
+  toNumSafe, unwrapReiVal, getSigmaOf, buildSigmaResult,
+  type SigmaMetadata, type ReiVal,
+} from './sigma';
+export type { SigmaMetadata, ReiVal };
 
 // --- Environment (Scope) ---
 
@@ -255,18 +82,18 @@ export class Environment {
     const b = this.bindings.get(name);
     if (b) return b.value;
     if (this.parent) return this.parent.get(name);
-    throw new Error(`–¢’è‹`‚Ì•Ï”: ${name}`);
+    throw new Error(`æœªå®šç¾©ã®å¤‰æ•°: ${name}`);
   }
 
   set(name: string, value: any) {
     const b = this.bindings.get(name);
     if (b) {
-      if (!b.mutable) throw new Error(`•s•Ï‚Ì•Ï”‚É‘ã“ü: ${name}`);
+      if (!b.mutable) throw new Error(`ä¸å¤‰ã®å¤‰æ•°ã«ä»£å…¥: ${name}`);
       b.value = value;
       return;
     }
     if (this.parent) { this.parent.set(name, value); return; }
-    throw new Error(`–¢’è‹`‚Ì•Ï”: ${name}`);
+    throw new Error(`æœªå®šç¾©ã®å¤‰æ•°: ${name}`);
   }
 
   has(name: string): boolean {
@@ -292,2139 +119,42 @@ export class Environment {
   }
 }
 
-// --- Extended numbers ---
-
-function createExtended(base: number, subscripts: string) {
-  const order = subscripts.length;
-  return {
-    reiType: "Ext" as const,
-    base,
-    order,
-    subscripts,
-    valStar() {
-      if (base === 0) return Math.pow(0.1, order);
-      return base * Math.pow(0.1, order);
-    },
-  };
-}
-
-function parseExtLit(raw: string) {
-  if (raw === "0\u2080") return createExtended(0, "o");
-  const baseChar = raw[0];
-  const subs = raw.slice(1);
-  const baseMap: Record<string, number> = {
-    "0": 0, "\u03C0": Math.PI, "e": Math.E,
-    "\u03C6": (1 + Math.sqrt(5)) / 2, "i": NaN,
-  };
-  return createExtended(baseMap[baseChar] ?? 0, subs);
-}
-
-// --- MDim computation (v0.2.1 original) ---
-
-// ???????????????????????????????????????????
-// Tier 2: —˜—p‰Â”\‚È‘SŒvZƒ‚[ƒhˆê——iM1: ŒvZ‘½Œ³«Œö—j
-// ???????????????????????????????????????????
-const ALL_COMPUTE_MODES = [
-  "weighted", "multiplicative", "harmonic", "exponential",
-  "geometric", "median", "minkowski", "entropy",
-] as const;
-
-function computeMDim(md: any): number {
-  const { center, neighbors, mode } = md;
-  const weights = md.weights ?? neighbors.map(() => 1);
-  const n = neighbors.length;
-  if (n === 0) return center;
-
-  // Tier 2 M3: blend ƒ‚[ƒh ? blend(weighted:0.7,geometric:0.3)
-  if (typeof mode === 'string' && mode.startsWith('blend(')) {
-    return computeBlend(md, mode);
-  }
-
-  switch (mode) {
-    case "weighted": {
-      const wSum = weights.reduce((a: number, b: number) => a + b, 0);
-      const wAvg = neighbors.reduce((sum: number, v: number, i: number) => sum + (weights[i] ?? 1) * v, 0) / (wSum || 1);
-      return center + wAvg;
-    }
-    case "multiplicative": {
-      const prod = neighbors.reduce((p: number, v: number) => p * (1 + v), 1);
-      return center * prod;
-    }
-    case "harmonic": {
-      const harmSum = neighbors.reduce((s: number, v: number) => s + 1 / (Math.abs(v) || 1), 0);
-      return center + n / harmSum;
-    }
-    case "exponential": {
-      const expSum = neighbors.reduce((s: number, v: number) => s + Math.exp(v), 0);
-      return center * (expSum / n);
-    }
-    // „Ÿ„Ÿ Tier 2 M1: VŒvZƒ‚[ƒh „Ÿ„Ÿ
-    case "geometric": {
-      // Šô‰½•½‹Ï: center ~ (ƒ®|neighbors|)^(1/n)
-      const prod = neighbors.reduce((p: number, v: number) => p * Math.abs(v || 1), 1);
-      return center * Math.pow(prod, 1 / n);
-    }
-    case "median": {
-      // ’†‰›’l: center + median(neighbors)
-      const sorted = [...neighbors].sort((a: number, b: number) => a - b);
-      const mid = Math.floor(n / 2);
-      const med = n % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-      return center + med;
-    }
-    case "minkowski": {
-      // ƒ~ƒ“ƒRƒtƒXƒL[‹——£ip=2, ƒ†[ƒNƒŠƒbƒh‹——£j: center + sqrt(ƒ°(neighbors2)/n)
-      const p = md.minkowskiP ?? 2;
-      const sumP = neighbors.reduce((s: number, v: number) => s + Math.pow(Math.abs(v), p), 0);
-      return center + Math.pow(sumP / n, 1 / p);
-    }
-    case "entropy": {
-      // î•ñƒGƒ“ƒgƒƒs[: center ~ (1 + H(neighbors))
-      const total = neighbors.reduce((s: number, v: number) => s + Math.abs(v), 0) || 1;
-      const probs = neighbors.map((v: number) => Math.abs(v) / total);
-      const H = -probs.reduce((s: number, p: number) => s + (p > 0 ? p * Math.log2(p) : 0), 0);
-      return center * (1 + H);
-    }
-    default: return center;
-  }
-}
-
-/** Tier 2 M3: ƒ‚[ƒh‡¬ ? blend(weighted:0.7,geometric:0.3) */
-function computeBlend(md: any, blendSpec: string): number {
-  // Parse: "blend(weighted:0.7,geometric:0.3)"
-  const inner = blendSpec.slice(6, -1); // remove "blend(" and ")"
-  const parts = inner.split(',').map(s => s.trim());
-  let totalWeight = 0;
-  let blendedResult = 0;
-
-  for (const part of parts) {
-    const [modeName, weightStr] = part.split(':').map(s => s.trim());
-    const w = parseFloat(weightStr) || 0;
-    const result = computeMDim({ ...md, mode: modeName });
-    blendedResult += w * result;
-    totalWeight += w;
-  }
-
-  return totalWeight > 0 ? blendedResult / totalWeight : md.center;
-}
-
-/** Tier 2 N1: ”z—ñE•¶š—ñE”’l‚ğ??‚ÉË‰e‚·‚é */
-function projectToMDim(input: any, centerSpec: string | number | null, args: any[]): any {
-  let elements: any[];
-
-  // “ü—Í‚ğ—v‘f”z—ñ‚É•ÏŠ·
-  if (Array.isArray(input)) {
-    elements = [...input];
-  } else if (typeof input === 'string') {
-    // •¶š—ñ ¨ •¶šƒR[ƒh”z—ñ
-    elements = Array.from(input).map(c => c.charCodeAt(0));
-  } else if (typeof input === 'number') {
-    // ”’l ¨ Œ…‚Ì”z—ñ
-    const digits = Math.abs(input).toString().split('').map(Number);
-    elements = digits;
-  } else if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
-    // MDim‚ÌÄË‰eiN2: reprojectj
-    elements = [input.center, ...input.neighbors];
-  } else {
-    return { reiType: "MDim", center: input ?? 0, neighbors: [], mode: "weighted" };
-  }
-
-  if (elements.length === 0) {
-    return { reiType: "MDim", center: 0, neighbors: [], mode: "weighted" };
-  }
-
-  // ’†S‚Ì‘I‘ğ
-  let centerIndex = 0;
-  if (centerSpec === ':max' || centerSpec === 'max') {
-    centerIndex = elements.indexOf(Math.max(...elements.map(Number)));
-  } else if (centerSpec === ':min' || centerSpec === 'min') {
-    centerIndex = elements.indexOf(Math.min(...elements.map(Number)));
-  } else if (centerSpec === ':first' || centerSpec === 'first') {
-    centerIndex = 0;
-  } else if (centerSpec === ':last' || centerSpec === 'last') {
-    centerIndex = elements.length - 1;
-  } else if (centerSpec === ':middle' || centerSpec === 'middle') {
-    centerIndex = Math.floor(elements.length / 2);
-  } else if (typeof centerSpec === 'number') {
-    // ‹ï‘Ì“I‚È’l‚Åw’è ¨ ‚»‚Ì’l‚ğ‚Â—v‘f‚ğ’†S‚É‚·‚é
-    const idx = elements.indexOf(centerSpec);
-    centerIndex = idx >= 0 ? idx : 0;
-  }
-
-  const center = elements[centerIndex];
-  const neighbors = elements.filter((_: any, i: number) => i !== centerIndex);
-
-  return { reiType: "MDim", center, neighbors, mode: "weighted" };
-}
-
-// ???????????????????????????????????????????
-// Tier 3: U1(\‘¢ŠÒŒ³Œö—) & A1(‰ğ‚Ì‘½Œ³«Œö—)
-// ???????????????????????????????????????????
-
-/** Tier 3 U1: ‘SË‰e‚Ì¶¬ ? Še—v‘f‚ğ’†S‚É‚µ‚½??‚Ì”z—ñ */
-function projectAll(input: any): any[] {
-  let elements: any[];
-
-  if (Array.isArray(input)) {
-    elements = [...input];
-  } else if (typeof input === 'string') {
-    elements = Array.from(input).map(c => c.charCodeAt(0));
-  } else if (typeof input === 'number') {
-    elements = Math.abs(input).toString().split('').map(Number);
-  } else if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
-    elements = [input.center, ...input.neighbors];
-  } else {
-    return [{ reiType: "MDim", center: input ?? 0, neighbors: [], mode: "weighted" }];
-  }
-
-  if (elements.length === 0) return [];
-
-  // U1.2iË‰e‚Ì‘½d«’è—j: n—v‘f ¨ n’Ê‚è‚ÌË‰e
-  return elements.map((_, centerIdx) => {
-    const center = elements[centerIdx];
-    const neighbors = elements.filter((_: any, i: number) => i !== centerIdx);
-    return { reiType: "MDim", center, neighbors, mode: "weighted" };
-  });
-}
-
-/** Tier 3 A1: ‘Sƒ‚[ƒh‚ÅŒvZ ? ‰ğ‚Ì‘½Œ³« */
-function computeAll(md: any): any {
-  if (!md || md.reiType !== 'MDim') return [];
-  return ALL_COMPUTE_MODES.map(mode => ({
-    mode,
-    value: computeMDim({ ...md, mode }),
-  }));
-}
-
-/** Tier 3 A1: 2‚Â‚Ìƒ‚[ƒh‚ğ”äŠr */
-function compareModes(md: any, mode1: string, mode2: string): any {
-  if (!md || md.reiType !== 'MDim') return null;
-  const v1 = computeMDim({ ...md, mode: mode1 });
-  const v2 = computeMDim({ ...md, mode: mode2 });
-  return {
-    reiType: 'CompareResult',
-    mode1: { mode: mode1, value: v1 },
-    mode2: { mode: mode2, value: v2 },
-    diff: Math.abs(v1 - v2),
-    ratio: v2 !== 0 ? v1 / v2 : Infinity,
-  };
-}
-
-/** Tier 3 U1+A1: perspectives ? ‘SË‰e ~ ‘Sƒ‚[ƒh */
-function perspectives(input: any): any {
-  const allProjections = projectAll(input);
-  return allProjections.map((proj, idx) => {
-    const results = ALL_COMPUTE_MODES.map(mode => ({
-      mode,
-      value: computeMDim({ ...proj, mode }),
-    }));
-    return {
-      projectionIndex: idx,
-      center: proj.center,
-      neighbors: proj.neighbors,
-      results,
-    };
-  });
-}
-
-/** Tier 3 U1: ƒlƒXƒg??‚Ìƒtƒ‰ƒbƒg‰» ? ??{??{a;b}; ??{c;d}} ¨ ’Pˆê”’l */
-function computeNestedMDim(md: any): number {
-  const center = md.reiType === 'MDim'
-    ? (md.center !== null && typeof md.center === 'object' && md.center.reiType === 'MDim'
-        ? computeNestedMDim(md.center)
-        : typeof md.center === 'number' ? md.center : 0)
-    : (typeof md === 'number' ? md : 0);
-
-  const neighbors = (md.neighbors ?? []).map((n: any) =>
-    n !== null && typeof n === 'object' && n.reiType === 'MDim'
-      ? computeNestedMDim(n)
-      : typeof n === 'number' ? n : 0
-  );
-
-  return computeMDim({ ...md, center, neighbors });
-}
-
-// ???????????????????????????????????????????
-// Tier 4: C3(‰“šŒö—) & C4(ŠoÁŒö—) & U2(•ÏŠ·•Û‘¶) & M2(ƒ‚[ƒh“™‰¿)
-// ???????????????????????????????????????????
-
-/**
- * Tier 4 C3: ‰“š ? ’l‚ªŠO•”hŒƒ‚É”½‰‚µ‚Ä•Ï‰»‚·‚é
- * •§‹³‘Î‰: Giphassaj? Š´ŠoŠíŠ¯‚Æ‘ÎÛ‚ÌÚG‚É‚æ‚é”½‰
- */
-function respondToStimulus(input: any, stimulus: number, method: string = 'absorb'): any {
-  if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
-    const md = input;
-    switch (method) {
-      case 'absorb': {
-        // hŒƒ‚ğ‹zû: center‚ªhŒƒ‚Ì‰e‹¿‚ğó‚¯‚é
-        const factor = stimulus / (Math.abs(md.center) + Math.abs(stimulus) || 1);
-        const newCenter = md.center + stimulus * factor;
-        return { ...md, center: newCenter };
-      }
-      case 'distribute': {
-        // hŒƒ‚ğ‹ß–T‚É•ª”z
-        const share = stimulus / (md.neighbors.length || 1);
-        const newNeighbors = md.neighbors.map((n: number) => n + share);
-        return { ...md, neighbors: newNeighbors };
-      }
-      case 'reflect': {
-        // hŒƒ‚ğ”½Ëicenter‚Í‚»‚Ì‚Ü‚ÜA‹ß–T‚ª”½“]•ûŒü‚É•Ï‰»j
-        const newNeighbors = md.neighbors.map((n: number) => n - stimulus / (md.neighbors.length || 1));
-        return { ...md, neighbors: newNeighbors };
-      }
-      case 'resonate': {
-        // hŒƒ‚Æ‹¤–Âi‘S‘Ì‚ªstimulusü”g”‚Å•Ï’²j
-        const newCenter = md.center * (1 + Math.sin(stimulus));
-        const newNeighbors = md.neighbors.map((n: number, i: number) =>
-          n * (1 + Math.sin(stimulus + (i + 1) * Math.PI / md.neighbors.length))
-        );
-        return { ...md, center: newCenter, neighbors: newNeighbors };
-      }
-      default:
-        return respondToStimulus(input, stimulus, 'absorb');
-    }
-  }
-
-  // ”ñ??: ”’l‚Í’Pƒ‰ÁZ
-  if (typeof input === 'number') return input + stimulus;
-  return input;
-}
-
-/**
- * Tier 4 C3: Š´“x ? ’l‚ªhŒƒ‚É‚Ç‚ê‚¾‚¯•qŠ´‚©‚ğ‘ª’è
- * ”÷¬hŒƒ‚É‘Î‚·‚é•Ï‰»—¦
- */
-function computeSensitivity(input: any): number {
-  if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
-    const original = computeMDim(input);
-    const epsilon = 0.001;
-    const perturbed = respondToStimulus(input, epsilon, 'absorb');
-    const perturbedVal = computeMDim(perturbed);
-    return Math.abs(perturbedVal - original) / epsilon;
-  }
-  if (typeof input === 'number') return 1.0; // ”’l‚Íí‚ÉŠ´“x1
-  return 0;
-}
-
-/**
- * Tier 4 C4: ŠoÁ“x ? ƒĞ‚Ì–L‚©‚³‚ÉŠî‚Ã‚­©ŒÈ”F¯ƒXƒRƒA
- * •§‹³‘Î‰: •ì’ñibodhij? Œå‚è‚Ö‚Ì’iŠK
- *
- * ƒXƒRƒA—v‘f:
- *   - memory ‚Ì[‚³iƒpƒCƒv’Ê‰ß—š—ğj
- *   - tendency ‚Ì•Ï‰»iÃ~‚Å‚È‚¢j
- *   - \‘¢‚Ì•¡G‚³i‹ß–T‚Ì”j
- *   - pipeCounti•ÏŠ·‰ñ”j
- */
-function computeAwareness(input: any, meta: SigmaMetadata): number {
-  let score = 0;
-  const maxScore = 5;
-
-  // 1. ‹L‰¯‚Ì[‚³i0?1j
-  score += Math.min(meta.memory.length / 5, 1);
-
-  // 2. ŒXŒü«‚ªÃ~‚Å‚È‚¢i0 or 1j
-  if (meta.tendency !== 'rest') score += 1;
-
-  // 3. ƒpƒCƒv’Ê‰ß‰ñ”i0?1j
-  score += Math.min(meta.pipeCount / 5, 1);
-
-  // 4. \‘¢‚Ì•¡G‚³i0?1j
-  const raw = unwrapReiVal(input);
-  if (raw !== null && typeof raw === 'object') {
-    if (raw.reiType === 'MDim' && raw.neighbors) {
-      score += Math.min(raw.neighbors.length / 8, 1);
-    } else if (raw.reiType === 'Space') {
-      score += 1; // Space‚ÍÅ‚à•¡G
-    } else if (raw.reiType === 'State' && raw.history) {
-      score += Math.min(raw.history.length / 5, 1);
-    }
-  }
-
-  // 5. ‹L‰¯‚Ì‘½—l«i“¯‚¶’l‚Î‚©‚è‚Å‚È‚¢‚©j
-  if (meta.memory.length >= 2) {
-    const unique = new Set(meta.memory.map(v => JSON.stringify(v)));
-    score += Math.min(unique.size / meta.memory.length, 1);
-  }
-
-  return Math.min(score / maxScore, 1);
-}
-
-/** Tier 4 C4: ŠoÁè‡’l ? awareness >= 0.6 ‚ÅŠoÁ */
-const AWAKENING_THRESHOLD = 0.6;
-
-/**
- * Tier 4 U2: •ÏŠ·ƒpƒ^[ƒ“‚Ì“ˆê“K—p
- * ˆÙ‚È‚é—Ìˆæ‚Ì•ÏŠ·‚ğ??ã‚Ì“¯‚¶ƒpƒCƒv‘€ì‚Å•\Œ»
- */
-function applyTransform(input: any, transformName: string, param: number): any {
-  const raw = unwrapReiVal(input);
-
-  if (raw !== null && typeof raw === 'object' && raw.reiType === 'MDim') {
-    const md = raw;
-    switch (transformName) {
-      case 'scale': {
-        // ƒXƒP[ƒ‹•ÏŠ·: ‘S—v‘f‚ğparam”{
-        return { ...md, center: md.center * param, neighbors: md.neighbors.map((n: number) => n * param) };
-      }
-      case 'shift': {
-        // ƒVƒtƒg•ÏŠ·: ‘S—v‘f‚Éparam‰ÁZ
-        return { ...md, center: md.center + param, neighbors: md.neighbors.map((n: number) => n + param) };
-      }
-      case 'rotate': {
-        // ‰ñ“]•ÏŠ·: ‹ß–T‚ğparamˆÊ’u‚¸‚ç‚·
-        const n = md.neighbors.length;
-        if (n === 0) return md;
-        const shift = ((param % n) + n) % n;
-        const rotated = [...md.neighbors.slice(shift), ...md.neighbors.slice(0, shift)];
-        return { ...md, neighbors: rotated };
-      }
-      case 'invert': {
-        // ”½“]•ÏŠ·: centerŠî€‚Å‹ß–T‚ğ”½“]
-        return { ...md, neighbors: md.neighbors.map((n: number) => 2 * md.center - n) };
-      }
-      case 'normalize_to': {
-        // ³‹K‰»•ÏŠ·: ‘S—v‘f‚Ì˜a‚ªparam‚É‚È‚é‚æ‚¤³‹K‰»
-        const total = Math.abs(md.center) + md.neighbors.reduce((s: number, v: number) => s + Math.abs(v), 0) || 1;
-        const factor = param / total;
-        return { ...md, center: md.center * factor, neighbors: md.neighbors.map((n: number) => n * factor) };
-      }
-      default:
-        throw new Error(`–¢’m‚Ì•ÏŠ·: ${transformName}`);
-    }
-  }
-
-  // ”’l‚Ö‚Ì•ÏŠ·
-  if (typeof raw === 'number') {
-    switch (transformName) {
-      case 'scale': return raw * param;
-      case 'shift': return raw + param;
-      case 'invert': return -raw;
-      default: return raw;
-    }
-  }
-
-  return raw;
-}
-
-/**
- * Tier 4 M2: ƒ‚[ƒh“™‰¿”»’è
- * 2‚Â‚Ìƒ‚[ƒh‚ª“¯‚¶Œ^‚Ìo—Í‚ğ•Ô‚·‚±‚Æ‚ğŠm”F
- */
-function checkModeEquivalence(md: any, mode1: string, mode2: string): any {
-  if (!md || md.reiType !== 'MDim') return { equivalent: false, reason: 'non-MDim input' };
-  const v1 = computeMDim({ ...md, mode: mode1 });
-  const v2 = computeMDim({ ...md, mode: mode2 });
-  return {
-    reiType: 'ModeEquivResult',
-    mode1,
-    mode2,
-    type_equivalent: typeof v1 === typeof v2, // M2: o—ÍŒ^‚ª“™‰¿
-    value1: v1,
-    value2: v2,
-    relative_diff: Math.abs(v2) > 0 ? Math.abs(v1 - v2) / Math.abs(v2) : (v1 === v2 ? 0 : Infinity),
-  };
-}
-
-// --- Quad logic (v0.2.1) ---
-
-// ============================================================
-// Tier 5: C5(‹¤–Â) & N3-N5(”ñ””Šw) & M4-M5(ƒ‚[ƒh¶¬EŠ®‘S«)
-//         U3-U5(ŠK‘wÄ‹AE‰Ë‹´EŠ®‘S«) & A2-A5(‰ğ•ÏŠ·E‡¬E•]‰¿EŠ®‘S«)
-// ============================================================
-
-/**
- * Tier 5 C5: ‹¤–ÂŒvZ ? 2‚Â‚Ì??‚Ì\‘¢“I‹¤–Â“x‚ğZo
- * ŠoÁ‚µ‚½’l“¯m‚ª”ñ‹ÇŠ“I‚É‰e‹¿‚µ‡‚¤i•§‹³: ˆö‘É—…–Ô Indra's Netj
- */
-function computeResonance(a: any, b: any): any {
-  const aRaw = unwrapReiVal(a);
-  const bRaw = unwrapReiVal(b);
-
-  // ”’l“¯m‚Ì‹¤–Â: ·‚Ì‹t”‚ÉŠî‚Ã‚­
-  const aNum = typeof aRaw === 'number' ? aRaw : (aRaw?.center ?? 0);
-  const bNum = typeof bRaw === 'number' ? bRaw : (bRaw?.center ?? 0);
-
-  // \‘¢“I‹¤–Â: ŸŒ³‚Ìˆê’v“x
-  const aDim = aRaw?.neighbors?.length ?? 0;
-  const bDim = bRaw?.neighbors?.length ?? 0;
-  const dimMatch = aDim === 0 && bDim === 0 ? 1 : 1 - Math.abs(aDim - bDim) / Math.max(aDim, bDim, 1);
-
-  // ’l‚Ì‹ßÚ“x
-  const maxAbs = Math.max(Math.abs(aNum), Math.abs(bNum), 1);
-  const valueProximity = 1 - Math.abs(aNum - bNum) / maxAbs;
-
-  // ‹ß–Tƒpƒ^[ƒ“‚Ì—Ş—“xi—]Œ·—Ş—“xj
-  let patternSimilarity = 0;
-  if (aDim > 0 && bDim > 0) {
-    const minLen = Math.min(aDim, bDim);
-    const aN = aRaw.neighbors.slice(0, minLen);
-    const bN = bRaw.neighbors.slice(0, minLen);
-    const dotProduct = aN.reduce((s: number, v: number, i: number) => s + v * bN[i], 0);
-    const normA = Math.sqrt(aN.reduce((s: number, v: number) => s + v * v, 0)) || 1;
-    const normB = Math.sqrt(bN.reduce((s: number, v: number) => s + v * v, 0)) || 1;
-    patternSimilarity = dotProduct / (normA * normB);
-  }
-
-  // ‘‡‹¤–Â“x: 3—v‘f‚Ì‰Ád•½‹Ï
-  const strength = (dimMatch * 0.3 + Math.max(valueProximity, 0) * 0.3 + (patternSimilarity + 1) / 2 * 0.4);
-
-  return {
-    reiType: 'ResonanceResult',
-    strength: Math.max(0, Math.min(1, strength)),
-    dimMatch,
-    valueProximity: Math.max(0, valueProximity),
-    patternSimilarity,
-    resonates: strength >= 0.5,
-  };
-}
-
-/**
- * Tier 5 C5: ‹¤–Âê ? ’l‚Ì‹¤–Âƒƒ^ƒf[ƒ^‚ğ•Ô‚·
- */
-function getResonanceField(input: any, meta: SigmaMetadata): any {
-  const raw = unwrapReiVal(input);
-  const isAwakened = computeAwareness(input, meta) >= AWAKENING_THRESHOLD;
-  return {
-    reiType: 'ResonanceField',
-    awakened: isAwakened,
-    // ŠoÁ’l‚Í‚æ‚èL‚¢‹¤–Âê‚ğ‚Â
-    range: isAwakened ? 'non-local' : 'local',
-    capacity: isAwakened ? 1.0 : 0.3,
-    signature: raw?.neighbors?.length ?? 0,
-  };
-}
-
-/**
- * Tier 5 C5: ‹¤–Âƒ}ƒbƒv ? ”z—ñ“à‚Ì‘SƒyƒA‚Ì‹¤–Â‚ğZo
- */
-function resonanceMap(input: any): any {
-  const raw = unwrapReiVal(input);
-  if (!Array.isArray(raw)) {
-    if (raw?.reiType === 'MDim') {
-      // ??‚Ì’†S‚ÆŠe‹ß–T‚Ì‹¤–Â
-      return raw.neighbors.map((n: number, i: number) => ({
-        pair: [raw.center, n],
-        index: i,
-        strength: 1 - Math.abs(raw.center - n) / Math.max(Math.abs(raw.center), Math.abs(n), 1),
-      }));
-    }
-    return [];
-  }
-  // ”z—ñ: ‘SƒyƒA‚Ì‹¤–Â
-  const results: any[] = [];
-  for (let i = 0; i < raw.length; i++) {
-    for (let j = i + 1; j < raw.length; j++) {
-      const res = computeResonance(raw[i], raw[j]);
-      results.push({ pair: [i, j], ...res });
-    }
-  }
-  return results;
-}
-
-/**
- * Tier 5 C5: ‹¤–Âƒ`ƒF[ƒ“ ? ‹¤–Â‚Ì˜A½‚ğ’ÇÕ
- */
-function resonanceChain(input: any): any {
-  const raw = unwrapReiVal(input);
-  if (!raw || raw.reiType !== 'MDim') {
-    return { reiType: 'ResonanceChain', chain: [], depth: 0 };
-  }
-  // ’†S¨Še‹ß–T¨‹ß–T“¯m‚Ì‹¤–Â˜A½
-  const chain: any[] = [];
-  const visited = new Set<number>();
-  function trace(value: number, depth: number) {
-    if (visited.has(value) || depth > 5) return;
-    visited.add(value);
-    chain.push({ value, depth });
-    for (const n of raw.neighbors) {
-      if (!visited.has(n)) {
-        const proximity = 1 - Math.abs(value - n) / Math.max(Math.abs(value), Math.abs(n), 1);
-        if (proximity > 0.3) trace(n, depth + 1);
-      }
-    }
-  }
-  trace(raw.center, 0);
-  return { reiType: 'ResonanceChain', chain, depth: chain.length };
-}
-
-/**
- * Tier 5 N3: Œ^•ÏŠ·Ë‰e ? ??‚ğˆÙ‚È‚é\‘¢Œ^‚Æ‚µ‚ÄÄ‰ğß
- */
-function projectAs(input: any, targetType: string): any {
-  const raw = unwrapReiVal(input);
-
-  // ‚Ü‚¸??‚É•ÏŠ·
-  let md: any;
-  if (raw?.reiType === 'MDim') {
-    md = raw;
-  } else if (Array.isArray(raw)) {
-    md = projectToMDim(raw, 'first', []);
-  } else if (typeof raw === 'number') {
-    const digits = String(Math.abs(Math.floor(raw))).split('').map(Number);
-    md = { reiType: 'MDim', center: digits[0], neighbors: digits.slice(1), mode: 'weighted' };
-  } else {
-    md = { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
-  }
-
-  switch (targetType) {
-    case 'graph': {
-      // ƒOƒ‰ƒt\‘¢: center=ƒnƒu, neighbors=Ú‘±ƒm[ƒh, edges=ƒnƒu‚©‚çŠeƒm[ƒh‚Ö
-      const edges = md.neighbors.map((n: number, i: number) => ({
-        from: md.center, to: n, weight: Math.abs(md.center - n),
-      }));
-      return {
-        reiType: 'GraphProjection',
-        hub: md.center,
-        nodes: [md.center, ...md.neighbors],
-        edges,
-        degree: md.neighbors.length,
-      };
-    }
-    case 'series': {
-      // Œn—ñ: center=‰Šú’l, neighbors=ŠÔƒXƒeƒbƒv
-      const series = [md.center, ...md.neighbors];
-      const deltas = [];
-      for (let i = 1; i < series.length; i++) deltas.push(series[i] - series[i - 1]);
-      return {
-        reiType: 'SeriesProjection',
-        values: series,
-        deltas,
-        trend: deltas.length > 0 ? (deltas.reduce((a: number, b: number) => a + b, 0) / deltas.length > 0 ? 'up' : 'down') : 'flat',
-        length: series.length,
-      };
-    }
-    case 'matrix': {
-      // s—ñs: center=‘ÎŠp—v‘f, neighbors=”ñ‘ÎŠp—v‘f
-      const size = md.neighbors.length + 1;
-      const row = [md.center, ...md.neighbors];
-      return {
-        reiType: 'MatrixProjection',
-        row,
-        size,
-        diagonal: md.center,
-        trace: md.center, // 1s•ª‚Ìtrace
-      };
-    }
-    case 'tree': {
-      // –Ø\‘¢: center=root, neighbors=children
-      const children = md.neighbors.map((n: number, i: number) => ({
-        value: n, depth: 1, index: i, leaf: true,
-      }));
-      return {
-        reiType: 'TreeProjection',
-        root: md.center,
-        children,
-        height: md.neighbors.length > 0 ? 1 : 0,
-        leaves: md.neighbors.length,
-      };
-    }
-    default:
-      throw new Error(`–¢’m‚ÌË‰eŒ^: ${targetType}`);
-  }
-}
-
-/**
- * Tier 5 N4: Ë‰e‡¬ ? •¡”‚ÌË‰e‚ğ‡¬‚µ‚ÄV‚µ‚¢??‚ğ¶¬
- */
-function composeProjections(input: any): any {
-  const raw = unwrapReiVal(input);
-  if (!Array.isArray(raw)) {
-    if (raw?.reiType === 'MDim') {
-      // ??‚Ì‘SË‰e‚ğ‡¬: ŠeË‰e‚ÌcomputeŒ‹‰Ê‚ğV‚µ‚¢‹ß–T‚É
-      const allProj = projectAll(raw);
-      const values = allProj.map((p: any) => computeMDim(p));
-      const center = values.reduce((a: number, b: number) => a + b, 0) / values.length;
-      return { reiType: 'MDim', center, neighbors: values, mode: 'weighted' };
-    }
-    return raw;
-  }
-  // ”z—ñ‚ÌË‰e‡¬: ŠeË‰e‚Ì’†S‚ğV‚µ‚¢??‚Ì‹ß–T‚É
-  const projected = raw.map((item: any) => {
-    if (item?.reiType === 'MDim') return item;
-    return projectToMDim(typeof item === 'number' ? [item] : item, 'first', []);
-  });
-  const centers = projected.map((p: any) => p.center);
-  const avgCenter = centers.reduce((a: number, b: number) => a + b, 0) / centers.length;
-  return { reiType: 'MDim', center: avgCenter, neighbors: centers, mode: 'weighted' };
-}
-
-/**
- * Tier 5 N5: •\Œ»‰Â”\«”»’è ? ”CˆÓ‚Ì’l‚ª??‚Æ‚µ‚Ä•\Œ»‰Â”\‚©‚ğ”»’è
- */
-function checkRepresentable(input: any): any {
-  const raw = unwrapReiVal(input);
-  const result = { reiType: 'RepresentableResult', representable: true, reason: '', lossless: true };
-
-  if (raw === null || raw === undefined) {
-    result.representable = true;
-    result.reason = 'null ¨ ??{0;}';
-    result.lossless = true;
-  } else if (typeof raw === 'number') {
-    result.representable = true;
-    result.reason = 'number ¨ ??{n;}';
-    result.lossless = true;
-  } else if (typeof raw === 'string') {
-    result.representable = true;
-    result.reason = 'string ¨ ??{charCode(center); charCodes(rest)}';
-    result.lossless = true;
-  } else if (typeof raw === 'boolean') {
-    result.representable = true;
-    result.reason = 'boolean ¨ ??{0|1;}';
-    result.lossless = true;
-  } else if (Array.isArray(raw)) {
-    result.representable = true;
-    result.reason = `array[${raw.length}] ¨ ??{first; rest}`;
-    result.lossless = true;
-  } else if (raw?.reiType === 'MDim') {
-    result.representable = true;
-    result.reason = 'already ??';
-    result.lossless = true;
-  } else if (raw?.reiType === 'Space') {
-    result.representable = true;
-    result.reason = 'Space ¨ nested ?? (U3 hierarchical)';
-    result.lossless = true;
-  } else if (raw?.reiType) {
-    result.representable = true;
-    result.reason = `${raw.reiType} ¨ ?? via structural projection`;
-    result.lossless = false; // Œ^î•ñ‚Ìˆê•”‚ª¸‚í‚ê‚é‰Â”\«
-  } else if (typeof raw === 'object') {
-    result.representable = true;
-    result.reason = 'object ¨ ??{keys; values}';
-    result.lossless = false;
-  } else {
-    result.representable = false;
-    result.reason = `unknown type: ${typeof raw}`;
-    result.lossless = false;
-  }
-  return result;
-}
-
-/**
- * Tier 5 M4: ƒ‚[ƒh“±o ? Šù‘¶2ƒ‚[ƒh‚Ì‡¬‚ÅVƒ‚[ƒh‚ğ¶¬
- */
-function deriveMode(md: any, baseModes: string[], weights: number[]): any {
-  if (!md || md.reiType !== 'MDim') throw new Error('derive_mode: ??Œ^‚ª•K—v‚Å‚·');
-  const results = baseModes.map(m => computeMDim({ ...md, mode: m }));
-  let derived = 0;
-  let totalWeight = 0;
-  for (let i = 0; i < results.length; i++) {
-    const w = weights[i] ?? 1;
-    derived += results[i] * w;
-    totalWeight += w;
-  }
-  derived = totalWeight > 0 ? derived / totalWeight : 0;
-  return {
-    reiType: 'DerivedModeResult',
-    value: derived,
-    baseModes,
-    weights,
-    formula: baseModes.map((m, i) => `${weights[i] ?? 1}~${m}`).join(' + '),
-  };
-}
-
-/**
- * Tier 5 M5: ƒ‚[ƒh‹óŠÔ ? ‘Sƒ‚[ƒh‚ÌŠ®‘S‹Lq
- */
-function getModeSpace(md: any): any {
-  if (!md || md.reiType !== 'MDim') {
-    return { reiType: 'ModeSpace', modes: ALL_COMPUTE_MODES.length, values: [], coverage: 0 };
-  }
-  const values = ALL_COMPUTE_MODES.map(mode => ({
-    mode,
-    value: computeMDim({ ...md, mode }),
-  }));
-  // ƒ‚[ƒhŠÔ‚Ì‹——£s—ñ
-  const distances: number[][] = [];
-  for (let i = 0; i < values.length; i++) {
-    distances[i] = [];
-    for (let j = 0; j < values.length; j++) {
-      distances[i][j] = Math.abs(values[i].value - values[j].value);
-    }
-  }
-  // •ªUi‘½—l«‚Ìw•Wj
-  const allVals = values.map(v => v.value);
-  const mean = allVals.reduce((a, b) => a + b, 0) / allVals.length;
-  const variance = allVals.reduce((a, v) => a + (v - mean) ** 2, 0) / allVals.length;
-  return {
-    reiType: 'ModeSpace',
-    modes: ALL_COMPUTE_MODES.length,
-    values,
-    variance,
-    diversity: Math.sqrt(variance),
-    coverage: 1.0, // ‘Sƒ‚[ƒh—˜—p‰Â”\
-  };
-}
-
-/**
- * Tier 5 U3: ƒlƒXƒg[“x‚ÌŒv‘ª
- */
-function measureDepth(input: any): number {
-  const raw = unwrapReiVal(input);
-  if (!raw || raw.reiType !== 'MDim') return 0;
-
-  let maxDepth = 0;
-  // center‚ª??‚È‚çÄ‹A
-  if (raw.center !== null && typeof raw.center === 'object' && raw.center.reiType === 'MDim') {
-    maxDepth = Math.max(maxDepth, 1 + measureDepth(raw.center));
-  }
-  // neighbors‚É??‚ª‚ ‚ê‚ÎÄ‹A
-  if (raw.neighbors) {
-    for (const n of raw.neighbors) {
-      if (n !== null && typeof n === 'object' && n.reiType === 'MDim') {
-        maxDepth = Math.max(maxDepth, 1 + measureDepth(n));
-      }
-    }
-  }
-  return maxDepth;
-}
-
-/**
- * Tier 5 U3: ƒlƒXƒg‰» ? ??‚ğw’èƒŒƒxƒ‹•ªƒlƒXƒg‚·‚é
- */
-function nestMDim(input: any, levels: number = 1): any {
-  const raw = unwrapReiVal(input);
-  if (!raw || raw.reiType !== 'MDim') {
-    // ”ñ??‚Í‚Ü‚¸??‚É•ÏŠ·
-    const md = { reiType: 'MDim', center: typeof raw === 'number' ? raw : 0, neighbors: [], mode: 'weighted' };
-    return levels <= 1 ? md : nestMDim(md, levels - 1);
-  }
-  if (levels <= 0) return raw;
-  // Œ»İ‚Ì??‚ğV‚µ‚¢??‚Ìcenter‚Éƒ‰ƒbƒv
-  const wrapped = {
-    reiType: 'MDim',
-    center: raw,
-    neighbors: [],
-    mode: 'weighted',
-  };
-  return levels <= 1 ? wrapped : nestMDim(wrapped, levels - 1);
-}
-
-/**
- * Tier 5 U3: Ä‹A“IŒvZ ? ƒlƒXƒg‚³‚ê‚½??‚ğ’ê‚©‚çã‚ÖÄ‹A“I‚ÉŒvZ
- */
-function recursiveCompute(input: any): number {
-  const raw = unwrapReiVal(input);
-  if (typeof raw === 'number') return raw;
-  if (!raw || raw.reiType !== 'MDim') return 0;
-
-  // center‚ª??‚È‚çÄ‹A“I‚ÉŒvZ
-  const centerVal = (raw.center?.reiType === 'MDim')
-    ? recursiveCompute(raw.center)
-    : (typeof raw.center === 'number' ? raw.center : 0);
-
-  // neighbors‚àÄ‹A“I‚ÉŒvZ
-  const neighborVals = (raw.neighbors || []).map((n: any) =>
-    (n?.reiType === 'MDim') ? recursiveCompute(n) : (typeof n === 'number' ? n : 0)
-  );
-
-  // ƒtƒ‰ƒbƒg‰»‚µ‚½’l‚ÅcomputeMDim
-  return computeMDim({
-    reiType: 'MDim',
-    center: centerVal,
-    neighbors: neighborVals,
-    mode: raw.mode || 'weighted',
-  });
-}
-
-/**
- * Tier 5 U4: \‘¢“I—Ş—“x ? 2‚Â‚Ì??‚Ì\‘¢“I—Ş—«‚ğZo
- */
-function structuralSimilarity(a: any, b: any): any {
-  const aRaw = unwrapReiVal(a);
-  const bRaw = unwrapReiVal(b);
-
-  // ŸŒ³‚Ìˆê’v“x
-  const aDim = aRaw?.neighbors?.length ?? 0;
-  const bDim = bRaw?.neighbors?.length ?? 0;
-  const dimSim = aDim === 0 && bDim === 0 ? 1 : 1 - Math.abs(aDim - bDim) / Math.max(aDim, bDim, 1);
-
-  // ”ä—¦ƒpƒ^[ƒ“‚Ì—Ş—“x
-  const aCenter = typeof aRaw === 'number' ? aRaw : (aRaw?.center ?? 0);
-  const bCenter = typeof bRaw === 'number' ? bRaw : (bRaw?.center ?? 0);
-  const aRatios = (aRaw?.neighbors ?? []).map((n: number) => aCenter !== 0 ? n / aCenter : n);
-  const bRatios = (bRaw?.neighbors ?? []).map((n: number) => bCenter !== 0 ? n / bCenter : n);
-
-  let ratioSim = 0;
-  if (aRatios.length > 0 && bRatios.length > 0) {
-    const minLen = Math.min(aRatios.length, bRatios.length);
-    let sumDiff = 0;
-    for (let i = 0; i < minLen; i++) {
-      sumDiff += Math.abs(aRatios[i] - bRatios[i]);
-    }
-    ratioSim = 1 / (1 + sumDiff / minLen);
-  } else if (aRatios.length === 0 && bRatios.length === 0) {
-    ratioSim = 1;
-  }
-
-  // ƒ‚[ƒh‚Ìˆê’v
-  const modeSim = (aRaw?.mode ?? 'weighted') === (bRaw?.mode ?? 'weighted') ? 1 : 0.5;
-
-  const similarity = dimSim * 0.4 + ratioSim * 0.4 + modeSim * 0.2;
-
-  return {
-    reiType: 'SimilarityResult',
-    similarity,
-    dimSimilarity: dimSim,
-    ratioSimilarity: ratioSim,
-    modeSimilarity: modeSim,
-    isomorphic: similarity > 0.9,
-  };
-}
-
-/**
- * Tier 5 U4: —Ìˆæ‰Ë‹´ ? 2‚Â‚Ì??ŠÔ‚Ì\‘¢“Iƒ}ƒbƒsƒ“ƒO‚ğ¶¬
- */
-function bridgeMDim(a: any, b: any): any {
-  const sim = structuralSimilarity(a, b);
-  const aRaw = unwrapReiVal(a);
-  const bRaw = unwrapReiVal(b);
-  const aCenter = typeof aRaw === 'number' ? aRaw : (aRaw?.center ?? 0);
-  const bCenter = typeof bRaw === 'number' ? bRaw : (bRaw?.center ?? 0);
-
-  // ƒXƒP[ƒ‹ƒtƒ@ƒNƒ^[‚ÌŒvZ
-  const scaleFactor = aCenter !== 0 ? bCenter / aCenter : 1;
-
-  return {
-    reiType: 'BridgeResult',
-    similarity: sim.similarity,
-    scaleFactor,
-    mapping: {
-      centerA: aCenter,
-      centerB: bCenter,
-      dimA: aRaw?.neighbors?.length ?? 0,
-      dimB: bRaw?.neighbors?.length ?? 0,
-    },
-    transferable: sim.similarity > 0.5,
-  };
-}
-
-/**
- * Tier 5 U5: ƒGƒ“ƒR[ƒh ? ”CˆÓ‚Ì’l‚ğ??‚É•ÏŠ·
- */
-function encodeMDim(input: any): any {
-  const raw = unwrapReiVal(input);
-  if (raw?.reiType === 'MDim') return raw;
-  if (typeof raw === 'number') {
-    return { reiType: 'MDim', center: raw, neighbors: [], mode: 'weighted' };
-  }
-  if (typeof raw === 'string') {
-    const codes = Array.from(raw).map(c => c.charCodeAt(0));
-    if (codes.length === 0) return { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
-    return { reiType: 'MDim', center: codes[0], neighbors: codes.slice(1), mode: 'weighted' };
-  }
-  if (typeof raw === 'boolean') {
-    return { reiType: 'MDim', center: raw ? 1 : 0, neighbors: [], mode: 'weighted' };
-  }
-  if (raw === null || raw === undefined) {
-    return { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
-  }
-  if (Array.isArray(raw)) {
-    const nums = raw.map((v: any) => typeof v === 'number' ? v : 0);
-    return { reiType: 'MDim', center: nums[0] ?? 0, neighbors: nums.slice(1), mode: 'weighted' };
-  }
-  // ƒIƒuƒWƒFƒNƒgŒ^ ? ƒL[”‚ğcenter, ’l‚ğ‹ß–T‚É
-  if (typeof raw === 'object') {
-    const values = Object.values(raw).filter(v => typeof v === 'number') as number[];
-    return { reiType: 'MDim', center: values[0] ?? 0, neighbors: values.slice(1), mode: 'weighted' };
-  }
-  return { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
-}
-
-/**
- * Tier 5 U5: ƒfƒR[ƒh ? ??‚ğw’èŒ^‚É•ÏŠ·
- */
-function decodeMDim(input: any, targetType: string): any {
-  const raw = unwrapReiVal(input);
-  const md = raw?.reiType === 'MDim' ? raw : encodeMDim(raw);
-
-  switch (targetType) {
-    case 'number':
-      return computeMDim(md);
-    case 'array':
-      return [md.center, ...md.neighbors];
-    case 'string':
-      return String.fromCharCode(md.center, ...md.neighbors);
-    case 'object':
-      const obj: any = { center: md.center };
-      md.neighbors.forEach((n: number, i: number) => { obj[`n${i}`] = n; });
-      return obj;
-    default:
-      return [md.center, ...md.neighbors];
-  }
-}
-
-/**
- * Tier 5 A2: ‰ğ•ÏŠ· ? compute_all‚ÌŒ‹‰Ê‚É•ÏŠ·‚ğ“K—p
- */
-function mapSolutions(md: any, transformName: string, param: number = 1): any {
-  const solutions = computeAll(md);
-  return solutions.map((sol: any) => {
-    let transformed: number;
-    switch (transformName) {
-      case 'scale': transformed = sol.value * param; break;
-      case 'shift': transformed = sol.value + param; break;
-      case 'normalize': {
-        const maxVal = Math.max(...solutions.map((s: any) => Math.abs(s.value)), 1);
-        transformed = sol.value / maxVal;
-        break;
-      }
-      case 'rank_normalize': {
-        const sorted = [...solutions].sort((a: any, b: any) => a.value - b.value);
-        const rank = sorted.findIndex((s: any) => s.mode === sol.mode);
-        transformed = (rank + 1) / solutions.length;
-        break;
-      }
-      default: transformed = sol.value;
-    }
-    return { ...sol, original: sol.value, value: transformed, transform: transformName };
-  });
-}
-
-/**
- * Tier 5 A3: ‡ˆÓŒ`¬ ? ‘Sƒ‚[ƒh‚ÌŒ‹‰Ê‚©‚çƒRƒ“ƒZƒ“ƒTƒX‚ğZo
- */
-function computeConsensus(md: any): any {
-  const solutions = computeAll(md);
-  const values = solutions.map((s: any) => s.value);
-
-  // ’†‰›’liƒƒoƒXƒg‚ÈƒRƒ“ƒZƒ“ƒTƒXj
-  const sorted = [...values].sort((a: number, b: number) => a - b);
-  const median = sorted.length % 2 === 0
-    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-    : sorted[Math.floor(sorted.length / 2)];
-
-  // •½‹Ï
-  const mean = values.reduce((a: number, b: number) => a + b, 0) / values.length;
-
-  // •W€•Î·i‡ˆÓ‚Ì“x‡‚¢j
-  const variance = values.reduce((a: number, v: number) => a + (v - mean) ** 2, 0) / values.length;
-  const stddev = Math.sqrt(variance);
-
-  // ‡ˆÓ“x: •W€•Î·‚ª¬‚³‚¢‚Ù‚Ç‚‚¢
-  const agreement = 1 / (1 + stddev / (Math.abs(mean) || 1));
-
-  return {
-    reiType: 'ConsensusResult',
-    median,
-    mean,
-    stddev,
-    agreement,
-    solutions: solutions.length,
-    range: { min: sorted[0], max: sorted[sorted.length - 1] },
-  };
-}
-
-/**
- * Tier 5 A4: Å—Ç‰ğ‘I‘ğ ? w’èŠî€‚ÅÅ—Ç‚Ì‰ğ‚ğ‘I‘ğ
- */
-function selectBest(md: any, criteria: string = 'median_closest'): any {
-  const solutions = computeAll(md);
-  const values = solutions.map((s: any) => s.value);
-
-  switch (criteria) {
-    case 'max':
-      return solutions.reduce((best: any, s: any) => s.value > best.value ? s : best);
-    case 'min':
-      return solutions.reduce((best: any, s: any) => s.value < best.value ? s : best);
-    case 'median_closest':
-    default: {
-      const sorted = [...values].sort((a: number, b: number) => a - b);
-      const median = sorted.length % 2 === 0
-        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-        : sorted[Math.floor(sorted.length / 2)];
-      return solutions.reduce((best: any, s: any) =>
-        Math.abs(s.value - median) < Math.abs(best.value - median) ? s : best
-      );
-    }
-  }
-}
-
-/**
- * Tier 5 A4: ‰ğ‚Ìƒ‰ƒ“ƒLƒ“ƒO
- */
-function rankSolutions(md: any, criteria: string = 'value'): any {
-  const solutions = computeAll(md);
-  const sorted = [...solutions].sort((a: any, b: any) => {
-    switch (criteria) {
-      case 'value': return b.value - a.value; // ~‡
-      case 'abs': return Math.abs(b.value) - Math.abs(a.value);
-      default: return b.value - a.value;
-    }
-  });
-  return sorted.map((s: any, i: number) => ({ ...s, rank: i + 1 }));
-}
-
-/**
- * Tier 5 A5: ‰ğ‚ÌŠ®‘S« ? ‰ğ‹óŠÔ‚Ì–Ô—…“x‚ğ•]‰¿
- */
-function solutionCompleteness(md: any): any {
-  const solutions = computeAll(md);
-  const values = solutions.map((s: any) => s.value);
-
-  // ƒ†ƒj[ƒN’l‚Ì”ä—¦
-  const uniqueValues = new Set(values.map((v: number) => Math.round(v * 1e6) / 1e6));
-  const uniqueRatio = uniqueValues.size / values.length;
-
-  // ƒŒƒ“ƒWƒJƒoƒŒƒbƒW
-  const sorted = [...values].sort((a: number, b: number) => a - b);
-  const range = sorted[sorted.length - 1] - sorted[0];
-
-  // •ª•z‚Ì‹Ïˆê«iƒGƒ“ƒgƒƒs[ƒx[ƒXj
-  const bins = 4;
-  const binWidth = range / bins || 1;
-  const histogram = new Array(bins).fill(0);
-  for (const v of values) {
-    const bin = Math.min(Math.floor((v - sorted[0]) / binWidth), bins - 1);
-    histogram[bin]++;
-  }
-  const total = values.length;
-  let entropy = 0;
-  for (const count of histogram) {
-    if (count > 0) {
-      const p = count / total;
-      entropy -= p * Math.log2(p);
-    }
-  }
-  const maxEntropy = Math.log2(bins);
-  const uniformity = maxEntropy > 0 ? entropy / maxEntropy : 1;
-
-  return {
-    reiType: 'CompletenessResult',
-    totalModes: solutions.length,
-    uniqueSolutions: uniqueValues.size,
-    uniqueRatio,
-    range,
-    uniformity,
-    completeness: (uniqueRatio * 0.5 + uniformity * 0.5),
-    isComplete: uniqueRatio > 0.5 && uniformity > 0.3,
-  };
-}
-
-// ============================================================
-// Evolve ? ©“®ƒ‚[ƒh‘I‘ği’Œ‡@: ’l‚ª—ˆ—ğ‚©‚çÅ“KŒvZ‚ğ©•ª‚Å‘I‚Ôj
-// ƒĞ‚Ì‹L‰¯imemoryj‚ÆƒÑ‚ÌŒXŒü«itendencyj‚©‚ç8ƒ‚[ƒh‚ğ•]‰¿‚µA
-// í—ª‚ÉŠî‚Ã‚¢‚ÄÅ“K‚Ècomputeƒ‚[ƒh‚ğ©“®‘I‘ğ‚·‚éB
-// u’l‚ª©•ª‚Ì—ˆ—ğ‚ğŒ©‚ÄŒvZ•û–@‚ğ©•ª‚Å‘I‚Ôv¢ŠE‰‚Ì‹@”\B
-// ============================================================
-
-interface EvolveCandidate {
-  mode: string;
-  value: number;
-}
-
-interface EvolveResult {
-  reiType: 'EvolveResult';
-  value: number;
-  selectedMode: string;
-  strategy: string;
-  reason: string;
-  candidates: EvolveCandidate[];
-  awareness: number;
-  tendency: string;
-}
-
-/**
- * evolve: ƒĞ‚Ì—ˆ—ğ‚ÆƒÑ‚ÌŒXŒü«‚©‚çÅ“Kƒ‚[ƒh‚ğ©“®‘I‘ğ
- *
- * í—ª:
- *   "auto"      ? ŠoÁ“x‚ÆŒXŒü«‚ÉŠî‚Ã‚­‘‡”»’èiƒfƒtƒHƒ‹ƒgj
- *   "stable"    ? ‰ß‹‚Ì—ˆ—ğ‚Æ‚Ì•ªU‚ªÅ¬‚Ìƒ‚[ƒh
- *   "divergent" ? Œ‹‰Ê‚ªÅ‚àL‚ª‚éƒ‚[ƒh
- *   "creative"  ? ‘¼‚Ìƒ‚[ƒh‚ÆÅ‚àˆÙ‚È‚éŒ‹‰Ê‚Ìƒ‚[ƒh
- *   "tendency"  ? ƒÑ‚ÌŒXŒü«iexpand/contract/spiralj‚Æ®‡‚·‚éƒ‚[ƒh
- */
-function evolveMode(input: any, meta: SigmaMetadata, strategy: string = 'auto'): EvolveResult {
-  const raw = unwrapReiVal(input);
-
-  // ??‚Å‚È‚¯‚ê‚Îproject‚µ‚Ä‚©‚çˆ—
-  let md: any;
-  if (raw?.reiType === 'MDim') {
-    md = raw;
-  } else if (Array.isArray(raw)) {
-    md = projectToMDim(raw, 'first', []);
-  } else if (typeof raw === 'number') {
-    md = { reiType: 'MDim', center: raw, neighbors: [], mode: 'weighted' };
-  } else {
-    md = { reiType: 'MDim', center: 0, neighbors: [], mode: 'weighted' };
-  }
-
-  // ‘Sƒ‚[ƒh‚ÅŒvZ
-  const candidates: EvolveCandidate[] = ALL_COMPUTE_MODES.map(mode => ({
-    mode,
-    value: computeMDim({ ...md, mode }),
-  }));
-
-  // ŠoÁ“x
-  const awareness = computeAwareness(input, meta);
-  const tendency = meta.tendency;
-
-  // í—ª‚ÉŠî‚Ã‚­‘I‘ğ
-  let selected: EvolveCandidate;
-  let reason: string;
-
-  switch (strategy) {
-    case 'stable':
-      selected = selectStable(candidates, meta);
-      reason = selectStableReason(selected, candidates, meta);
-      break;
-    case 'divergent':
-      selected = selectDivergent(candidates);
-      reason = `Å‚à‘¼‚Ìƒ‚[ƒh‚ÆˆÙ‚È‚éŒ‹‰Ê‚ğo‚·ƒ‚[ƒhi•Î·: ${calcDeviation(selected.value, candidates).toFixed(4)}j`;
-      break;
-    case 'creative':
-      selected = selectCreative(candidates);
-      reason = `’†‰›’l‚©‚çÅ‚à‰“‚¢Œ‹‰Êi‹——£: ${calcMedianDistance(selected.value, candidates).toFixed(4)}j`;
-      break;
-    case 'tendency':
-      selected = selectByTendency(candidates, tendency, md);
-      reason = `ƒÑ‚ÌŒXŒü«u${tendency}v‚Æ®‡‚·‚éƒ‚[ƒh`;
-      break;
-    case 'auto':
-    default:
-      ({ selected, reason } = selectAuto(candidates, meta, awareness, md));
-      strategy = 'auto';
-      break;
-  }
-
-  return {
-    reiType: 'EvolveResult',
-    value: selected.value,
-    selectedMode: selected.mode,
-    strategy,
-    reason,
-    candidates,
-    awareness,
-    tendency,
-  };
-}
-
-/** stableí—ª: ‰ß‹‚Ì—ˆ—ğ‚Æ‚ÌˆêŠÑ«‚ªÅ‚à‚‚¢ƒ‚[ƒh */
-function selectStable(candidates: EvolveCandidate[], meta: SigmaMetadata): EvolveCandidate {
-  if (meta.memory.length === 0) {
-    // —ˆ—ğ‚È‚µ ¨ •ªU‚ªÅ¬‚Ìƒ‚[ƒhi‘¼ƒ‚[ƒh‚Æ‚Ì·‚ª¬‚³‚¢j
-    const mean = candidates.reduce((s, c) => s + c.value, 0) / candidates.length;
-    return candidates.reduce((best, c) =>
-      Math.abs(c.value - mean) < Math.abs(best.value - mean) ? c : best
-    );
-  }
-
-  // —ˆ—ğ‚ ‚è ¨ —ˆ—ğ‚Ì”’lƒgƒŒƒ“ƒh‚Æ‚Ì®‡«
-  const recentValues = meta.memory.slice(-5).map(toNumSafe);
-  const recentMean = recentValues.reduce((s, v) => s + v, 0) / recentValues.length;
-
-  return candidates.reduce((best, c) =>
-    Math.abs(c.value - recentMean) < Math.abs(best.value - recentMean) ? c : best
-  );
-}
-
-function selectStableReason(selected: EvolveCandidate, candidates: EvolveCandidate[], meta: SigmaMetadata): string {
-  if (meta.memory.length === 0) {
-    return `‘Sƒ‚[ƒh‚Ì•½‹Ï‚ÉÅ‚à‹ß‚¢Œ‹‰Êi—ˆ—ğ‚È‚µA‰‰ñ‘I‘ğj`;
-  }
-  return `‰ß‹${meta.memory.length}‰ñ‚Ì—ˆ—ğ‚ÌŒXŒü‚ÉÅ‚à®‡iˆÀ’è«—Dæj`;
-}
-
-/** divergentí—ª: ‘¼‚Ìƒ‚[ƒh‚ÆÅ‚àˆÙ‚È‚éŒ‹‰Ê‚Ìƒ‚[ƒh */
-function selectDivergent(candidates: EvolveCandidate[]): EvolveCandidate {
-  return candidates.reduce((best, c) =>
-    calcDeviation(c.value, candidates) > calcDeviation(best.value, candidates) ? c : best
-  );
-}
-
-/** creativeí—ª: ’†‰›’l‚©‚çÅ‚à‰“‚¢Œ‹‰Ê */
-function selectCreative(candidates: EvolveCandidate[]): EvolveCandidate {
-  return candidates.reduce((best, c) =>
-    calcMedianDistance(c.value, candidates) > calcMedianDistance(best.value, candidates) ? c : best
-  );
-}
-
-/** tendencyí—ª: ƒÑ‚ÌŒXŒü«‚Æ®‡‚·‚éƒ‚[ƒh */
-function selectByTendency(candidates: EvolveCandidate[], tendency: string, md: any): EvolveCandidate {
-  const baseValue = computeMDim({ ...md, mode: 'weighted' });
-
-  switch (tendency) {
-    case 'expand': {
-      // Šg’£ŒXŒü ¨ Å‚à‘å‚«‚È’l‚ğo‚·ƒ‚[ƒh
-      return candidates.reduce((best, c) => c.value > best.value ? c : best);
-    }
-    case 'contract': {
-      // ûkŒXŒü ¨ center‚ÉÅ‚à‹ß‚¢’l‚ğo‚·ƒ‚[ƒh
-      return candidates.reduce((best, c) =>
-        Math.abs(c.value - md.center) < Math.abs(best.value - md.center) ? c : best
-      );
-    }
-    case 'spiral': {
-      // —†ùŒXŒü ¨ baseValue‚ÆˆÙ‚È‚é‚ª‹É’[‚Å‚Í‚È‚¢’l
-      const sorted = [...candidates].sort((a, b) =>
-        Math.abs(a.value - baseValue) - Math.abs(b.value - baseValue)
-      );
-      // ’†ŠÔ“I‚È‹——£‚Ìƒ‚[ƒh‚ğ‘I‘ği‹É’[‚Å‚à•½–}‚Å‚à‚È‚¢j
-      const midIdx = Math.floor(sorted.length / 2);
-      return sorted[midIdx];
-    }
-    default: {
-      // rest ¨ weightedƒ‚[ƒhiƒfƒtƒHƒ‹ƒgj
-      return candidates.find(c => c.mode === 'weighted') ?? candidates[0];
-    }
-  }
-}
-
-/** autoí—ª: ŠoÁ“x‚ÆŒXŒü«‚ÉŠî‚Ã‚­‘‡”»’è */
-function selectAuto(
-  candidates: EvolveCandidate[],
-  meta: SigmaMetadata,
-  awareness: number,
-  md: any
-): { selected: EvolveCandidate; reason: string } {
-  // ŠoÁ“x‚ª’á‚¢i< 0.3j¨ ˆÀ’èƒ‚[ƒh
-  if (awareness < 0.3) {
-    const selected = selectStable(candidates, meta);
-    return {
-      selected,
-      reason: `ŠoÁ“x‚ª’á‚¢i${awareness.toFixed(2)}j‚½‚ßˆÀ’èƒ‚[ƒh‚ğ‘I‘ğ`,
-    };
-  }
-
-  // ŠoÁ“x‚ª‚‚¢i>= 0.6j¨ ŒXŒü«‚É]‚¤
-  if (awareness >= AWAKENING_THRESHOLD) {
-    const selected = selectByTendency(candidates, meta.tendency, md);
-    return {
-      selected,
-      reason: `ŠoÁó‘Ôi${awareness.toFixed(2)}j: ŒXŒü«u${meta.tendency}v‚ÉŠî‚Ã‚«‘I‘ğ`,
-    };
-  }
-
-  // ’†ŠÔŠoÁ“x ¨ —ˆ—ğ‚ª‚ ‚ê‚Î‚»‚ê‚ğŠˆ—pA‚È‚¯‚ê‚Îî•ñƒGƒ“ƒgƒƒs[‚Å
-  if (meta.memory.length >= 3) {
-    // —ˆ—ğƒpƒ^[ƒ“‚ğ•ªÍ: ’l‚ª‘‰ÁŒXŒü‚È‚çexpandŒnAŒ¸­‚È‚çcontractŒn
-    const recentValues = meta.memory.slice(-3).map(toNumSafe);
-    const trend = recentValues[recentValues.length - 1] - recentValues[0];
-
-    if (trend > 0) {
-      const selected = candidates.reduce((best, c) => c.value > best.value ? c : best);
-      return { selected, reason: `—ˆ—ğ‚©‚ç‘‰ÁŒXŒü‚ğŒŸo ¨ Å‘å’lƒ‚[ƒh‚ğ‘I‘ğ` };
-    } else if (trend < 0) {
-      const selected = candidates.reduce((best, c) =>
-        Math.abs(c.value - md.center) < Math.abs(best.value - md.center) ? c : best
-      );
-      return { selected, reason: `—ˆ—ğ‚©‚çŒ¸­ŒXŒü‚ğŒŸo ¨ ’†Sû‘©ƒ‚[ƒh‚ğ‘I‘ğ` };
-    }
-  }
-
-  // ƒfƒtƒHƒ‹ƒg: ƒGƒ“ƒgƒƒs[ƒ‚[ƒhiÅ‚àî•ñ—Ê‚Ì‘½‚¢ŒvZj
-  const selected = candidates.find(c => c.mode === 'entropy') ?? candidates[0];
-  return {
-    selected,
-    reason: `’†ŠÔŠoÁ“xi${awareness.toFixed(2)}j: î•ñƒGƒ“ƒgƒƒs[ƒ‚[ƒh‚Å’Tõ`,
-  };
-}
-
-/** ƒwƒ‹ƒp[: Œó•âŒQ“à‚Å‚Ì•Î· */
-function calcDeviation(value: number, candidates: EvolveCandidate[]): number {
-  const mean = candidates.reduce((s, c) => s + c.value, 0) / candidates.length;
-  return Math.abs(value - mean);
-}
-
-/** ƒwƒ‹ƒp[: ’†‰›’l‚Æ‚Ì‹——£ */
-function calcMedianDistance(value: number, candidates: EvolveCandidate[]): number {
-  const sorted = [...candidates].map(c => c.value).sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-  return Math.abs(value - median);
-}
-
-// ============================================================
-// ’Œ‡A: Š¿š/“ú–{Œê‚Ì??•\Œ» ? ©‘RŒ¾Œê‚Æ’†S-ü•Óƒpƒ^[ƒ“‚Ì“‡
-//
-// Š¿š‚Ì\‘¢ = ??: u‹xv= ??{"‹x"; "l", "–Ø"}
-// “ú–{Œê•¶ = qŒê’†S??: ??{"H‚×‚½"; "”L‚ª", "‹›‚ğ"}
-// ’†‘Œêº’² = ƒ‚[ƒh‘½Œ³«: ??{"ma"; "?(1º)", "–ƒ(2º)", ...}
-// ============================================================
-
-/** •¶š—ñ?? ? center/neighbors‚ª•¶š—ñ‚Ì??\‘¢ */
-interface StringMDim {
-  reiType: 'StringMDim';
-  center: string;
-  neighbors: string[];
-  mode: string;       // 'kanji' | 'sentence' | 'tone' | 'freeform'
-  metadata?: any;
-}
-
-/** Š¿šî•ñ */
-interface KanjiInfo {
-  components: string[];
-  radical: string;
-  radicalName: string;
-  strokes: number;
-  on: string[];
-  kun: string[];
-  category: string;   // ˜Z‘: ÛŒ`|w–|‰ïˆÓ|Œ`º|“]’|‰¼Ø
-  meaning: string;
-}
-
-// „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
-// Š¿š\¬—v‘f«‘i˜Z‘•ª—Ş•t‚«j
-// „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
-const KANJI_DB: Record<string, KanjiInfo> = {
-  // ??? ÛŒ`i‚µ‚å‚¤‚¯‚¢j? •¨‚ÌŒ`‚ğÛ‚é ???
-  "“ú": { components: [], radical: "“ú", radicalName: "‚É‚¿", strokes: 4, on: ["ƒjƒ`","ƒWƒc"], kun: ["‚Ğ","‚©"], category: "ÛŒ`", meaning: "sun/day" },
-  "Œ": { components: [], radical: "Œ", radicalName: "‚Â‚«", strokes: 4, on: ["ƒQƒc","ƒKƒc"], kun: ["‚Â‚«"], category: "ÛŒ`", meaning: "moon/month" },
-  "R": { components: [], radical: "R", radicalName: "‚â‚Ü", strokes: 3, on: ["ƒTƒ“","ƒZƒ“"], kun: ["‚â‚Ü"], category: "ÛŒ`", meaning: "mountain" },
-  "ì": { components: [], radical: "ì", radicalName: "‚©‚í", strokes: 3, on: ["ƒZƒ“"], kun: ["‚©‚í"], category: "ÛŒ`", meaning: "river" },
-  "…": { components: [], radical: "…", radicalName: "‚İ‚¸", strokes: 4, on: ["ƒXƒC"], kun: ["‚İ‚¸"], category: "ÛŒ`", meaning: "water" },
-  "‰Î": { components: [], radical: "‰Î", radicalName: "‚Ğ", strokes: 4, on: ["ƒJ"], kun: ["‚Ğ","‚Ù"], category: "ÛŒ`", meaning: "fire" },
-  "–Ø": { components: [], radical: "–Ø", radicalName: "‚«", strokes: 4, on: ["ƒ‚ƒN","ƒ{ƒN"], kun: ["‚«","‚±"], category: "ÛŒ`", meaning: "tree/wood" },
-  "‹à": { components: [], radical: "‹à", radicalName: "‚©‚Ë", strokes: 8, on: ["ƒLƒ“","ƒRƒ“"], kun: ["‚©‚Ë","‚©‚È"], category: "ÛŒ`", meaning: "gold/metal" },
-  "“y": { components: [], radical: "“y", radicalName: "‚Â‚¿", strokes: 3, on: ["ƒh","ƒg"], kun: ["‚Â‚¿"], category: "ÛŒ`", meaning: "earth/soil" },
-  "l": { components: [], radical: "l", radicalName: "‚Ğ‚Æ", strokes: 2, on: ["ƒWƒ“","ƒjƒ“"], kun: ["‚Ğ‚Æ"], category: "ÛŒ`", meaning: "person" },
-  "Œû": { components: [], radical: "Œû", radicalName: "‚­‚¿", strokes: 3, on: ["ƒRƒE","ƒN"], kun: ["‚­‚¿"], category: "ÛŒ`", meaning: "mouth" },
-  "–Ú": { components: [], radical: "–Ú", radicalName: "‚ß", strokes: 5, on: ["ƒ‚ƒN","ƒ{ƒN"], kun: ["‚ß","‚Ü"], category: "ÛŒ`", meaning: "eye" },
-  "è": { components: [], radical: "è", radicalName: "‚Ä", strokes: 4, on: ["ƒVƒ…"], kun: ["‚Ä","‚½"], category: "ÛŒ`", meaning: "hand" },
-  "¨": { components: [], radical: "¨", radicalName: "‚İ‚İ", strokes: 6, on: ["ƒW"], kun: ["‚İ‚İ"], category: "ÛŒ`", meaning: "ear" },
-  "‘«": { components: [], radical: "‘«", radicalName: "‚ ‚µ", strokes: 7, on: ["ƒ\ƒN"], kun: ["‚ ‚µ","‚½"], category: "ÛŒ`", meaning: "foot/leg" },
-  "—": { components: [], radical: "—", radicalName: "‚¨‚ñ‚È", strokes: 3, on: ["ƒWƒ‡","ƒjƒ‡"], kun: ["‚¨‚ñ‚È","‚ß"], category: "ÛŒ`", meaning: "woman" },
-  "q": { components: [], radical: "q", radicalName: "‚±", strokes: 3, on: ["ƒV","ƒX"], kun: ["‚±"], category: "ÛŒ`", meaning: "child" },
-  "“c": { components: [], radical: "“c", radicalName: "‚½", strokes: 5, on: ["ƒfƒ“"], kun: ["‚½"], category: "ÛŒ`", meaning: "rice field" },
-  "ŠL": { components: [], radical: "ŠL", radicalName: "‚©‚¢", strokes: 7, on: ["ƒoƒC"], kun: ["‚©‚¢"], category: "ÛŒ`", meaning: "shell" },
-  "Ô": { components: [], radical: "Ô", radicalName: "‚­‚é‚Ü", strokes: 7, on: ["ƒVƒƒ"], kun: ["‚­‚é‚Ü"], category: "ÛŒ`", meaning: "vehicle" },
-  "”n": { components: [], radical: "”n", radicalName: "‚¤‚Ü", strokes: 10, on: ["ƒo"], kun: ["‚¤‚Ü","‚Ü"], category: "ÛŒ`", meaning: "horse" },
-  "‹›": { components: [], radical: "‹›", radicalName: "‚¤‚¨", strokes: 11, on: ["ƒMƒ‡"], kun: ["‚¤‚¨","‚³‚©‚È"], category: "ÛŒ`", meaning: "fish" },
-  "’¹": { components: [], radical: "’¹", radicalName: "‚Æ‚è", strokes: 11, on: ["ƒ`ƒ‡ƒE"], kun: ["‚Æ‚è"], category: "ÛŒ`", meaning: "bird" },
-  "‰J": { components: [], radical: "‰J", radicalName: "‚ ‚ß", strokes: 8, on: ["ƒE"], kun: ["‚ ‚ß","‚ ‚Ü"], category: "ÛŒ`", meaning: "rain" },
-  "Î": { components: [], radical: "Î", radicalName: "‚¢‚µ", strokes: 5, on: ["ƒZƒL","ƒVƒƒƒN"], kun: ["‚¢‚µ"], category: "ÛŒ`", meaning: "stone" },
-  "’|": { components: [], radical: "’|", radicalName: "‚½‚¯", strokes: 6, on: ["ƒ`ƒN"], kun: ["‚½‚¯"], category: "ÛŒ`", meaning: "bamboo" },
-  "…": { components: [], radical: "…", radicalName: "‚¢‚Æ", strokes: 6, on: ["ƒV"], kun: ["‚¢‚Æ"], category: "ÛŒ`", meaning: "thread" },
-  "•Ä": { components: [], radical: "•Ä", radicalName: "‚±‚ß", strokes: 6, on: ["ƒxƒC","ƒ}ƒC"], kun: ["‚±‚ß"], category: "ÛŒ`", meaning: "rice" },
-  "’": { components: [], radical: "’", radicalName: "‚Ş‚µ", strokes: 6, on: ["ƒ`ƒ…ƒE"], kun: ["‚Ş‚µ"], category: "ÛŒ`", meaning: "insect" },
-  "Œ¢": { components: [], radical: "Œ¢", radicalName: "‚¢‚Ê", strokes: 4, on: ["ƒPƒ“"], kun: ["‚¢‚Ê"], category: "ÛŒ`", meaning: "dog" },
-  "—Í": { components: [], radical: "—Í", radicalName: "‚¿‚©‚ç", strokes: 2, on: ["ƒŠƒL","ƒŠƒ‡ƒN"], kun: ["‚¿‚©‚ç"], category: "ÛŒ`", meaning: "power" },
-  "“": { components: [], radical: "“", radicalName: "‚©‚½‚È", strokes: 2, on: ["ƒgƒE"], kun: ["‚©‚½‚È"], category: "ÛŒ`", meaning: "sword" },
-  "–å": { components: [], radical: "–å", radicalName: "‚à‚ñ", strokes: 8, on: ["ƒ‚ƒ“"], kun: ["‚©‚Ç"], category: "ÛŒ`", meaning: "gate" },
-  "S": { components: [], radical: "S", radicalName: "‚±‚±‚ë", strokes: 4, on: ["ƒVƒ“"], kun: ["‚±‚±‚ë"], category: "ÛŒ`", meaning: "heart/mind" },
-
-  // ??? w–i‚µ‚¶j? ’ŠÛŠT”O‚ğ‹L†‚Å¦‚· ???
-  "ˆê": { components: [], radical: "ˆê", radicalName: "‚¢‚¿", strokes: 1, on: ["ƒCƒ`","ƒCƒc"], kun: ["‚Ğ‚Æ"], category: "w–", meaning: "one" },
-  "“ñ": { components: [], radical: "“ñ", radicalName: "‚É", strokes: 2, on: ["ƒj"], kun: ["‚Ó‚½"], category: "w–", meaning: "two" },
-  "O": { components: [], radical: "ˆê", radicalName: "‚¢‚¿", strokes: 3, on: ["ƒTƒ“"], kun: ["‚İ","‚İ‚Á"], category: "w–", meaning: "three" },
-  "ã": { components: [], radical: "ˆê", radicalName: "‚¢‚¿", strokes: 3, on: ["ƒWƒ‡ƒE","ƒVƒ‡ƒE"], kun: ["‚¤‚¦","‚ "], category: "w–", meaning: "above" },
-  "‰º": { components: [], radical: "ˆê", radicalName: "‚¢‚¿", strokes: 3, on: ["ƒJ","ƒQ"], kun: ["‚µ‚½","‚³","‚­‚¾"], category: "w–", meaning: "below" },
-  "–{": { components: ["–Ø","ˆê"], radical: "–Ø", radicalName: "‚«", strokes: 5, on: ["ƒzƒ“"], kun: ["‚à‚Æ"], category: "w–", meaning: "origin/book" },
-  "––": { components: ["–Ø","ˆê"], radical: "–Ø", radicalName: "‚«", strokes: 5, on: ["ƒ}ƒc","ƒoƒc"], kun: ["‚·‚¦"], category: "w–", meaning: "end/tip" },
-  "’†": { components: ["Œû","úh"], radical: "úh", radicalName: "‚Ú‚¤", strokes: 4, on: ["ƒ`ƒ…ƒE"], kun: ["‚È‚©"], category: "w–", meaning: "center/middle" },
-  "“V": { components: ["ˆê","‘å"], radical: "‘å", radicalName: "‚¾‚¢", strokes: 4, on: ["ƒeƒ“"], kun: ["‚ ‚ß","‚ ‚Ü"], category: "w–", meaning: "heaven/sky" },
-
-  // ??? ‰ïˆÓi‚©‚¢‚¢j? 2‚ÂˆÈã‚Ìš‚ğ‡‚í‚¹‚ÄˆÓ–¡‚ğì‚é ???
-  "‹x": { components: ["l","–Ø"], radical: "l", radicalName: "‚É‚ñ‚×‚ñ", strokes: 6, on: ["ƒLƒ…ƒE"], kun: ["‚â‚·"], category: "‰ïˆÓ", meaning: "rest" },
-  "–¾": { components: ["“ú","Œ"], radical: "“ú", radicalName: "‚É‚¿", strokes: 8, on: ["ƒƒC","ƒ~ƒ‡ƒE"], kun: ["‚ ‚©","‚ ‚«"], category: "‰ïˆÓ", meaning: "bright" },
-  "X": { components: ["–Ø","–Ø","–Ø"], radical: "–Ø", radicalName: "‚«", strokes: 12, on: ["ƒVƒ“"], kun: ["‚à‚è"], category: "‰ïˆÓ", meaning: "forest" },
-  "—Ñ": { components: ["–Ø","–Ø"], radical: "–Ø", radicalName: "‚«", strokes: 8, on: ["ƒŠƒ“"], kun: ["‚Í‚â‚µ"], category: "‰ïˆÓ", meaning: "grove" },
-  "’j": { components: ["“c","—Í"], radical: "“c", radicalName: "‚½", strokes: 7, on: ["ƒ_ƒ“","ƒiƒ“"], kun: ["‚¨‚Æ‚±"], category: "‰ïˆÓ", meaning: "man" },
-  "D": { components: ["—","q"], radical: "—", radicalName: "‚¨‚ñ‚È", strokes: 6, on: ["ƒRƒE"], kun: ["‚·","‚±‚Ì","‚æ"], category: "‰ïˆÓ", meaning: "like/good" },
-  "M": { components: ["l","Œ¾"], radical: "l", radicalName: "‚É‚ñ‚×‚ñ", strokes: 9, on: ["ƒVƒ“"], kun: [""], category: "‰ïˆÓ", meaning: "trust/believe" },
-  "‰Š": { components: ["‰Î","‰Î"], radical: "‰Î", radicalName: "‚Ğ", strokes: 8, on: ["ƒGƒ“"], kun: ["‚Ù‚Ì‚¨"], category: "‰ïˆÓ", meaning: "flame" },
-  "Šâ": { components: ["R","Î"], radical: "R", radicalName: "‚â‚Ü", strokes: 8, on: ["ƒKƒ“"], kun: ["‚¢‚í"], category: "‰ïˆÓ", meaning: "rock" },
-  "‰Ô": { components: ["‘","‰»"], radical: "‘", radicalName: "‚­‚³‚©‚ñ‚Ş‚è", strokes: 7, on: ["ƒJ"], kun: ["‚Í‚È"], category: "‰ïˆÓ", meaning: "flower" },
-  "‘": { components: ["‘Š¥","‘"], radical: "‘", radicalName: "‚­‚³‚©‚ñ‚Ş‚è", strokes: 9, on: ["ƒ\ƒE"], kun: ["‚­‚³"], category: "‰ïˆÓ", meaning: "grass" },
-  "–Â": { components: ["Œû","’¹"], radical: "’¹", radicalName: "‚Æ‚è", strokes: 14, on: ["ƒƒC"], kun: ["‚È"], category: "‰ïˆÓ", meaning: "cry/chirp" },
-  "”¨": { components: ["‰Î","“c"], radical: "“c", radicalName: "‚½", strokes: 9, on: [], kun: ["‚Í‚½","‚Í‚½‚¯"], category: "‰ïˆÓ", meaning: "field (cultivated)" },
-  "“»": { components: ["R","ã","‰º"], radical: "R", radicalName: "‚â‚Ü", strokes: 9, on: [], kun: ["‚Æ‚¤‚°"], category: "‰ïˆÓ", meaning: "mountain pass" },
-  "—‹": { components: ["‰J","“c"], radical: "‰J", radicalName: "‚ ‚ß", strokes: 13, on: ["ƒ‰ƒC"], kun: ["‚©‚İ‚È‚è"], category: "‰ïˆÓ", meaning: "thunder" },
-  "ŠÅ": { components: ["è","–Ú"], radical: "–Ú", radicalName: "‚ß", strokes: 9, on: ["ƒJƒ“"], kun: ["‚İ"], category: "‰ïˆÓ", meaning: "watch/look" },
-  "v": { components: ["“c","S"], radical: "S", radicalName: "‚±‚±‚ë", strokes: 9, on: ["ƒV"], kun: ["‚¨‚à"], category: "‰ïˆÓ", meaning: "think" },
-  "”E": { components: ["“","S"], radical: "S", radicalName: "‚±‚±‚ë", strokes: 7, on: ["ƒjƒ“"], kun: ["‚µ‚Ì"], category: "‰ïˆÓ", meaning: "endure/ninja" },
-  "•": { components: ["~","œ÷"], radical: "~", radicalName: "‚Æ‚ß‚é", strokes: 8, on: ["ƒu","ƒ€"], kun: ["‚½‚¯"], category: "‰ïˆÓ", meaning: "martial" },
-  "—F": { components: ["–”","–”"], radical: "–”", radicalName: "‚Ü‚½", strokes: 4, on: ["ƒ†ƒE"], kun: ["‚Æ‚à"], category: "‰ïˆÓ", meaning: "friend" },
-  "Œõ": { components: ["‰Î","™X"], radical: "™X", radicalName: "‚É‚ñ‚É‚å‚¤", strokes: 6, on: ["ƒRƒE"], kun: ["‚Ğ‚©","‚Ğ‚©‚è"], category: "‰ïˆÓ", meaning: "light" },
-  "‹ó": { components: ["ŒŠ","H"], radical: "ŒŠ", radicalName: "‚ ‚È", strokes: 8, on: ["ƒNƒE"], kun: ["‚»‚ç","‚ ","‚©‚ç"], category: "‰ïˆÓ", meaning: "sky/empty" },
-  "ŠC": { components: ["…","–ˆ"], radical: "…", radicalName: "‚³‚ñ‚¸‚¢", strokes: 9, on: ["ƒJƒC"], kun: ["‚¤‚İ"], category: "‰ïˆÓ", meaning: "sea" },
-  "“¹": { components: ["ñ","?"], radical: "?", radicalName: "‚µ‚ñ‚É‚å‚¤", strokes: 12, on: ["ƒhƒE","ƒgƒE"], kun: ["‚İ‚¿"], category: "‰ïˆÓ", meaning: "way/path" },
-  "˜a": { components: ["‰Ñ","Œû"], radical: "Œû", radicalName: "‚­‚¿", strokes: 8, on: ["ƒ"], kun: ["‚â‚í","‚È‚²"], category: "‰ïˆÓ", meaning: "harmony/Japan" },
-  "”ü": { components: ["—r","‘å"], radical: "—r", radicalName: "‚Ğ‚Â‚¶", strokes: 9, on: ["ƒr"], kun: ["‚¤‚Â‚­"], category: "‰ïˆÓ", meaning: "beauty" },
-  "ˆ¤": { components: ["’Ü","™k","S","šç"], radical: "S", radicalName: "‚±‚±‚ë", strokes: 13, on: ["ƒAƒC"], kun: [""], category: "‰ïˆÓ", meaning: "love" },
-  "–²": { components: ["‘","?","™k","—["], radical: "—[", radicalName: "‚ä‚¤‚×", strokes: 13, on: ["ƒ€","ƒ{ƒE"], kun: ["‚ä‚ß"], category: "‰ïˆÓ", meaning: "dream" },
-  "•—": { components: ["™{","’"], radical: "•—", radicalName: "‚©‚º", strokes: 9, on: ["ƒtƒE","ƒt"], kun: ["‚©‚º","‚©‚´"], category: "‰ïˆÓ", meaning: "wind" },
-  "á": { components: ["‰J","ƒˆ"], radical: "‰J", radicalName: "‚ ‚ß", strokes: 11, on: ["ƒZƒc"], kun: ["‚ä‚«"], category: "‰ïˆÓ", meaning: "snow" },
-  "‰_": { components: ["‰J","‰]"], radical: "‰J", radicalName: "‚ ‚ß", strokes: 12, on: ["ƒEƒ“"], kun: ["‚­‚à"], category: "‰ïˆÓ", meaning: "cloud" },
-  "¯": { components: ["“ú","¶"], radical: "“ú", radicalName: "‚É‚¿", strokes: 9, on: ["ƒZƒC","ƒVƒ‡ƒE"], kun: ["‚Ù‚µ"], category: "‰ïˆÓ", meaning: "star" },
-  "‘": { components: ["š˜","‹Ê"], radical: "š˜", radicalName: "‚­‚É‚ª‚Ü‚¦", strokes: 8, on: ["ƒRƒN"], kun: ["‚­‚É"], category: "‰ïˆÓ", meaning: "country" },
-  "Œê": { components: ["Œ¾","ŒÜ","Œû"], radical: "Œ¾", radicalName: "‚²‚ñ‚×‚ñ", strokes: 14, on: ["ƒS"], kun: ["‚©‚½"], category: "‰ïˆÓ", meaning: "language/word" },
-  "˜b": { components: ["Œ¾","ã"], radical: "Œ¾", radicalName: "‚²‚ñ‚×‚ñ", strokes: 13, on: ["ƒ"], kun: ["‚Í‚È‚µ","‚Í‚È"], category: "‰ïˆÓ", meaning: "talk/story" },
-  "“Ç": { components: ["Œ¾","”„"], radical: "Œ¾", radicalName: "‚²‚ñ‚×‚ñ", strokes: 14, on: ["ƒhƒN","ƒgƒN","ƒgƒE"], kun: ["‚æ"], category: "Œ`º", meaning: "read" },
-  "‘": { components: ["ãä","“ú"], radical: "“ú", radicalName: "‚É‚¿", strokes: 10, on: ["ƒVƒ‡"], kun: ["‚©"], category: "‰ïˆÓ", meaning: "write/book" },
-  "¶": { components: [], radical: "¶", radicalName: "‚¹‚¢", strokes: 5, on: ["ƒZƒC","ƒVƒ‡ƒE"], kun: ["‚¢","‚¤","‚Í","‚«","‚È‚Ü"], category: "ÛŒ`", meaning: "life/birth" },
-  "‘å": { components: [], radical: "‘å", radicalName: "‚¾‚¢", strokes: 3, on: ["ƒ_ƒC","ƒ^ƒC"], kun: ["‚¨‚¨","‚¨‚¨‚«"], category: "ÛŒ`", meaning: "big" },
-  "¬": { components: [], radical: "¬", radicalName: "‚µ‚å‚¤", strokes: 3, on: ["ƒVƒ‡ƒE"], kun: ["‚¿‚¢","‚±","‚¨"], category: "ÛŒ`", meaning: "small" },
-  "”’": { components: [], radical: "”’", radicalName: "‚µ‚ë", strokes: 5, on: ["ƒnƒN","ƒrƒƒƒN"], kun: ["‚µ‚ë","‚µ‚ç"], category: "ÛŒ`", meaning: "white" },
-  "Ô": { components: ["“y","‰Î"], radical: "Ô", radicalName: "‚ ‚©", strokes: 7, on: ["ƒZƒL","ƒVƒƒƒN"], kun: ["‚ ‚©"], category: "‰ïˆÓ", meaning: "red" },
-  "Â": { components: ["¶","Œ"], radical: "Â", radicalName: "‚ ‚¨", strokes: 8, on: ["ƒZƒC","ƒVƒ‡ƒE"], kun: ["‚ ‚¨"], category: "‰ïˆÓ", meaning: "blue/green" },
-  "•": { components: ["—¢","?"], radical: "•", radicalName: "‚­‚ë", strokes: 11, on: ["ƒRƒN"], kun: ["‚­‚ë"], category: "‰ïˆÓ", meaning: "black" },
-
-  // ??? Œ`ºi‚¯‚¢‚¹‚¢j? ˆÓ•„‚Æ‰¹•„‚Ì‘g‚İ‡‚í‚¹ ???
-  "°": { components: ["“ú","Â"], radical: "“ú", radicalName: "‚É‚¿", strokes: 12, on: ["ƒZƒC"], kun: ["‚Í"], category: "Œ`º", meaning: "clear weather" },
-  "´": { components: ["…","Â"], radical: "…", radicalName: "‚³‚ñ‚¸‚¢", strokes: 11, on: ["ƒZƒC","ƒVƒ‡ƒE"], kun: ["‚«‚æ"], category: "Œ`º", meaning: "pure/clean" },
-  "¿": { components: ["Œ¾","Â"], radical: "Œ¾", radicalName: "‚²‚ñ‚×‚ñ", strokes: 15, on: ["ƒZƒC","ƒVƒ“"], kun: ["‚±","‚¤"], category: "Œ`º", meaning: "request" },
-  "î": { components: ["S","Â"], radical: "S", radicalName: "‚è‚Á‚µ‚ñ‚×‚ñ", strokes: 11, on: ["ƒWƒ‡ƒE","ƒZƒC"], kun: ["‚È‚³‚¯"], category: "Œ`º", meaning: "emotion" },
-  "¸": { components: ["•Ä","Â"], radical: "•Ä", radicalName: "‚±‚ß", strokes: 14, on: ["ƒZƒC","ƒVƒ‡ƒE"], kun: [""], category: "Œ`º", meaning: "spirit/refined" },
-  "“º": { components: ["‹à","“¯"], radical: "‹à", radicalName: "‚©‚Ë", strokes: 14, on: ["ƒhƒE"], kun: ["‚ ‚©‚ª‚Ë"], category: "Œ`º", meaning: "copper" },
-  "|": { components: ["‹à","‰ª"], radical: "‹à", radicalName: "‚©‚Ë", strokes: 16, on: ["ƒRƒE"], kun: ["‚Í‚ª‚Ë"], category: "Œ`º", meaning: "steel" },
-  "‰Í": { components: ["…","‰Â"], radical: "…", radicalName: "‚³‚ñ‚¸‚¢", strokes: 8, on: ["ƒJ"], kun: ["‚©‚í"], category: "Œ`º", meaning: "river" },
-  "ŒÎ": { components: ["…","ŒÓ"], radical: "…", radicalName: "‚³‚ñ‚¸‚¢", strokes: 12, on: ["ƒR"], kun: ["‚İ‚¸‚¤‚İ"], category: "Œ`º", meaning: "lake" },
-  "’r": { components: ["…","–ç"], radical: "…", radicalName: "‚³‚ñ‚¸‚¢", strokes: 6, on: ["ƒ`"], kun: ["‚¢‚¯"], category: "Œ`º", meaning: "pond" },
-  "—m": { components: ["…","—r"], radical: "…", radicalName: "‚³‚ñ‚¸‚¢", strokes: 9, on: ["ƒˆƒE"], kun: [""], category: "Œ`º", meaning: "ocean/Western" },
-  "¼": { components: ["–Ø","Œö"], radical: "–Ø", radicalName: "‚«", strokes: 8, on: ["ƒVƒ‡ƒE"], kun: ["‚Ü‚Â"], category: "Œ`º", meaning: "pine" },
-  "÷": { components: ["–Ø","‰d"], radical: "–Ø", radicalName: "‚«", strokes: 10, on: ["ƒIƒE"], kun: ["‚³‚­‚ç"], category: "Œ`º", meaning: "cherry blossom" },
-  "‹´": { components: ["–Ø","‹ª"], radical: "–Ø", radicalName: "‚«", strokes: 16, on: ["ƒLƒ‡ƒE"], kun: ["‚Í‚µ"], category: "Œ`º", meaning: "bridge" },
-  "‘º": { components: ["–Ø","¡"], radical: "–Ø", radicalName: "‚«", strokes: 7, on: ["ƒ\ƒ“"], kun: ["‚Ş‚ç"], category: "Œ`º", meaning: "village" },
-  "†": { components: ["…",""], radical: "…", radicalName: "‚¢‚Æ", strokes: 10, on: ["ƒV"], kun: ["‚©‚İ"], category: "Œ`º", meaning: "paper" },
-  "ü": { components: ["…","ò"], radical: "…", radicalName: "‚¢‚Æ", strokes: 15, on: ["ƒZƒ“"], kun: [""], category: "Œ`º", meaning: "line/thread" },
-  "”L": { components: ["Œ¢","•c"], radical: "Œ¢", radicalName: "‚¯‚à‚Ì‚Ö‚ñ", strokes: 11, on: ["ƒrƒ‡ƒE"], kun: ["‚Ë‚±"], category: "Œ`º", meaning: "cat" },
-  "": { components: ["“ú","›"], radical: "“ú", radicalName: "‚É‚¿", strokes: 10, on: ["ƒW"], kun: ["‚Æ‚«"], category: "Œ`º", meaning: "time" },
-  "ŠÔ": { components: ["–å","“ú"], radical: "–å", radicalName: "‚à‚ñ", strokes: 12, on: ["ƒJƒ“","ƒPƒ“"], kun: ["‚ ‚¢‚¾","‚Ü"], category: "Œ`º", meaning: "interval/between" },
-  "•·": { components: ["–å","¨"], radical: "¨", radicalName: "‚İ‚İ", strokes: 14, on: ["ƒuƒ“","ƒ‚ƒ“"], kun: ["‚«"], category: "Œ`º", meaning: "hear/ask" },
-  "•Â": { components: ["–å","Ë"], radical: "–å", radicalName: "‚à‚ñ", strokes: 11, on: ["ƒwƒC"], kun: ["‚µ","‚Æ"], category: "Œ`º", meaning: "close/shut" },
-  "ŠJ": { components: ["–å","?"], radical: "–å", radicalName: "‚à‚ñ", strokes: 12, on: ["ƒJƒC"], kun: ["‚ ","‚Ğ‚ç"], category: "Œ`º", meaning: "open" },
-  "–â": { components: ["–å","Œû"], radical: "Œû", radicalName: "‚­‚¿", strokes: 11, on: ["ƒ‚ƒ“"], kun: ["‚Æ"], category: "Œ`º", meaning: "question" },
-  "‰Ì": { components: ["‰Â","Œ‡"], radical: "Œ‡", radicalName: "‚ ‚­‚Ñ", strokes: 14, on: ["ƒJ"], kun: ["‚¤‚½","‚¤‚½"], category: "Œ`º", meaning: "song" },
-  "Z": { components: ["’|","–Ú","œO"], radical: "’|", radicalName: "‚½‚¯‚©‚ñ‚Ş‚è", strokes: 14, on: ["ƒTƒ“"], kun: [""], category: "Œ`º", meaning: "calculate" },
-  "”": { components: ["•Ä","—","¼"], radical: "¼", radicalName: "‚Ú‚­‚Ã‚­‚è", strokes: 13, on: ["ƒXƒE","ƒX"], kun: ["‚©‚¸","‚©‚¼"], category: "Œ`º", meaning: "number/count" },
-  "—ë": { components: ["‰J","—ß"], radical: "‰J", radicalName: "‚ ‚ß", strokes: 13, on: ["ƒŒƒC"], kun: [""], category: "Œ`º", meaning: "zero" },
-  "–³": { components: ["ˆê","‰Î"], radical: "‰Î", radicalName: "‚ê‚Á‚©", strokes: 12, on: ["ƒ€","ƒu"], kun: ["‚È"], category: "‰ïˆÓ", meaning: "nothing/void" },
-  "n": { components: ["—","‘ä"], radical: "—", radicalName: "‚¨‚ñ‚È", strokes: 8, on: ["ƒV"], kun: ["‚Í‚¶"], category: "Œ`º", meaning: "begin" },
-};
-
-/** ‹¤’Ê•”ñƒpƒ^[ƒ“: “¯‚¶‰¹•„‚ğ‹¤—L‚·‚éŠ¿šŒQ */
-const PHONETIC_GROUPS: Record<string, string[]> = {
-  "Â": ["°","´","¿","î","¸"],
-  "–å": ["ŠÔ","•·","•Â","ŠJ","–â"],
-  "…": ["‰Í","ŒÎ","’r","—m","ŠC","´"],
-  "–Ø": ["—Ñ","X","¼","÷","‹´","‘º","–{","––"],
-  "‹à": ["“º","|"],
-  "Œ¾": ["Œê","˜b","“Ç","¿"],
-  "“ú": ["–¾","°","","ŠÔ","¯"],
-  "S": ["v","”E","î","ˆ¤"],
-  "‰Î": ["‰Š","”¨","Œõ"],
-  "R": ["Šâ","“»"],
-  "‰J": ["—‹","á","‰_","—ë"],
-};
-
-// „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
-// StringMDim ¶¬ŠÖ”
-// „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
-
-/** Š¿š¨StringMDim•ª‰ğ: u‹xv¨ {center:"‹x", neighbors:["l","–Ø"]} */
-function kanjiToStringMDim(ch: string): StringMDim {
-  const info = KANJI_DB[ch];
-  if (!info) {
-    // «‘‚É‚È‚¢Š¿š: 1•¶š’†SA‹ó‹ß–T
-    return {
-      reiType: 'StringMDim',
-      center: ch,
-      neighbors: [],
-      mode: 'kanji',
-      metadata: { known: false },
-    };
-  }
-  return {
-    reiType: 'StringMDim',
-    center: ch,
-    neighbors: info.components.length > 0 ? info.components : [ch],
-    mode: 'kanji',
-    metadata: {
-      known: true,
-      radical: info.radical,
-      radicalName: info.radicalName,
-      strokes: info.strokes,
-      on: info.on,
-      kun: info.kun,
-      category: info.category,
-      meaning: info.meaning,
-    },
-  };
-}
-
-/** •¡”Š¿š¨StringMDim: u–¾“úv¨ {center:"–¾“ú", neighbors:["–¾","“ú"]} */
-function wordToStringMDim(word: string): StringMDim {
-  const chars = Array.from(word);
-  if (chars.length === 1) return kanjiToStringMDim(chars[0]);
-
-  return {
-    reiType: 'StringMDim',
-    center: word,
-    neighbors: chars,
-    mode: 'kanji',
-    metadata: {
-      charCount: chars.length,
-      components: chars.map(c => {
-        const info = KANJI_DB[c];
-        return info ? { char: c, components: info.components, category: info.category } : { char: c, components: [], category: 'unknown' };
-      }),
-    },
-  };
-}
-
-/** “ú–{Œê•¶¨qŒê’†SStringMDimiŠÈˆÕ“I‚È•Œ•ªŠ„j */
-function sentenceToStringMDim(text: string): StringMDim {
-  // •Œƒpƒ^[ƒ“‚Å•¶ß•ªŠ„iŠÈˆÕ”Åj
-  const particles = /([‚ª‚Í‚ğ‚É‚Å‚Æ‚Ì‚Ö‚à‚â‚©‚È‚ª‚ç‚Ü‚Å‚æ‚è‚³‚¦‚¾‚¯‚Î‚©‚è‚µ‚©‚±‚»]+)/;
-  const parts: string[] = [];
-  let predicate = '';
-
-  // •Œ‚ÌŒã‚ë‚Å•ªŠ„‚µ‚Ä•¶ß‚ğì‚é
-  const segments = text.split(particles).filter(s => s.length > 0);
-
-  let currentBunsetsu = '';
-  for (const seg of segments) {
-    currentBunsetsu += seg;
-    if (particles.test(seg)) {
-      parts.push(currentBunsetsu);
-      currentBunsetsu = '';
-    }
-  }
-  if (currentBunsetsu.length > 0) {
-    predicate = currentBunsetsu; // ÅŒã‚ÌƒZƒOƒƒ“ƒg‚ªqŒê
-  }
-
-  // qŒê‚ª‹ó‚È‚çÅŒã‚Ì•¶ß‚ğqŒê‚Æ‚·‚é
-  if (!predicate && parts.length > 0) {
-    predicate = parts.pop()!;
-  }
-
-  return {
-    reiType: 'StringMDim',
-    center: predicate || text,
-    neighbors: parts,
-    mode: 'sentence',
-    metadata: {
-      original: text,
-      bunsetsuCount: parts.length + 1,
-      particlesFound: parts.map(p => {
-        const match = p.match(particles);
-        return match ? match[0] : '';
-      }),
-    },
-  };
-}
-
-/** ’†‘Œêº’²¨StringMDim */
-function toneToStringMDim(pinyin: string, toneVariants: string[]): StringMDim {
-  return {
-    reiType: 'StringMDim',
-    center: pinyin,
-    neighbors: toneVariants,
-    mode: 'tone',
-    metadata: {
-      toneCount: toneVariants.length,
-      // M1Œö—: “¯‚¶‰¹‚Éƒ‚[ƒh‚ğ•Ï‚¦‚é‚ÆˆÓ–¡‚ª•Ï‚í‚é
-      m1_correspondence: 'tone = compute mode',
-    },
-  };
-}
-
-/** 2‚Â‚ÌŠ¿šStringMDim‚Ì\‘¢“I—Ş—“x */
-function kanjiSimilarity(a: StringMDim, b: StringMDim): any {
-  const aComps = new Set(a.neighbors);
-  const bComps = new Set(b.neighbors);
-
-  // ‹¤’Ê\¬—v‘f
-  const shared: string[] = [];
-  for (const c of aComps) {
-    if (bComps.has(c)) shared.push(c);
-  }
-
-  // Jaccard—Ş—“x
-  const unionSize = new Set([...aComps, ...bComps]).size;
-  const jaccard = unionSize > 0 ? shared.length / unionSize : 0;
-
-  // •”ñˆê’v
-  const sameRadical = a.metadata?.radical === b.metadata?.radical;
-
-  // ƒJƒeƒSƒŠˆê’v
-  const sameCategory = a.metadata?.category === b.metadata?.category;
-
-  // ‰æ”‚Ì‹ß‚³
-  const strokeDiff = Math.abs((a.metadata?.strokes ?? 0) - (b.metadata?.strokes ?? 0));
-  const strokeSimilarity = 1 / (1 + strokeDiff);
-
-  // ‰¹•„ƒOƒ‹[ƒv‚Ì‹¤—L
-  let sharedPhoneticGroup = false;
-  for (const [, group] of Object.entries(PHONETIC_GROUPS)) {
-    if (group.includes(a.center) && group.includes(b.center)) {
-      sharedPhoneticGroup = true;
-      break;
-    }
-  }
-
-  // ‘‡—Ş—“x
-  const strength = (
-    jaccard * 0.35 +
-    (sameRadical ? 0.25 : 0) +
-    (sameCategory ? 0.15 : 0) +
-    strokeSimilarity * 0.1 +
-    (sharedPhoneticGroup ? 0.15 : 0)
-  );
-
-  return {
-    reiType: 'KanjiSimilarity',
-    pair: [a.center, b.center],
-    strength: Math.min(1, strength),
-    sharedComponents: shared,
-    jaccard,
-    sameRadical,
-    sameCategory,
-    strokeDiff,
-    sharedPhoneticGroup,
-  };
-}
-
-/** Š¿š‚Ì‹tˆø‚«: \¬—v‘f‚©‚çŠ¿š‚ğŒŸõ */
-function reverseKanjiLookup(components: string[]): string[] {
-  const results: string[] = [];
-  const compSet = new Set(components);
-
-  for (const [kanji, info] of Object.entries(KANJI_DB)) {
-    if (info.components.length === 0) continue;
-    // ‘S\¬—v‘f‚ªŠÜ‚Ü‚ê‚é‚©
-    if (info.components.every(c => compSet.has(c))) {
-      results.push(kanji);
-    }
-  }
-  return results;
-}
-
-/** “¯‰¹ƒOƒ‹[ƒv‚Ìæ“¾ */
-function getPhoneticGroup(ch: string): string[] {
-  for (const [key, group] of Object.entries(PHONETIC_GROUPS)) {
-    if (ch === key || group.includes(ch)) return group;
-  }
-  return [];
-}
-
-// ============================================================
-// Serialization ? ??‚ÌƒVƒŠƒAƒ‰ƒCƒ[[ƒVƒ‡ƒ“i•Û‘¶E•œŒ³j
-// serialize: Rei’l ¨ JSON•¶š—ñiƒĞ/ƒÑ/ŠoÁó‘Ô‚ğŠÜ‚Şj
-// deserialize: JSON•¶š—ñ ¨ Rei’li—ˆ—ğ‚ğˆø‚«Œp‚¢‚ÅŒvZÄŠJj
-// ============================================================
-
-const REI_SERIAL_VERSION = "0.3.1";
-
-function reiSerialize(value: any, pretty: boolean = false): string {
-  const type = detectSerialType(value);
-  let sigma: any;
-  if (value !== null && typeof value === "object" && value.__sigma__) {
-    sigma = {
-      memory: value.__sigma__.memory || [],
-      tendency: value.__sigma__.tendency || "rest",
-      pipeCount: value.__sigma__.pipeCount || 0,
-    };
-  }
-  const payload = cleanSerialPayload(value);
-  const envelope = {
-    __rei__: true as const,
-    version: REI_SERIAL_VERSION,
-    type,
-    timestamp: new Date().toISOString(),
-    payload,
-    ...(sigma ? { sigma } : {}),
-  };
-  return JSON.stringify(envelope, null, pretty ? 2 : undefined);
-}
-
-function reiDeserialize(value: any): any {
-  let json: string;
-  if (typeof value === "string") {
-    json = value;
-  } else if (typeof value === "object" && value !== null && value.reiType === "ReiVal" && typeof value.value === "string") {
-    json = value.value;
-  } else {
-    json = JSON.stringify(value);
-  }
-  let parsed: any;
-  try { parsed = JSON.parse(json); } catch (e) {
-    throw new Error(`deserialize: –³Œø‚ÈJSON ? ${(e as Error).message}`);
-  }
-  if (parsed && parsed.__rei__ === true && "payload" in parsed) {
-    let val = parsed.payload;
-    if (parsed.sigma && val !== null && typeof val === "object") {
-      val.__sigma__ = {
-        memory: parsed.sigma.memory || [],
-        tendency: parsed.sigma.tendency || "rest",
-        pipeCount: parsed.sigma.pipeCount || 0,
-      };
-    }
-    return val;
-  }
-  return parsed;
-}
-
-function detectSerialType(value: any): string {
-  if (value === null || value === undefined) return "null";
-  if (typeof value === "number") return "number";
-  if (typeof value === "string") return "string";
-  if (typeof value === "boolean") return "boolean";
-  if (Array.isArray(value)) return "array";
-  if (typeof value === "object" && value.reiType) return value.reiType;
-  return "object";
-}
-
-function cleanSerialPayload(value: any): any {
-  if (value === null || value === undefined) return value;
-  if (typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(cleanSerialPayload);
-  const clean: any = {};
-  for (const key of Object.keys(value)) {
-    if (key === "__sigma__") continue;
-    clean[key] = value[key];
-  }
-  return clean;
-}
-
-// ============================================================
-// RCT Compress / Decompress ? D-FUMT Theory #67
-// ============================================================
-// uƒf[ƒ^‚ğ•Û‘¶‚·‚é‚Ì‚Å‚Í‚È‚­Aƒf[ƒ^‚ğ¶¬‚·‚éŒö—‚ğ•Û‘¶‚·‚év
-// ReiŒ¾Œê‚Ì‘g‚İƒpƒCƒvƒRƒ}ƒ“ƒh:
-//   data |> compress         ¨ CompressedRei
-//   compressed |> decompress ¨ Œ³ƒf[ƒ^
-//   data |> compress_info    ¨ ˆ³kƒƒ^ƒf[ƒ^
-//   data |> ˆ³k             ¨ CompressedRei (“ú–{Œê)
-//   compressed |> •œŒ³       ¨ Œ³ƒf[ƒ^ (“ú–{Œê)
-
-interface CompressedRei {
-  reiType: 'CompressedRei';
-  params: GenerativeParams;
-  originalLength: number;
-  originalType: 'array' | 'string' | 'number' | 'object';
-  compressionRatio: number;
-  exactMatch: boolean;
-}
-
-function reiCompress(value: any): CompressedRei {
-  const originalType = typeof value === 'string' ? 'string'
-    : typeof value === 'number' ? 'number'
-    : Array.isArray(value) ? 'array'
-    : 'object';
-
-  const data = valueToNumberArray(value);
-  const result = compressToGenerativeParams(data);
-
-  return {
-    reiType: 'CompressedRei',
-    params: result.params,
-    originalLength: data.length,
-    originalType,
-    compressionRatio: result.compressionRatio,
-    exactMatch: result.exactMatch,
-  };
-}
-
-function reiDecompress(value: any): any {
-  if (value && typeof value === 'object' && value.reiType === 'CompressedRei') {
-    const comp = value as CompressedRei;
-    const restored = generate(comp.params, comp.originalLength);
-
-    // Œ³‚Ìƒf[ƒ^Œ^‚É•œŒ³
-    if (comp.originalType === 'string') {
-      try {
-        return Buffer.from(restored).toString('utf-8');
-      } catch (_) { return restored; }
-    }
-    if (comp.originalType === 'number' && restored.length === 1) {
-      return restored[0];
-    }
-    if (comp.originalType === 'object') {
-      try {
-        return JSON.parse(Buffer.from(restored).toString('utf-8'));
-      } catch (_) { return restored; }
-    }
-
-    // ”’l”z—ñ‚Æ‚µ‚Ä•œŒ³
-    return restored;
-  }
-  throw new Error('•œŒ³: CompressedReiŒ^‚Ìƒf[ƒ^‚ª•K—v‚Å‚·');
-}
-
-function reiCompressInfo(value: any): any {
-  const data = valueToNumberArray(value);
-  const result = compressToGenerativeParams(data);
-
-  return {
-    reiType: 'CompressInfo',
-    type: result.params.type,
-    originalSize: data.length,
-    compressedSize: result.params.size,
-    compressionRatio: result.compressionRatio,
-    exactMatch: result.exactMatch,
-    kolmogorovEstimate: result.kolmogorovEstimate,
-    improvement: `${((1 - result.compressionRatio) * 100).toFixed(1)}% íŒ¸`,
-  };
-}
-
-/** Rei’l‚ğ”’l”z—ñ‚É•ÏŠ·iˆ³k“ü—Í‚Ì³‹K‰»j */
-function valueToNumberArray(value: any): number[] {
-  // ”’l”z—ñ
-  if (Array.isArray(value)) {
-    return value.map((v: any) => {
-      if (typeof v === 'number') return v;
-      if (typeof v === 'string') return v.charCodeAt(0);
-      return 0;
-    });
-  }
-  // •¶š—ñ ¨ UTF-8ƒoƒCƒg—ñ
-  if (typeof value === 'string') {
-    return Array.from(Buffer.from(value, 'utf-8'));
-  }
-  // ”’l ¨ ’Pˆê—v‘f”z—ñ
-  if (typeof value === 'number') {
-    return [value];
-  }
-  // ƒIƒuƒWƒFƒNƒg ¨ JSON•¶š—ñ ¨ ƒoƒCƒg—ñ
-  if (typeof value === 'object' && value !== null) {
-    const json = JSON.stringify(value);
-    return Array.from(Buffer.from(json, 'utf-8'));
-  }
-  throw new Error('ˆ³k: ‘Î‰‚µ‚Ä‚¢‚È‚¢ƒf[ƒ^Œ^‚Å‚·');
-}
-
-// ============================================================
-// RCT •ûŒü3: Semantic Compress / Decompress / Verify (ƒ[ƒJƒ‹“¯Šú”Å)
-// ============================================================
-// Evaluator“à‚Å‚Ì“¯ŠúÀs—pBAPIÚ‘±”Å‚Ítheory/semantic-compressor.ts‚ğg—pB
-// Rei\•¶:
-//   data |> semantic_compress           ¨ SemanticThetaLocal
-//   theta |> semantic_decompress        ¨ •œŒ³•¶š—ñ
-//   [orig, recon] |> semantic_verify    ¨ ŒŸØŒ‹‰Ê
-//   data |> ˆÓ–¡ˆ³k / theta |> ˆÓ–¡•œŒ³ / [a,b] |> ˆÓ–¡ŒŸØ i“ú–{Œê”Åj
-
-interface SemanticThetaLocal {
-  reiType: 'SemanticTheta';
-  version: '3.0';
-  fidelity: string;
-  intent: string;
-  structure: string;
-  functions: string[];
-  imports: string[];
-  types: string[];
-  patterns: string[];
-  language: string;
-  originalSize: number;
-  thetaSize: number;
-  compressionRatio: number;
-}
-
-function reiLocalSemanticCompress(data: string, fidelity: string = 'high'): SemanticThetaLocal {
-  const lines = data.split('\n');
-  const originalSize = Buffer.byteLength(data, 'utf-8');
-
-  // ŠÖ”ƒVƒOƒlƒ`ƒƒ’Šo
-  const functions: string[] = [];
-  for (const line of lines) {
-    const funcMatch = line.match(/(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)(?:\s*:\s*([^\s{]+))?/);
-    if (funcMatch) {
-      functions.push(`${funcMatch[1]}(${funcMatch[2].replace(/\s+/g, '')})${funcMatch[3] ? ':' + funcMatch[3] : ''}`);
-    }
-    const methodMatch = line.match(/^\s{2,}(?:async\s+)?(\w+)\s*\(([^)]*)\)(?:\s*:\s*([^\s{]+))?\s*\{/);
-    if (methodMatch && !['if','for','while','switch','catch','else'].includes(methodMatch[1])) {
-      functions.push(`.${methodMatch[1]}(${methodMatch[2].replace(/\s+/g, '')})`);
-    }
-  }
-
-  // import’Šo
-  const imports: string[] = [];
-  for (const line of lines) {
-    const impMatch = line.match(/from\s+['"]([^'"]+)['"]/);
-    if (impMatch) imports.push(impMatch[1]);
-  }
-
-  // interface/class/type ’Šo
-  const types: string[] = [];
-  for (const line of lines) {
-    const typeMatch = line.match(/(?:export\s+)?(?:interface|class|type)\s+(\w+)/);
-    if (typeMatch) types.push(typeMatch[1]);
-  }
-
-  // ƒpƒ^[ƒ“ŒŸo
-  const patterns: string[] = [];
-  if (data.includes('async')) patterns.push('async/await');
-  if (data.includes('extends') || data.includes('implements')) patterns.push('inheritance');
-  if (data.match(/\.map\(|\.filter\(|\.reduce\(/)) patterns.push('functional');
-  if (data.includes('try') && data.includes('catch')) patterns.push('error-handling');
-
-  // ƒRƒƒ“ƒg‚©‚çˆÓ}‚ğ’Šo
-  const comments = lines
-    .filter(l => l.trim().startsWith('//') || l.trim().startsWith('*'))
-    .slice(0, 5)
-    .map(c => c.replace(/^[\s/*]+/, '').trim())
-    .filter(Boolean);
-
-  // Œ¾ŒêŒŸo
-  const language = data.includes('interface ') || data.includes(': string') ? 'TypeScript'
-    : data.includes('def ') ? 'Python'
-    : data.includes('fn ') ? 'Rust'
-    : 'JavaScript';
-
-  // fidelity‚É‚æ‚Á‚ÄÚ×“x‚ğ’²®
-  const funcsToInclude = fidelity === 'low' ? functions.slice(0, 3)
-    : fidelity === 'medium' ? functions.slice(0, 8)
-    : functions;
-
-  const theta: SemanticThetaLocal = {
-    reiType: 'SemanticTheta',
-    version: '3.0',
-    fidelity,
-    intent: comments.join('. ').substring(0, 120) || 'code module',
-    structure: `${types.length}types, ${functions.length}fns, ${imports.length}deps`,
-    functions: funcsToInclude,
-    imports,
-    types,
-    patterns,
-    language,
-    originalSize,
-    thetaSize: 0,
-    compressionRatio: 0,
-  };
-
-  const thetaJson = JSON.stringify(theta);
-  theta.thetaSize = Buffer.byteLength(thetaJson, 'utf-8');
-  theta.compressionRatio = theta.thetaSize / originalSize;
-
-  return theta;
-}
-
-function reiLocalSemanticDecompress(input: any): string {
-  if (!input || typeof input !== 'object' || input.reiType !== 'SemanticTheta') {
-    throw new Error('semantic_decompress: SemanticThetaŒ^‚Ìƒf[ƒ^‚ª•K—v‚Å‚· (data |> semantic_compress ‚ÌŒ‹‰Ê‚ğ“n‚µ‚Ä‚­‚¾‚³‚¢)');
-  }
-
-  const theta = input as SemanticThetaLocal;
-
-  // ƒÆ‚©‚çŠT—vƒR[ƒh‚ğÄ¶¬iƒ[ƒJƒ‹ƒ‚[ƒhj
-  const lines: string[] = [];
-
-  lines.push(`// ${theta.intent}`);
-  lines.push(`// Structure: ${theta.structure}`);
-  lines.push('');
-
-  // imports
-  for (const dep of theta.imports) {
-    lines.push(`import { /* ... */ } from '${dep}';`);
-  }
-  if (theta.imports.length > 0) lines.push('');
-
-  // types
-  for (const t of theta.types) {
-    lines.push(`interface ${t} { /* ... */ }`);
-  }
-  if (theta.types.length > 0) lines.push('');
-
-  // functions
-  for (const fn of theta.functions) {
-    if (fn.startsWith('.')) {
-      lines.push(`  ${fn.slice(1)} { /* ... */ }`);
-    } else {
-      lines.push(`export function ${fn} {`);
-      lines.push('  // TODO: implement');
-      lines.push('}');
-      lines.push('');
-    }
-  }
-
-  lines.push(`// RCT Semantic Reconstruction (local mode)`);
-  lines.push(`// Connect ANTHROPIC_API_KEY for full LLM-powered reconstruction`);
-
-  return lines.join('\n');
-}
-
-function reiLocalSemanticVerify(original: string, reconstructed: string): {
-  reiType: string; score: number; functional: number; structural: number; details: string;
-} {
-  // ŠÖ”–¼‚Ìˆê’v—¦
-  const extractNames = (code: string) => new Set(
-    (code.match(/(?:function|class|interface)\s+(\w+)/g) || [])
-      .map(m => m.replace(/(?:function|class|interface)\s+/, ''))
-  );
-
-  const origNames = extractNames(original);
-  const reconNames = extractNames(reconstructed);
-
-  let matches = 0;
-  for (const name of origNames) {
-    if (reconNames.has(name)) matches++;
-  }
-
-  const structural = origNames.size > 0 ? matches / origNames.size : 0;
-
-  // importˆê’v—¦
-  const extractImports = (code: string) => new Set(
-    (code.match(/from\s+['"]([^'"]+)['"]/g) || []).map(m => m.replace(/from\s+['"]|['"]/g, ''))
-  );
-  const origImports = extractImports(original);
-  const reconImports = extractImports(reconstructed);
-  let importMatches = 0;
-  for (const imp of origImports) {
-    if (reconImports.has(imp)) importMatches++;
-  }
-  const importScore = origImports.size > 0 ? importMatches / origImports.size : 1;
-
-  // ‘‡ƒXƒRƒA
-  const score = structural * 0.6 + importScore * 0.2 + 0.2;
-  const functional = structural * 0.7;
-
-  return {
-    reiType: 'SemanticVerify',
-    score: Math.round(score * 1000) / 1000,
-    functional: Math.round(functional * 1000) / 1000,
-    structural: Math.round(structural * 1000) / 1000,
-    details: `${matches}/${origNames.size} identifiers, ${importMatches}/${origImports.size} imports matched`,
-  };
-}
-
-function quadNot(v: string): string {
-  switch (v) {
-    case "top": return "bottom";
-    case "bottom": return "top";
-    case "topPi": return "bottomPi";
-    case "bottomPi": return "topPi";
-    default: return v;
-  }
-}
-
-function quadAnd(a: string, b: string): string {
-  if (a === "bottom" || b === "bottom") return "bottom";
-  if (a === "top" && b === "top") return "top";
-  return "bottomPi";
-}
-
-function quadOr(a: string, b: string): string {
-  if (a === "top" || b === "top") return "top";
-  if (a === "bottom" && b === "bottom") return "bottom";
-  return "topPi";
-}
-
-// --- Genesis ---
-
-const PHASE_ORDER = ["void", "dot", "line", "surface", "solid", "omega"];
-
-function createGenesis() {
-  return { reiType: "State" as const, state: "void", omega: 0, history: ["void"] };
-}
-
-function genesisForward(g: any) {
-  const idx = PHASE_ORDER.indexOf(g.state);
-  if (idx < PHASE_ORDER.length - 1) {
-    g.state = PHASE_ORDER[idx + 1];
-    g.history.push(g.state);
-    if (g.state === "omega") g.omega = 1;
-  }
-}
-
-// ============================================================
-// EVALUATOR
-// ============================================================
+// --- Extracted modules ---
+import {
+  createExtended, parseExtLit,
+  ALL_COMPUTE_MODES, computeMDim, computeBlend, projectToMDim,
+  projectAll, computeAll, compareModes, perspectives, computeNestedMDim,
+  respondToStimulus, computeSensitivity, computeAwareness,
+  applyTransform, checkModeEquivalence,
+  computeResonance, getResonanceField, resonanceMap, resonanceChain,
+  projectAs, composeProjections, checkRepresentable,
+  deriveMode, getModeSpace, measureDepth, nestMDim, recursiveCompute,
+  structuralSimilarity, bridgeMDim, encodeMDim, decodeMDim,
+  mapSolutions, computeConsensus, selectBest, rankSolutions, solutionCompleteness,
+  AWAKENING_THRESHOLD,
+} from './mdim-core';
+import {
+  evolveMode,
+  type EvolveResult, type EvolveCandidate,
+} from './evolve';
+import {
+  kanjiToStringMDim, wordToStringMDim, sentenceToStringMDim,
+  toneToStringMDim, kanjiSimilarity, reverseKanjiLookup, getPhoneticGroup,
+  type StringMDim, type KanjiInfo,
+} from './string-mdim';
+import {
+  reiSerialize, reiDeserialize, detectSerialType, cleanSerialPayload,
+  reiCompress, reiDecompress, reiCompressInfo, valueToNumberArray,
+  reiLocalSemanticCompress, reiLocalSemanticDecompress, reiLocalSemanticVerify,
+} from './rct-local';
+import {
+  quadNot, quadAnd, quadOr,
+  createGenesis, genesisForward,
+} from './quad-genesis';
 
 export class Evaluator {
   env: Environment;
-  // „Ÿ„Ÿ v0.4: ŠÖŒWƒGƒ“ƒWƒ“ „Ÿ„Ÿ
+  // â”€â”€ v0.4: é–¢ä¿‚ã‚¨ãƒ³ã‚¸ãƒ³ â”€â”€
   bindingRegistry: BindingRegistry = new BindingRegistry();
 
   constructor(parent?: Environment) {
@@ -2475,10 +205,10 @@ export class Evaluator {
       case "ReflectOp": return this.evalReflect(ast);
       case "IfExpr": return this.evalIfExpr(ast);
       case "MatchExpr": return this.evalMatchExpr(ast);
-      // „Ÿ„Ÿ v0.3 „Ÿ„Ÿ
+      // â”€â”€ v0.3 â”€â”€
       case "SpaceLit": return this.evalSpaceLit(ast);
       default:
-        throw new Error(`–¢À‘•‚Ìƒm[ƒhŒ^: ${ast.type}`);
+        throw new Error(`æœªå®Ÿè£…ã®ãƒãƒ¼ãƒ‰å‹: ${ast.type}`);
     }
   }
 
@@ -2504,7 +234,7 @@ export class Evaluator {
     const rawCenter = this.eval(ast.center);
     const rawNeighbors = ast.neighbors.map((n: any) => this.eval(n));
 
-    // „Ÿ„Ÿ ’Œ‡A: •¶š—ñ‚ğŠÜ‚Şê‡‚ÍStringMDim‚ğ¶¬ „Ÿ„Ÿ
+    // â”€â”€ æŸ±â‘¡: æ–‡å­—åˆ—ã‚’å«ã‚€å ´åˆã¯StringMDimã‚’ç”Ÿæˆ â”€â”€
     const hasString = typeof rawCenter === 'string' ||
       rawNeighbors.some((n: any) => typeof n === 'string');
 
@@ -2528,7 +258,7 @@ export class Evaluator {
     return { reiType: "MDim", center, neighbors, mode, weights };
   }
 
-  // „Ÿ„Ÿ v0.3: Space literal evaluation „Ÿ„Ÿ
+  // â”€â”€ v0.3: Space literal evaluation â”€â”€
   private evalSpaceLit(ast: any): ReiSpace {
     const space = createSpace((ast.topology || "flat") as any);
 
@@ -2589,19 +319,19 @@ export class Evaluator {
       case "/": return r !== 0 ? l / r : NaN;
       case "\u2295": return l + r;     // ?
       case "\u2297": return l * r;     // ?
-      case "\xB7": return l * r;       // E
+      case "\xB7": return l * r;       // ãƒ»
       case "==": return l === r;
       case "!=": return l !== r;
       case ">": return l > r;
       case "<": return l < r;
       case ">=": return l >= r;
       case "<=": return l <= r;
-      case ">\u03BA": return l > r;    // >ƒÈ
-      case "<\u03BA": return l < r;    // <ƒÈ
-      case "=\u03BA": return l === r;  // =ƒÈ
-      case "\u2227": return l !== 0 && r !== 0;  // È
-      case "\u2228": return l !== 0 || r !== 0;  // É
-      default: throw new Error(`–¢’m‚Ì‰‰Zq: ${ast.op}`);
+      case ">\u03BA": return l > r;    // >Îº
+      case "<\u03BA": return l < r;    // <Îº
+      case "=\u03BA": return l === r;  // =Îº
+      case "\u2227": return l !== 0 && r !== 0;  // âˆ§
+      case "\u2228": return l !== 0 || r !== 0;  // âˆ¨
+      default: throw new Error(`æœªçŸ¥ã®æ¼”ç®—å­: ${ast.op}`);
     }
   }
 
@@ -2612,7 +342,7 @@ export class Evaluator {
       case "\xAC":
         if (this.isQuad(operand)) return { reiType: "Quad", value: quadNot(operand.value) };
         return !operand;
-      default: throw new Error(`–¢’m‚Ì’P€‰‰Zq: ${ast.op}`);
+      default: throw new Error(`æœªçŸ¥ã®å˜é …æ¼”ç®—å­: ${ast.op}`);
     }
   }
 
@@ -2620,39 +350,39 @@ export class Evaluator {
     const rawInput = this.eval(ast.input);
     const cmd = ast.command;
     if (cmd.type === "PipeCmd") {
-      // „Ÿ„Ÿ Tier 1: ƒĞƒƒ‚ƒŠ’ÇÕ „Ÿ„Ÿ
-      // sigmaƒRƒ}ƒ“ƒh©‘Ì‚Íƒ‰ƒbƒv‚µ‚È‚¢iQÆ‘€ì‚È‚Ì‚Åj
+      // â”€â”€ Tier 1: Ïƒãƒ¡ãƒ¢ãƒªè¿½è·¡ â”€â”€
+      // sigmaã‚³ãƒãƒ³ãƒ‰è‡ªä½“ã¯ãƒ©ãƒƒãƒ—ã—ãªã„ï¼ˆå‚ç…§æ“ä½œãªã®ã§ï¼‰
       if (cmd.cmd === "sigma") {
         return this.execPipeCmd(rawInput, cmd);
       }
-      // „Ÿ„Ÿ Serialization: serialize/deserialize ‚àƒ‰ƒbƒv‚µ‚È‚¢ „Ÿ„Ÿ
+      // â”€â”€ Serialization: serialize/deserialize ã‚‚ãƒ©ãƒƒãƒ—ã—ãªã„ â”€â”€
       if (cmd.cmd === "serialize" || cmd.cmd === "serialize_pretty") {
         return reiSerialize(rawInput, cmd.cmd === "serialize_pretty");
       }
       if (cmd.cmd === "deserialize") {
         return reiDeserialize(rawInput);
       }
-      // „Ÿ„Ÿ RCT: compress/decompress/compress_info ‚àƒ‰ƒbƒv‚µ‚È‚¢ „Ÿ„Ÿ
-      if (cmd.cmd === "compress" || cmd.cmd === "ˆ³k") {
+      // â”€â”€ RCT: compress/decompress/compress_info ã‚‚ãƒ©ãƒƒãƒ—ã—ãªã„ â”€â”€
+      if (cmd.cmd === "compress" || cmd.cmd === "åœ§ç¸®") {
         return reiCompress(rawInput);
       }
-      if (cmd.cmd === "decompress" || cmd.cmd === "•œŒ³") {
+      if (cmd.cmd === "decompress" || cmd.cmd === "å¾©å…ƒ") {
         return reiDecompress(rawInput);
       }
-      if (cmd.cmd === "compress_info" || cmd.cmd === "ˆ³kî•ñ") {
+      if (cmd.cmd === "compress_info" || cmd.cmd === "åœ§ç¸®æƒ…å ±") {
         return reiCompressInfo(rawInput);
       }
-      // „Ÿ„Ÿ RCT •ûŒü3: semantic_compress/decompress/verify „Ÿ„Ÿ
-      if (cmd.cmd === "semantic_compress" || cmd.cmd === "ˆÓ–¡ˆ³k") {
+      // â”€â”€ RCT æ–¹å‘3: semantic_compress/decompress/verify â”€â”€
+      if (cmd.cmd === "semantic_compress" || cmd.cmd === "æ„å‘³åœ§ç¸®") {
         const data = typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
         const evalArgs = (cmd.args || []).map((a: any) => this.eval(a));
         const fidelity = (evalArgs.length > 1 && typeof evalArgs[1] === 'string' ? evalArgs[1] : 'high');
         return reiLocalSemanticCompress(data, fidelity);
       }
-      if (cmd.cmd === "semantic_decompress" || cmd.cmd === "ˆÓ–¡•œŒ³") {
+      if (cmd.cmd === "semantic_decompress" || cmd.cmd === "æ„å‘³å¾©å…ƒ") {
         return reiLocalSemanticDecompress(rawInput);
       }
-      if (cmd.cmd === "semantic_verify" || cmd.cmd === "ˆÓ–¡ŒŸØ") {
+      if (cmd.cmd === "semantic_verify" || cmd.cmd === "æ„å‘³æ¤œè¨¼") {
         if (!Array.isArray(rawInput) || rawInput.length < 2) {
           throw new Error('semantic_verify expects [original, reconstructed] array');
         }
@@ -2660,135 +390,135 @@ export class Evaluator {
         const recon = typeof rawInput[1] === 'string' ? rawInput[1] : JSON.stringify(rawInput[1]);
         return reiLocalSemanticVerify(orig, recon);
       }
-      // „Ÿ„Ÿ Evolve: evolve_value ‚Íƒ‰ƒbƒv‚µ‚È‚¢i’¼’l•Ô‹pj „Ÿ„Ÿ
+      // â”€â”€ Evolve: evolve_value ã¯ãƒ©ãƒƒãƒ—ã—ãªã„ï¼ˆç›´å€¤è¿”å´ï¼‰ â”€â”€
       if (cmd.cmd === "evolve_value") {
         return this.execPipeCmd(rawInput, cmd);
       }
-      // „Ÿ„Ÿ ’Œ‡C: Thought Loop ? think/vl ‚Íƒ‰ƒbƒv‚µ‚È‚¢iThoughtResult’¼•Ô‹pj „Ÿ„Ÿ
-      if (cmd.cmd === "think" || cmd.cmd === "vl" ||
-          cmd.cmd === "think_trajectory" || cmd.cmd === "‹OÕ" ||
+      // â”€â”€ æŸ±â‘£: Thought Loop ? think/æ€è€ƒ ã¯ãƒ©ãƒƒãƒ—ã—ãªã„ï¼ˆThoughtResultç›´è¿”å´ï¼‰ â”€â”€
+      if (cmd.cmd === "think" || cmd.cmd === "æ€è€ƒ" ||
+          cmd.cmd === "think_trajectory" || cmd.cmd === "è»Œè·¡" ||
           cmd.cmd === "think_modes" || cmd.cmd === "think_dominant" ||
-          cmd.cmd === "think_format" || cmd.cmd === "vl•\¦") {
+          cmd.cmd === "think_format" || cmd.cmd === "æ€è€ƒè¡¨ç¤º") {
         return this.execPipeCmd(rawInput, cmd);
       }
-      // ThoughtResult‚ÌŒã‘±ƒpƒCƒv‚à’¼’l•Ô‹p
+      // ThoughtResultã®å¾Œç¶šãƒ‘ã‚¤ãƒ—ã‚‚ç›´å€¤è¿”å´
       if (rawInput?.reiType === 'ThoughtResult' || (rawInput?.reiType === 'ReiVal' && rawInput?.value?.reiType === 'ThoughtResult')) {
         const thoughtAccessors = [
-          "final_value", "ÅI’l", "iterations", "”½•œ”",
-          "stop_reason", "’â~——R", "trajectory", "‹OÕ",
-          "convergence", "û‘©—¦", "awareness", "ŠoÁ“x",
-          "tendency", "ˆÓu", "steps", "‘S—š—ğ",
-          "dominant_mode", "x”zƒ‚[ƒh",
+          "final_value", "æœ€çµ‚å€¤", "iterations", "åå¾©æ•°",
+          "stop_reason", "åœæ­¢ç†ç”±", "trajectory", "è»Œè·¡",
+          "convergence", "åæŸç‡", "awareness", "è¦šé†’åº¦",
+          "tendency", "æ„å¿—", "steps", "å…¨å±¥æ­´",
+          "dominant_mode", "æ”¯é…ãƒ¢ãƒ¼ãƒ‰",
         ];
         if (thoughtAccessors.includes(cmd.cmd)) {
           return this.execPipeCmd(rawInput, cmd);
         }
       }
-      // „Ÿ„Ÿ ’Œ‡D: Game/Random ? ƒ‰ƒbƒv‚µ‚È‚¢i’¼’l•Ô‹pj „Ÿ„Ÿ
+      // â”€â”€ æŸ±â‘¤: Game/Random ? ãƒ©ãƒƒãƒ—ã—ãªã„ï¼ˆç›´å€¤è¿”å´ï¼‰ â”€â”€
       const gameCommands = [
-        "game", "ƒQ[ƒ€", "play", "‘Å‚Â", "auto_play", "©“®‘Î‹Ç",
-        "best_move", "Å‘Pè", "legal_moves", "‡–@è",
-        "game_format", "”Õ–Ê•\¦", "game_sigma",
-        "simulate", "ƒVƒ~ƒ…ƒŒ[ƒg",
-        "random", "ƒ‰ƒ“ƒ_ƒ€", "random_walk", "entropy", "ƒGƒ“ƒgƒƒs[",
+        "game", "ã‚²ãƒ¼ãƒ ", "play", "æ‰“ã¤", "auto_play", "è‡ªå‹•å¯¾å±€",
+        "best_move", "æœ€å–„æ‰‹", "legal_moves", "åˆæ³•æ‰‹",
+        "game_format", "ç›¤é¢è¡¨ç¤º", "game_sigma",
+        "simulate", "ã‚·ãƒŸãƒ¥ãƒ¬ãƒ¼ãƒˆ",
+        "random", "ãƒ©ãƒ³ãƒ€ãƒ ", "random_walk", "entropy", "ã‚¨ãƒ³ãƒˆãƒ­ãƒ”ãƒ¼",
         "monte_carlo", "seed",
       ];
       if (gameCommands.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
-      // GameSpace‚ÌŒã‘±ƒpƒCƒv‚à’¼’l•Ô‹p
+      // GameSpaceã®å¾Œç¶šãƒ‘ã‚¤ãƒ—ã‚‚ç›´å€¤è¿”å´
       const unwrappedForGame = rawInput?.reiType === 'ReiVal' ? rawInput.value : rawInput;
       if (unwrappedForGame?.reiType === 'GameSpace') {
         const gameAccessors = [
-          "play", "‘Å‚Â", "auto_play", "©“®‘Î‹Ç",
-          "best_move", "Å‘Pè", "legal_moves", "‡–@è",
-          "board", "”Õ–Ê", "status", "ó‘Ô", "winner", "ŸÒ",
-          "turn", "è”Ô", "history", "Šû•ˆ",
-          "game_format", "”Õ–Ê•\¦", "sigma",
+          "play", "æ‰“ã¤", "auto_play", "è‡ªå‹•å¯¾å±€",
+          "best_move", "æœ€å–„æ‰‹", "legal_moves", "åˆæ³•æ‰‹",
+          "board", "ç›¤é¢", "status", "çŠ¶æ…‹", "winner", "å‹è€…",
+          "turn", "æ‰‹ç•ª", "history", "æ£‹è­œ",
+          "game_format", "ç›¤é¢è¡¨ç¤º", "sigma",
           "as_mdim",
         ];
         if (gameAccessors.includes(cmd.cmd)) {
           return this.execPipeCmd(rawInput, cmd);
         }
       }
-      // RandomResult/EntropyAnalysis‚ÌŒã‘±ƒpƒCƒv‚à’¼’l•Ô‹p
+      // RandomResult/EntropyAnalysisã®å¾Œç¶šãƒ‘ã‚¤ãƒ—ã‚‚ç›´å€¤è¿”å´
       if (unwrappedForGame?.reiType === 'RandomResult' || unwrappedForGame?.reiType === 'EntropyAnalysis') {
         return this.execPipeCmd(rawInput, cmd);
       }
-      // „Ÿ„Ÿ ’Œ‡B: Puzzle ? ƒpƒYƒ‹ƒRƒ}ƒ“ƒh‚Íƒ‰ƒbƒv‚µ‚È‚¢i’¼’l•Ô‹pj „Ÿ„Ÿ
+      // â”€â”€ æŸ±â‘¢: Puzzle ? ãƒ‘ã‚ºãƒ«ã‚³ãƒãƒ³ãƒ‰ã¯ãƒ©ãƒƒãƒ—ã—ãªã„ï¼ˆç›´å€¤è¿”å´ï¼‰ â”€â”€
       const puzzleCommands = [
-        "puzzle", "ƒpƒYƒ‹", "”“Æ", "sudoku", "latin_square", "ƒ‰ƒeƒ“•ûw",
-        "solve", "‰ğ‚­", "propagate", "“`”d", "propagate_pair",
-        "cell", "ƒZƒ‹", "grid", "”Õ–Ê", "candidates", "Œó•â",
-        "puzzle_format", "”“Æ•\¦", "difficulty", "“ïˆÕ“x",
-        "generate_sudoku", "”“Æ¶¬",
+        "puzzle", "ãƒ‘ã‚ºãƒ«", "æ•°ç‹¬", "sudoku", "latin_square", "ãƒ©ãƒ†ãƒ³æ–¹é™£",
+        "solve", "è§£ã", "propagate", "ä¼æ’­", "propagate_pair",
+        "cell", "ã‚»ãƒ«", "grid", "ç›¤é¢", "candidates", "å€™è£œ",
+        "puzzle_format", "æ•°ç‹¬è¡¨ç¤º", "difficulty", "é›£æ˜“åº¦",
+        "generate_sudoku", "æ•°ç‹¬ç”Ÿæˆ",
       ];
       if (puzzleCommands.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
-      // PuzzleSpace‚ÌŒã‘±ƒpƒCƒv‚à’¼’l•Ô‹p
+      // PuzzleSpaceã®å¾Œç¶šãƒ‘ã‚¤ãƒ—ã‚‚ç›´å€¤è¿”å´
       const unwrappedForPuzzle = rawInput?.reiType === 'ReiVal' ? rawInput.value : rawInput;
       if (unwrappedForPuzzle?.reiType === 'PuzzleSpace') {
         const puzzleAccessors = [
-          "solve", "‰ğ‚­", "propagate", "“`”d", "propagate_pair",
-          "cell", "ƒZƒ‹", "grid", "”Õ–Ê", "candidates", "Œó•â",
-          "puzzle_format", "”“Æ•\¦", "difficulty", "“ïˆÕ“x",
-          "sigma", "status", "ó‘Ô", "history", "—š—ğ",
+          "solve", "è§£ã", "propagate", "ä¼æ’­", "propagate_pair",
+          "cell", "ã‚»ãƒ«", "grid", "ç›¤é¢", "candidates", "å€™è£œ",
+          "puzzle_format", "æ•°ç‹¬è¡¨ç¤º", "difficulty", "é›£æ˜“åº¦",
+          "sigma", "status", "çŠ¶æ…‹", "history", "å±¥æ­´",
           "as_mdim",
         ];
         if (puzzleAccessors.includes(cmd.cmd)) {
           return this.execPipeCmd(rawInput, cmd);
         }
       }
-      // „Ÿ„Ÿ ’Œ‡A: StringMDimƒAƒNƒZƒT‚Íƒ‰ƒbƒv‚µ‚È‚¢iQÆ‘€ìj „Ÿ„Ÿ
+      // â”€â”€ æŸ±â‘¡: StringMDimã‚¢ã‚¯ã‚»ã‚µã¯ãƒ©ãƒƒãƒ—ã—ãªã„ï¼ˆå‚ç…§æ“ä½œï¼‰ â”€â”€
       const stringMDimAccessors = [
-        "strokes", "‰æ”", "category", "˜Z‘", "meaning", "ˆÓ–¡",
-        "readings", "“Ç‚İ", "radicals", "•”ñ", "phonetic_group", "‰¹•„",
-        "compose", "‡¬", "decompose", "•ª‰ğ", "similarity", "—Ş—",
+        "strokes", "ç”»æ•°", "category", "å…­æ›¸", "meaning", "æ„å‘³",
+        "readings", "èª­ã¿", "radicals", "éƒ¨é¦–", "phonetic_group", "éŸ³ç¬¦",
+        "compose", "åˆæˆ", "decompose", "åˆ†è§£", "similarity", "é¡ä¼¼",
       ];
       if (stringMDimAccessors.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
-      // „Ÿ„Ÿ v0.4: ŠÖŒWEˆÓuƒRƒ}ƒ“ƒh ? ƒ‰ƒbƒv‚µ‚È‚¢i’¼’l•Ô‹pj „Ÿ„Ÿ
+      // â”€â”€ v0.4: é–¢ä¿‚ãƒ»æ„å¿—ã‚³ãƒãƒ³ãƒ‰ ? ãƒ©ãƒƒãƒ—ã—ãªã„ï¼ˆç›´å€¤è¿”å´ï¼‰ â”€â”€
       const relationWillCommands = [
-        "bind", "Œ‹‡", "unbind", "‰ğœ", "unbind_all", "‘S‰ğœ",
-        "bindings", "Œ‹‡ˆê——", "cause", "ˆö‰Ê",
-        "propagate_bindings", "“`”dÀs",
-        "intend", "ˆÓu", "will_compute", "ˆÓuŒvZ",
-        "will_iterate", "ˆÓu”½•œ",
-        "intention", "ˆÓuŠm”F", "satisfaction", "–‘«“x",
-        // v0.4+: ©—¥“I‘ŠŒİ”F¯ƒRƒ}ƒ“ƒh
-        "recognize", "”F¯", "fuse_with", "—Z‡",
-        "separate", "•ª—£", "transform_to", "•Ï—e",
-        "entity_sigma", "‘¶İƒĞ",
-        "auto_recognize", "©“®”F¯_‘S‘Ì",
+        "bind", "çµåˆ", "unbind", "è§£é™¤", "unbind_all", "å…¨è§£é™¤",
+        "bindings", "çµåˆä¸€è¦§", "cause", "å› æœ",
+        "propagate_bindings", "ä¼æ’­å®Ÿè¡Œ",
+        "intend", "æ„å¿—", "will_compute", "æ„å¿—è¨ˆç®—",
+        "will_iterate", "æ„å¿—åå¾©",
+        "intention", "æ„å¿—ç¢ºèª", "satisfaction", "æº€è¶³åº¦",
+        // v0.4+: è‡ªå¾‹çš„ç›¸äº’èªè­˜ã‚³ãƒãƒ³ãƒ‰
+        "recognize", "èªè­˜", "fuse_with", "èåˆ",
+        "separate", "åˆ†é›¢", "transform_to", "å¤‰å®¹",
+        "entity_sigma", "å­˜åœ¨Ïƒ",
+        "auto_recognize", "è‡ªå‹•èªè­˜_å…¨ä½“",
       ];
       if (relationWillCommands.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
       }
       const result = this.execPipeCmd(rawInput, cmd);
-      // ƒpƒCƒv’Ê‰ß‚ÉƒĞƒƒ^ƒf[ƒ^‚ğ•t—^
+      // ãƒ‘ã‚¤ãƒ—é€šéæ™‚ã«Ïƒãƒ¡ã‚¿ãƒ‡ãƒ¼ã‚¿ã‚’ä»˜ä¸
       const prevMeta = getSigmaOf(rawInput);
       return wrapWithSigma(result, rawInput, prevMeta.pipeCount > 0 ? prevMeta : undefined);
     }
-    throw new Error("–³Œø‚ÈƒpƒCƒvƒRƒ}ƒ“ƒh");
+    throw new Error("ç„¡åŠ¹ãªãƒ‘ã‚¤ãƒ—ã‚³ãƒãƒ³ãƒ‰");
   }
 
   private execPipeCmd(input: any, cmd: any): any {
     const { cmd: cmdName, mode, args: argNodes } = cmd;
     const args = argNodes.map((a: any) => this.eval(a));
 
-    // „Ÿ„Ÿ Tier 1: ƒĞƒƒ^ƒf[ƒ^‚ğ•Û‘¶‚µ‚Ä‚©‚çƒAƒ“ƒ‰ƒbƒv „Ÿ„Ÿ
+    // â”€â”€ Tier 1: Ïƒãƒ¡ã‚¿ãƒ‡ãƒ¼ã‚¿ã‚’ä¿å­˜ã—ã¦ã‹ã‚‰ã‚¢ãƒ³ãƒ©ãƒƒãƒ— â”€â”€
     const sigmaMetadata = getSigmaOf(input);
     const rawInput = unwrapReiVal(input);
 
     // ???????????????????????????????????????????
-    // Tier 1: ƒĞi‘S’lŒ^‚Ì©ŒÈQÆ ? Œö—C1j
+    // Tier 1: Ïƒï¼ˆå…¨å€¤å‹ã®è‡ªå·±å‚ç…§ ? å…¬ç†C1ï¼‰
     // ???????????????????????????????????????????
     if (cmdName === "sigma") {
-      // Space ? Šù‘¶‚ÌgetSpaceSigma‚ÉˆÏ÷
+      // Space ? æ—¢å­˜ã®getSpaceSigmaã«å§”è­²
       if (this.isSpace(rawInput)) return getSpaceSigma(rawInput as ReiSpace);
-      // DNode ? Šù‘¶‚ÌƒĞŠÖ”‚Æ“‡
+      // DNode ? æ—¢å­˜ã®Ïƒé–¢æ•°ã¨çµ±åˆ
       if (this.isDNode(rawInput)) {
         const dn = rawInput as DNode;
         return {
@@ -2801,7 +531,7 @@ export class Evaluator {
           relation: [],
         };
       }
-      // „Ÿ„Ÿ ’Œ‡A: StringMDim ? \‘¢î•ñ‚ğƒĞ‚Æ‚µ‚Ä•Ô‚· „Ÿ„Ÿ
+      // â”€â”€ æŸ±â‘¡: StringMDim ? æ§‹é€ æƒ…å ±ã‚’Ïƒã¨ã—ã¦è¿”ã™ â”€â”€
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'StringMDim') {
         const sm = rawInput as StringMDim;
         return {
@@ -2814,21 +544,21 @@ export class Evaluator {
           relation: sm.neighbors.map((n: string) => ({ from: sm.center, to: n, type: sm.mode })),
         };
       }
-      // „Ÿ„Ÿ ’Œ‡C: ThoughtResult ? vlƒ‹[ƒvŒ‹‰Ê‚ÌƒĞ „Ÿ„Ÿ
+      // â”€â”€ æŸ±â‘£: ThoughtResult ? æ€è€ƒãƒ«ãƒ¼ãƒ—çµæœã®Ïƒ â”€â”€
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'ThoughtResult') {
         return getThoughtSigma(rawInput as ThoughtResult);
       }
-      // „Ÿ„Ÿ ’Œ‡D: GameSpace ? ƒQ[ƒ€‚ÌƒĞ „Ÿ„Ÿ
+      // â”€â”€ æŸ±â‘¤: GameSpace ? ã‚²ãƒ¼ãƒ ã®Ïƒ â”€â”€
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'GameSpace') {
         return getGameSigma(rawInput as GameSpace);
       }
-      // „Ÿ„Ÿ ’Œ‡B: PuzzleSpace ? ƒpƒYƒ‹‚ÌƒĞ „Ÿ„Ÿ
+      // â”€â”€ æŸ±â‘¢: PuzzleSpace ? ãƒ‘ã‚ºãƒ«ã®Ïƒ â”€â”€
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'PuzzleSpace') {
         return getPuzzleSigma(rawInput as PuzzleSpace);
       }
-      // ‘S’lŒ^ ? C1Œö—‚ÌƒĞŠÖ”
+      // å…¨å€¤å‹ ? C1å…¬ç†ã®Ïƒé–¢æ•°
       const sigmaResult = buildSigmaResult(rawInput, sigmaMetadata);
-      // „Ÿ„Ÿ v0.4: ƒĞ‚Érelation/willî•ñ‚ğ’“ü „Ÿ„Ÿ
+      // â”€â”€ v0.4: Ïƒã«relation/willæƒ…å ±ã‚’æ³¨å…¥ â”€â”€
       const ref = this.findRefByValue(input);
       if (ref) {
         sigmaResult.relation = this.bindingRegistry.buildRelationSigma(ref);
@@ -2841,7 +571,7 @@ export class Evaluator {
     }
 
     // ???????????????????????????????????????????
-    // v0.3: Space pipe commands (rawInput‚ğg—p)
+    // v0.3: Space pipe commands (rawInputã‚’ä½¿ç”¨)
     // ???????????????????????????????????????????
     if (this.isSpace(rawInput)) {
       const sp = rawInput as ReiSpace;
@@ -2880,7 +610,7 @@ export class Evaluator {
           const nodeIdx = args.length >= 2 ? this.toNumber(args[1]) : 0;
           const layer = sp.layers.get(layerIdx);
           if (layer && layer.nodes[nodeIdx]) return layer.nodes[nodeIdx];
-          throw new Error(`ƒm[ƒh‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ: ‘w${layerIdx}, index ${nodeIdx}`);
+          throw new Error(`ãƒãƒ¼ãƒ‰ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: å±¤${layerIdx}, index ${nodeIdx}`);
         }
         case "sigma": return getSpaceSigma(sp);
         case "resonances": {
@@ -2918,21 +648,21 @@ export class Evaluator {
         }
 
         // ???????????????????????????????????????????
-        // Phase 3“‡: Space ~ Auto-bind ? ‹¤–Â¨©“®Œ‹‡
+        // Phase 3çµ±åˆ: Space Ã— Auto-bind ? å…±é³´â†’è‡ªå‹•çµåˆ
         // ???????????????????????????????????????????
 
-        // auto_bind / ©“®Œ‹‡: findResonances‚ÌŒ‹‰Ê‚ğBindingRegistry‚É“o˜^
-        case "auto_bind": case "©“®Œ‹‡": {
+        // auto_bind / è‡ªå‹•çµåˆ: findResonancesã®çµæœã‚’BindingRegistryã«ç™»éŒ²
+        case "auto_bind": case "è‡ªå‹•çµåˆ": {
           const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.5;
           const resonances = findResonances(sp, threshold);
           let bindCount = 0;
           for (const pair of resonances) {
             const refA = `node_${pair.nodeA.layer}_${pair.nodeA.index}`;
             const refB = `node_${pair.nodeB.layer}_${pair.nodeB.index}`;
-            // Šù‘¶‚ÌŒ‹‡‚ğƒ`ƒFƒbƒN
+            // æ—¢å­˜ã®çµåˆã‚’ãƒã‚§ãƒƒã‚¯
             const existing = this.bindingRegistry.getBindingsFor(refA);
             if (existing.some(b => b.target === refB)) continue;
-            // ‹¤–Â“x‚É‰‚¶‚½Œ‹‡‹­“x‚Å resonance Œ‹‡‚ğì¬
+            // å…±é³´åº¦ã«å¿œã˜ãŸçµåˆå¼·åº¦ã§ resonance çµåˆã‚’ä½œæˆ
             this.bindingRegistry.bind(refA, refB, 'resonance', pair.similarity, true);
             bindCount++;
           }
@@ -2949,8 +679,8 @@ export class Evaluator {
           };
         }
 
-        // space_relations / êŠÖŒW: ‘SŒ‹‡‚ğÆ‰ï
-        case "space_relations": case "êŠÖŒW": {
+        // space_relations / å ´é–¢ä¿‚: å…¨çµåˆã‚’ç…§ä¼š
+        case "space_relations": case "å ´é–¢ä¿‚": {
           const allBindings: any[] = [];
           for (const [layerIdx, layer] of sp.layers) {
             for (let i = 0; i < layer.nodes.length; i++) {
@@ -2984,7 +714,7 @@ export class Evaluator {
       const dn = rawInput as DNode;
       switch (cmdName) {
         case "sigma": {
-          // Tier 1: ã‚ÌƒĞƒnƒ“ƒhƒ‰‚É“‡Ï‚İ ? ‚±‚±‚É‚Í“’B‚µ‚È‚¢
+          // Tier 1: ä¸Šã®Ïƒãƒãƒ³ãƒ‰ãƒ©ã«çµ±åˆæ¸ˆã¿ ? ã“ã“ã«ã¯åˆ°é”ã—ãªã„
           return buildSigmaResult(dn, sigmaMetadata);
         }
         case "compute": return computeNodeValue(dn);
@@ -3006,7 +736,7 @@ export class Evaluator {
       switch (cmdName) {
         case "flow": return rawInput.flow;
         case "memory": return rawInput.memory;
-        case "layer": case "‘w": return rawInput.layer;
+        case "layer": case "å±¤": return rawInput.layer;
         case "will": return rawInput.will;
         case "field": return rawInput.field;
         case "relation": return rawInput.relation ?? [];
@@ -3014,7 +744,7 @@ export class Evaluator {
     }
 
     // ???????????????????????????????????????????
-    // Tier 2: projectiN1 Ë‰eŒö—j/ reprojectiN2 •¡”Ë‰ej
+    // Tier 2: projectï¼ˆN1 å°„å½±å…¬ç†ï¼‰/ reprojectï¼ˆN2 è¤‡æ•°å°„å½±ï¼‰
     // ???????????????????????????????????????????
     if (cmdName === "project") {
       const centerSpec = args.length > 0 ? args[0] : ':first';
@@ -3027,20 +757,20 @@ export class Evaluator {
         const idx = typeof newCenter === 'number'
           ? allElements.indexOf(newCenter)
           : 0;
-        if (idx < 0) throw new Error(`reproject: ’†S’l ${newCenter} ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ`);
+        if (idx < 0) throw new Error(`reproject: ä¸­å¿ƒå€¤ ${newCenter} ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“`);
         const center = allElements[idx];
         const neighbors = allElements.filter((_: any, i: number) => i !== idx);
         return { reiType: "MDim", center, neighbors, mode: rawInput.mode };
       }
-      // ”ñMDim‚Ìê‡‚Íproject‚ÉƒtƒH[ƒ‹ƒoƒbƒN
+      // éMDimã®å ´åˆã¯projectã«ãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯
       return projectToMDim(rawInput, args[0] ?? ':first', args);
     }
     if (cmdName === "modes") {
       return [...ALL_COMPUTE_MODES];
     }
     if (cmdName === "blend") {
-      // blend("weighted", 0.7, "geometric", 0.3) ? ƒ‚[ƒh‡¬iM3: ƒ‚[ƒh‡¬Œö—j
-      if (!this.isMDim(rawInput)) throw new Error("blend: ??Œ^‚Ì’l‚ª•K—v‚Å‚·");
+      // blend("weighted", 0.7, "geometric", 0.3) ? ãƒ¢ãƒ¼ãƒ‰åˆæˆï¼ˆM3: ãƒ¢ãƒ¼ãƒ‰åˆæˆå…¬ç†ï¼‰
+      if (!this.isMDim(rawInput)) throw new Error("blend: ??å‹ã®å€¤ãŒå¿…è¦ã§ã™");
       let blendedResult = 0;
       let totalWeight = 0;
       for (let i = 0; i < args.length - 1; i += 2) {
@@ -3054,16 +784,16 @@ export class Evaluator {
     }
 
     // ???????????????????????????????????????????
-    // Tier 3: U1(\‘¢ŠÒŒ³) & A1(‰ğ‚Ì‘½Œ³«)
+    // Tier 3: U1(æ§‹é€ é‚„å…ƒ) & A1(è§£ã®å¤šå…ƒæ€§)
     // ???????????????????????????????????????????
     if (cmdName === "project_all") {
-      // U1.2: n—v‘f ¨ n’Ê‚è‚Ì‘SË‰e
+      // U1.2: nè¦ç´  â†’ né€šã‚Šã®å…¨å°„å½±
       return projectAll(rawInput);
     }
     if (cmdName === "compute_all") {
-      // A1: ‘Sƒ‚[ƒh‚ÅŒvZ ¨ ‰ğ‚Ì‘½Œ³«
+      // A1: å…¨ãƒ¢ãƒ¼ãƒ‰ã§è¨ˆç®— â†’ è§£ã®å¤šå…ƒæ€§
       if (this.isMDim(rawInput)) return computeAll(rawInput);
-      // ”z—ñ‚Ìê‡‚Íæ‚Éproject ¨ compute_all
+      // é…åˆ—ã®å ´åˆã¯å…ˆã«project â†’ compute_all
       if (Array.isArray(rawInput)) {
         const projected = projectToMDim(rawInput, 'first', []);
         return computeAll(projected);
@@ -3071,99 +801,99 @@ export class Evaluator {
       return [];
     }
     if (cmdName === "compare") {
-      // A1: 2ƒ‚[ƒh”äŠr
-      if (!this.isMDim(rawInput)) throw new Error("compare: ??Œ^‚Ì’l‚ª•K—v‚Å‚·");
+      // A1: 2ãƒ¢ãƒ¼ãƒ‰æ¯”è¼ƒ
+      if (!this.isMDim(rawInput)) throw new Error("compare: ??å‹ã®å€¤ãŒå¿…è¦ã§ã™");
       const mode1 = args.length >= 1 ? String(args[0]) : "weighted";
       const mode2 = args.length >= 2 ? String(args[1]) : "geometric";
       return compareModes(rawInput, mode1, mode2);
     }
     if (cmdName === "perspectives") {
-      // U1+A1: ‘SË‰e ~ ‘Sƒ‚[ƒh
+      // U1+A1: å…¨å°„å½± Ã— å…¨ãƒ¢ãƒ¼ãƒ‰
       return perspectives(rawInput);
     }
     if (cmdName === "flatten_nested") {
-      // U1: ƒlƒXƒg??‚ÌÄ‹A“Iƒtƒ‰ƒbƒg‰»
+      // U1: ãƒã‚¹ãƒˆ??ã®å†å¸°çš„ãƒ•ãƒ©ãƒƒãƒˆåŒ–
       if (this.isMDim(rawInput)) return computeNestedMDim(rawInput);
       return rawInput;
     }
 
     // ???????????????????????????????????????????
-    // Tier 4: C3(‰“š) & C4(ŠoÁ) & U2(•ÏŠ·•Û‘¶) & M2(ƒ‚[ƒh“™‰¿)
+    // Tier 4: C3(å¿œç­”) & C4(è¦šé†’) & U2(å¤‰æ›ä¿å­˜) & M2(ãƒ¢ãƒ¼ãƒ‰ç­‰ä¾¡)
     // ???????????????????????????????????????????
     if (cmdName === "respond") {
-      // C3: ŠO•”hŒƒ‚Ö‚Ì‰“š
+      // C3: å¤–éƒ¨åˆºæ¿€ã¸ã®å¿œç­”
       const stimulus = args.length >= 1 ? this.toNumber(args[0]) : 0;
       const method = args.length >= 2 ? String(args[1]) : 'absorb';
       return respondToStimulus(rawInput, stimulus, method);
     }
     if (cmdName === "sensitivity") {
-      // C3: ‰“šŠ´“x‚Ì‘ª’è
+      // C3: å¿œç­”æ„Ÿåº¦ã®æ¸¬å®š
       return computeSensitivity(rawInput);
     }
     if (cmdName === "awareness") {
-      // C4: ŠoÁ“xƒXƒRƒAi0.0?1.0j
+      // C4: è¦šé†’åº¦ã‚¹ã‚³ã‚¢ï¼ˆ0.0?1.0ï¼‰
       return computeAwareness(rawInput, sigmaMetadata);
     }
     if (cmdName === "awakened") {
-      // C4: ŠoÁ”»’è
+      // C4: è¦šé†’åˆ¤å®š
       return computeAwareness(rawInput, sigmaMetadata) >= AWAKENING_THRESHOLD;
     }
     if (cmdName === "transform") {
-      // U2: •ÏŠ·ƒpƒ^[ƒ“‚Ì“ˆê“K—p
+      // U2: å¤‰æ›ãƒ‘ã‚¿ãƒ¼ãƒ³ã®çµ±ä¸€é©ç”¨
       const transformName = args.length >= 1 ? String(args[0]) : 'scale';
       const param = args.length >= 2 ? this.toNumber(args[1]) : 1;
       return applyTransform(rawInput, transformName, param);
     }
     if (cmdName === "mode_equiv") {
-      // M2: ƒ‚[ƒh“™‰¿”»’è
-      if (!this.isMDim(rawInput)) throw new Error("mode_equiv: ??Œ^‚Ì’l‚ª•K—v‚Å‚·");
+      // M2: ãƒ¢ãƒ¼ãƒ‰ç­‰ä¾¡åˆ¤å®š
+      if (!this.isMDim(rawInput)) throw new Error("mode_equiv: ??å‹ã®å€¤ãŒå¿…è¦ã§ã™");
       const m1 = args.length >= 1 ? String(args[0]) : "weighted";
       const m2 = args.length >= 2 ? String(args[1]) : "geometric";
       return checkModeEquivalence(rawInput, m1, m2);
     }
 
     // ???????????????????????????????????????????
-    // Tier 5: C5(‹¤–Â) & N3-N5 & M4-M5 & U3-U5 & A2-A5
+    // Tier 5: C5(å…±é³´) & N3-N5 & M4-M5 & U3-U5 & A2-A5
     // ???????????????????????????????????????????
 
-    // C5: ‹¤–Â
+    // C5: å…±é³´
     if (cmdName === "resonate") {
-      // C5: 2‚Â‚Ì’l‚Ì‹¤–Â‚ğZo
-      if (args.length < 1) throw new Error("resonate: ”äŠr‘ÎÛ‚ª•K—v‚Å‚·");
+      // C5: 2ã¤ã®å€¤ã®å…±é³´ã‚’ç®—å‡º
+      if (args.length < 1) throw new Error("resonate: æ¯”è¼ƒå¯¾è±¡ãŒå¿…è¦ã§ã™");
       return computeResonance(rawInput, args[0]);
     }
     if (cmdName === "resonance_field") {
-      // C5: ‹¤–Âê‚Ìæ“¾
+      // C5: å…±é³´å ´ã®å–å¾—
       return getResonanceField(rawInput, sigmaMetadata);
     }
     if (cmdName === "resonance_map") {
-      // C5: ‹¤–Âƒ}ƒbƒvi‘SƒyƒA‚Ì‹¤–Âj
+      // C5: å…±é³´ãƒãƒƒãƒ—ï¼ˆå…¨ãƒšã‚¢ã®å…±é³´ï¼‰
       return resonanceMap(rawInput);
     }
     if (cmdName === "resonance_chain") {
-      // C5: ‹¤–Âƒ`ƒF[ƒ“
+      // C5: å…±é³´ãƒã‚§ãƒ¼ãƒ³
       return resonanceChain(rawInput);
     }
 
-    // N3: Œ^•ÏŠ·Ë‰e
+    // N3: å‹å¤‰æ›å°„å½±
     if (cmdName === "project_as") {
       const targetType = args.length >= 1 ? String(args[0]) : 'graph';
       return projectAs(rawInput, targetType);
     }
 
-    // N4: Ë‰e‡¬
+    // N4: å°„å½±åˆæˆ
     if (cmdName === "compose_projections") {
       return composeProjections(rawInput);
     }
 
-    // N5: •\Œ»‰Â”\«”»’è
+    // N5: è¡¨ç¾å¯èƒ½æ€§åˆ¤å®š
     if (cmdName === "representable") {
       return checkRepresentable(rawInput);
     }
 
-    // M4: ƒ‚[ƒh“±o
+    // M4: ãƒ¢ãƒ¼ãƒ‰å°å‡º
     if (cmdName === "derive_mode") {
-      if (!this.isMDim(rawInput)) throw new Error("derive_mode: ??Œ^‚ª•K—v‚Å‚·");
+      if (!this.isMDim(rawInput)) throw new Error("derive_mode: ??å‹ãŒå¿…è¦ã§ã™");
       const modes = args.filter((a: any) => typeof a === 'string');
       const weights = args.filter((a: any) => typeof a === 'number');
       if (modes.length === 0) modes.push('weighted', 'geometric');
@@ -3171,12 +901,12 @@ export class Evaluator {
       return deriveMode(rawInput, modes, weights);
     }
 
-    // M5: ƒ‚[ƒh‹óŠÔ
+    // M5: ãƒ¢ãƒ¼ãƒ‰ç©ºé–“
     if (cmdName === "mode_space") {
       return getModeSpace(rawInput);
     }
 
-    // U3: ŠK‘wÄ‹A
+    // U3: éšå±¤å†å¸°
     if (cmdName === "depth") {
       return measureDepth(rawInput);
     }
@@ -3188,17 +918,17 @@ export class Evaluator {
       return recursiveCompute(rawInput);
     }
 
-    // U4: —Ìˆæ‰Ë‹´
+    // U4: é ˜åŸŸæ¶æ©‹
     if (cmdName === "bridge") {
-      if (args.length < 1) throw new Error("bridge: ”äŠr‘ÎÛ‚ª•K—v‚Å‚·");
+      if (args.length < 1) throw new Error("bridge: æ¯”è¼ƒå¯¾è±¡ãŒå¿…è¦ã§ã™");
       return bridgeMDim(rawInput, args[0]);
     }
     if (cmdName === "structural_similarity") {
-      if (args.length < 1) throw new Error("structural_similarity: ”äŠr‘ÎÛ‚ª•K—v‚Å‚·");
+      if (args.length < 1) throw new Error("structural_similarity: æ¯”è¼ƒå¯¾è±¡ãŒå¿…è¦ã§ã™");
       return structuralSimilarity(rawInput, args[0]);
     }
 
-    // U5: Š®‘S«
+    // U5: å®Œå…¨æ€§
     if (cmdName === "encode") {
       return encodeMDim(rawInput);
     }
@@ -3207,36 +937,36 @@ export class Evaluator {
       return decodeMDim(rawInput, targetType);
     }
 
-    // A2: ‰ğ•ÏŠ·
+    // A2: è§£å¤‰æ›
     if (cmdName === "map_solutions") {
       if (!this.isMDim(rawInput)) {
         if (Array.isArray(rawInput)) {
           const projected = projectToMDim(rawInput, 'first', []);
           return mapSolutions(projected, args.length >= 1 ? String(args[0]) : 'scale', args.length >= 2 ? this.toNumber(args[1]) : 1);
         }
-        throw new Error("map_solutions: ??Œ^‚Ü‚½‚Í”z—ñ‚ª•K—v‚Å‚·");
+        throw new Error("map_solutions: ??å‹ã¾ãŸã¯é…åˆ—ãŒå¿…è¦ã§ã™");
       }
       return mapSolutions(rawInput, args.length >= 1 ? String(args[0]) : 'scale', args.length >= 2 ? this.toNumber(args[1]) : 1);
     }
 
-    // A3: ‡ˆÓŒ`¬
+    // A3: åˆæ„å½¢æˆ
     if (cmdName === "consensus") {
       if (!this.isMDim(rawInput)) {
         if (Array.isArray(rawInput)) {
           return computeConsensus(projectToMDim(rawInput, 'first', []));
         }
-        throw new Error("consensus: ??Œ^‚Ü‚½‚Í”z—ñ‚ª•K—v‚Å‚·");
+        throw new Error("consensus: ??å‹ã¾ãŸã¯é…åˆ—ãŒå¿…è¦ã§ã™");
       }
       return computeConsensus(rawInput);
     }
 
-    // A4: Å—Ç‰ğEƒ‰ƒ“ƒLƒ“ƒO
+    // A4: æœ€è‰¯è§£ãƒ»ãƒ©ãƒ³ã‚­ãƒ³ã‚°
     if (cmdName === "best") {
       if (!this.isMDim(rawInput)) {
         if (Array.isArray(rawInput)) {
           return selectBest(projectToMDim(rawInput, 'first', []), args.length >= 1 ? String(args[0]) : 'median_closest');
         }
-        throw new Error("best: ??Œ^‚Ü‚½‚Í”z—ñ‚ª•K—v‚Å‚·");
+        throw new Error("best: ??å‹ã¾ãŸã¯é…åˆ—ãŒå¿…è¦ã§ã™");
       }
       return selectBest(rawInput, args.length >= 1 ? String(args[0]) : 'median_closest');
     }
@@ -3245,24 +975,24 @@ export class Evaluator {
         if (Array.isArray(rawInput)) {
           return rankSolutions(projectToMDim(rawInput, 'first', []), args.length >= 1 ? String(args[0]) : 'value');
         }
-        throw new Error("rank: ??Œ^‚Ü‚½‚Í”z—ñ‚ª•K—v‚Å‚·");
+        throw new Error("rank: ??å‹ã¾ãŸã¯é…åˆ—ãŒå¿…è¦ã§ã™");
       }
       return rankSolutions(rawInput, args.length >= 1 ? String(args[0]) : 'value');
     }
 
-    // A5: ‰ğ‚ÌŠ®‘S«
+    // A5: è§£ã®å®Œå…¨æ€§
     if (cmdName === "solution_completeness") {
       if (!this.isMDim(rawInput)) {
         if (Array.isArray(rawInput)) {
           return solutionCompleteness(projectToMDim(rawInput, 'first', []));
         }
-        throw new Error("solution_completeness: ??Œ^‚Ü‚½‚Í”z—ñ‚ª•K—v‚Å‚·");
+        throw new Error("solution_completeness: ??å‹ã¾ãŸã¯é…åˆ—ãŒå¿…è¦ã§ã™");
       }
       return solutionCompleteness(rawInput);
     }
 
     // ???????????????????????????????????????????
-    // Evolve ? ©“®ƒ‚[ƒh‘I‘ği’Œ‡@j
+    // Evolve ? è‡ªå‹•ãƒ¢ãƒ¼ãƒ‰é¸æŠï¼ˆæŸ±â‘ ï¼‰
     // ???????????????????????????????????????????
     if (cmdName === "evolve") {
       // evolve / evolve("stable") / evolve("divergent") / evolve("creative") / evolve("tendency")
@@ -3270,41 +1000,41 @@ export class Evaluator {
       return evolveMode(input, sigmaMetadata, strategy);
     }
     if (cmdName === "evolve_value") {
-      // evolve‚ÌŒ‹‰Ê‚©‚ç’l‚¾‚¯‚ğæ“¾‚·‚éƒVƒ‡[ƒgƒJƒbƒg
+      // evolveã®çµæœã‹ã‚‰å€¤ã ã‘ã‚’å–å¾—ã™ã‚‹ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆ
       const strategy = args.length >= 1 ? String(args[0]) : 'auto';
       const result = evolveMode(input, sigmaMetadata, strategy);
       return result.value;
     }
 
     // ???????????????????????????????????????????
-    // v0.4: ŠÖŒWiRelationj? ”ñ‹ÇŠ“IŒ‹‡
+    // v0.4: é–¢ä¿‚ï¼ˆRelationï¼‰? éå±€æ‰€çš„çµåˆ
     // ???????????????????????????????????????????
 
-    if (cmdName === "bind" || cmdName === "Œ‹‡") {
+    if (cmdName === "bind" || cmdName === "çµåˆ") {
       // a |> bind("b", "mirror")  or  a |> bind("b", "mirror", 0.8)
-      // a |> Œ‹‡("b", "‹¾‘œ")
-      if (args.length < 1) throw new Error("bind: ƒ^[ƒQƒbƒg•Ï”–¼‚ª•K—v‚Å‚·");
+      // a |> çµåˆ("b", "é¡åƒ")
+      if (args.length < 1) throw new Error("bind: ã‚¿ãƒ¼ã‚²ãƒƒãƒˆå¤‰æ•°åãŒå¿…è¦ã§ã™");
       const targetRef = String(args[0]);
       const modeArg = args.length >= 2 ? String(args[1]) : 'mirror';
       const strength = args.length >= 3 ? this.toNumber(args[2]) : 1.0;
       const bidir = args.length >= 4 ? !!args[3] : false;
 
-      // “ú–{Œêƒ‚[ƒh–¼‚Ì•ÏŠ·
+      // æ—¥æœ¬èªãƒ¢ãƒ¼ãƒ‰åã®å¤‰æ›
       const modeMap: Record<string, BindingMode> = {
-        'mirror': 'mirror', '‹¾‘œ': 'mirror',
-        'inverse': 'inverse', '”½“]': 'inverse',
-        'resonance': 'resonance', '‹¤–Â': 'resonance',
-        'entangle': 'entangle', '‚à‚Â‚ê': 'entangle',
-        'causal': 'causal', 'ˆö‰Ê': 'causal',
+        'mirror': 'mirror', 'é¡åƒ': 'mirror',
+        'inverse': 'inverse', 'åè»¢': 'inverse',
+        'resonance': 'resonance', 'å…±é³´': 'resonance',
+        'entangle': 'entangle', 'ã‚‚ã¤ã‚Œ': 'entangle',
+        'causal': 'causal', 'å› æœ': 'causal',
       };
       const bindMode: BindingMode = modeMap[modeArg] ?? 'mirror';
 
-      // ƒ\[ƒX•Ï”–¼‚Ì‹tˆø‚«
+      // ã‚½ãƒ¼ã‚¹å¤‰æ•°åã®é€†å¼•ã
       const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
 
-      // ƒ^[ƒQƒbƒg‚ªŠÂ‹«‚É‘¶İ‚·‚é‚©Šm”F
+      // ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãŒç’°å¢ƒã«å­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
       if (!this.env.has(targetRef)) {
-        throw new Error(`bind: •Ï” '${targetRef}' ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ`);
+        throw new Error(`bind: å¤‰æ•° '${targetRef}' ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“`);
       }
 
       const binding = this.bindingRegistry.bind(sourceRef, targetRef, bindMode, strength, bidir);
@@ -3316,15 +1046,15 @@ export class Evaluator {
       };
     }
 
-    if (cmdName === "cause" || cmdName === "ˆö‰Ê") {
-      // a |> cause("b") ? causalˆê•ûŒüŒ‹‡‚ÌƒVƒ‡[ƒgƒJƒbƒg
-      if (args.length < 1) throw new Error("cause: ƒ^[ƒQƒbƒg•Ï”–¼‚ª•K—v‚Å‚·");
+    if (cmdName === "cause" || cmdName === "å› æœ") {
+      // a |> cause("b") ? causalä¸€æ–¹å‘çµåˆã®ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆ
+      if (args.length < 1) throw new Error("cause: ã‚¿ãƒ¼ã‚²ãƒƒãƒˆå¤‰æ•°åãŒå¿…è¦ã§ã™");
       const targetRef = String(args[0]);
       const strength = args.length >= 2 ? this.toNumber(args[1]) : 1.0;
       const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
 
       if (!this.env.has(targetRef)) {
-        throw new Error(`cause: •Ï” '${targetRef}' ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ`);
+        throw new Error(`cause: å¤‰æ•° '${targetRef}' ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“`);
       }
 
       const binding = this.bindingRegistry.bind(sourceRef, targetRef, 'causal', strength, false);
@@ -3336,62 +1066,62 @@ export class Evaluator {
       };
     }
 
-    if (cmdName === "unbind" || cmdName === "‰ğœ") {
+    if (cmdName === "unbind" || cmdName === "è§£é™¤") {
       // a |> unbind("b")
-      if (args.length < 1) throw new Error("unbind: ƒ^[ƒQƒbƒg•Ï”–¼‚ª•K—v‚Å‚·");
+      if (args.length < 1) throw new Error("unbind: ã‚¿ãƒ¼ã‚²ãƒƒãƒˆå¤‰æ•°åãŒå¿…è¦ã§ã™");
       const targetRef = String(args[0]);
       const sourceRef = this.findRefByValue(input) ?? '';
       const result = this.bindingRegistry.unbind(sourceRef, targetRef);
       return result;
     }
 
-    if (cmdName === "unbind_all" || cmdName === "‘S‰ğœ") {
+    if (cmdName === "unbind_all" || cmdName === "å…¨è§£é™¤") {
       // a |> unbind_all
       const ref = this.findRefByValue(input) ?? '';
       return this.bindingRegistry.unbindAll(ref);
     }
 
-    if (cmdName === "bindings" || cmdName === "Œ‹‡ˆê——") {
-      // a |> bindings ? ‚±‚Ì’l‚Ì‘SŒ‹‡ƒŠƒXƒg
+    if (cmdName === "bindings" || cmdName === "çµåˆä¸€è¦§") {
+      // a |> bindings ? ã“ã®å€¤ã®å…¨çµåˆãƒªã‚¹ãƒˆ
       const ref = this.findRefByValue(input) ?? '';
       return this.bindingRegistry.getBindingsFor(ref);
     }
 
-    if (cmdName === "propagate_bindings" || cmdName === "“`”dÀs") {
-      // a |> propagate_bindings ? ‚±‚Ì’l‚ÌŒ‹‡æ‚ÉŒ»İ’l‚ğ“`”d
+    if (cmdName === "propagate_bindings" || cmdName === "ä¼æ’­å®Ÿè¡Œ") {
+      // a |> propagate_bindings ? ã“ã®å€¤ã®çµåˆå…ˆã«ç¾åœ¨å€¤ã‚’ä¼æ’­
       const ref = this.findRefByValue(input);
-      if (!ref) throw new Error("propagate_bindings: •Ï”QÆ‚ğ‰ğŒˆ‚Å‚«‚Ü‚¹‚ñ");
+      if (!ref) throw new Error("propagate_bindings: å¤‰æ•°å‚ç…§ã‚’è§£æ±ºã§ãã¾ã›ã‚“");
       const count = this.triggerPropagation(ref, rawInput);
       return { propagated: count, source: ref };
     }
 
     // ???????????????????????????????????????????
-    // v0.4: ˆÓuiWillj? ©—¥“I–Ú•WwŒü
+    // v0.4: æ„å¿—ï¼ˆWillï¼‰? è‡ªå¾‹çš„ç›®æ¨™æŒ‡å‘
     // ???????????????????????????????????????????
 
-    if (cmdName === "intend" || cmdName === "ˆÓu") {
+    if (cmdName === "intend" || cmdName === "æ„å¿—") {
       // ??{5; 1,2,3} |> intend("seek", 10)
-      // ??{5; 1,2,3} |> ˆÓu("Ú‹ß", 10)
-      if (args.length < 1) throw new Error("intend: ˆÓu‚Ìí—Ş‚ª•K—v‚Å‚·");
+      // ??{5; 1,2,3} |> æ„å¿—("æ¥è¿‘", 10)
+      if (args.length < 1) throw new Error("intend: æ„å¿—ã®ç¨®é¡ãŒå¿…è¦ã§ã™");
       const typeArg = String(args[0]);
       const target = args.length >= 2 ? this.toNumber(args[1]) : undefined;
       const patience = args.length >= 3 ? this.toNumber(args[2]) : 50;
 
-      // “ú–{ŒêˆÓuƒ^ƒCƒv‚Ì•ÏŠ·
+      // æ—¥æœ¬èªæ„å¿—ã‚¿ã‚¤ãƒ—ã®å¤‰æ›
       const typeMap: Record<string, IntentionType> = {
-        'seek': 'seek', 'Ú‹ß': 'seek',
-        'avoid': 'avoid', '‰ñ”ğ': 'avoid',
-        'stabilize': 'stabilize', 'ˆÀ’è': 'stabilize',
-        'explore': 'explore', '’Tõ': 'explore',
-        'harmonize': 'harmonize', '’²˜a': 'harmonize',
-        'maximize': 'maximize', 'Å‘å‰»': 'maximize',
-        'minimize': 'minimize', 'Å¬‰»': 'minimize',
+        'seek': 'seek', 'æ¥è¿‘': 'seek',
+        'avoid': 'avoid', 'å›é¿': 'avoid',
+        'stabilize': 'stabilize', 'å®‰å®š': 'stabilize',
+        'explore': 'explore', 'æ¢ç´¢': 'explore',
+        'harmonize': 'harmonize', 'èª¿å’Œ': 'harmonize',
+        'maximize': 'maximize', 'æœ€å¤§åŒ–': 'maximize',
+        'minimize': 'minimize', 'æœ€å°åŒ–': 'minimize',
       };
       const intentType: IntentionType = typeMap[typeArg] ?? 'seek';
 
       const intention = createIntention(intentType, target, patience);
 
-      // harmonize ‚Ìê‡AŒ‹‡æ‚Ì’l‚ğ–Ú•W‚Éİ’è
+      // harmonize ã®å ´åˆã€çµåˆå…ˆã®å€¤ã‚’ç›®æ¨™ã«è¨­å®š
       if (intentType === 'harmonize') {
         const ref = this.findRefByValue(input);
         if (ref) {
@@ -3405,16 +1135,16 @@ export class Evaluator {
         }
       }
 
-      // ’l‚ÉˆÓu‚ğ•t—^‚µ‚Ä•Ô‚·
+      // å€¤ã«æ„å¿—ã‚’ä»˜ä¸ã—ã¦è¿”ã™
       return attachIntention(rawInput, intention);
     }
 
-    if (cmdName === "will_compute" || cmdName === "ˆÓuŒvZ") {
+    if (cmdName === "will_compute" || cmdName === "æ„å¿—è¨ˆç®—") {
       // ??{5; 1,2,3} |> intend("seek", 10) |> will_compute
       const intention = getIntentionOf(rawInput);
-      if (!intention) throw new Error("will_compute: ˆÓu‚ª•t—^‚³‚ê‚Ä‚¢‚Ü‚¹‚ñiæ‚É intend ‚ğg—p‚µ‚Ä‚­‚¾‚³‚¢j");
+      if (!intention) throw new Error("will_compute: æ„å¿—ãŒä»˜ä¸ã•ã‚Œã¦ã„ã¾ã›ã‚“ï¼ˆå…ˆã« intend ã‚’ä½¿ç”¨ã—ã¦ãã ã•ã„ï¼‰");
 
-      // harmonize‚Ìê‡AŒ‹‡æ‚Ì’l‚ğƒRƒ“ƒeƒLƒXƒg‚ÉŠÜ‚ß‚é
+      // harmonizeã®å ´åˆã€çµåˆå…ˆã®å€¤ã‚’ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆã«å«ã‚ã‚‹
       let harmonizeTarget: number | undefined;
       if (intention.type === 'harmonize' && intention.target !== undefined) {
         harmonizeTarget = intention.target;
@@ -3427,11 +1157,11 @@ export class Evaluator {
       return willCompute(md, intention, { harmonizeTarget });
     }
 
-    if (cmdName === "will_iterate" || cmdName === "ˆÓu”½•œ") {
+    if (cmdName === "will_iterate" || cmdName === "æ„å¿—åå¾©") {
       // ??{5; 1,2,3} |> intend("seek", 10) |> will_iterate
-      // ??{5; 1,2,3} |> intend("seek", 10) |> will_iterate(20)  // Å‘å20ƒXƒeƒbƒv
+      // ??{5; 1,2,3} |> intend("seek", 10) |> will_iterate(20)  // æœ€å¤§20ã‚¹ãƒ†ãƒƒãƒ—
       const intention = getIntentionOf(rawInput);
-      if (!intention) throw new Error("will_iterate: ˆÓu‚ª•t—^‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
+      if (!intention) throw new Error("will_iterate: æ„å¿—ãŒä»˜ä¸ã•ã‚Œã¦ã„ã¾ã›ã‚“");
 
       const maxSteps = args.length >= 1 ? this.toNumber(args[0]) : undefined;
       const md = this.isMDim(rawInput)
@@ -3441,30 +1171,30 @@ export class Evaluator {
       return willIterate(md, intention, maxSteps);
     }
 
-    if (cmdName === "intention" || cmdName === "ˆÓuŠm”F") {
-      // ’l‚ÌˆÓuî•ñ‚ğæ“¾
+    if (cmdName === "intention" || cmdName === "æ„å¿—ç¢ºèª") {
+      // å€¤ã®æ„å¿—æƒ…å ±ã‚’å–å¾—
       const intention = getIntentionOf(rawInput);
       if (!intention) return null;
       return buildWillSigma(intention);
     }
 
-    if (cmdName === "satisfaction" || cmdName === "–‘«“x") {
-      // ’l‚Ì–‘«“x‚ğæ“¾
+    if (cmdName === "satisfaction" || cmdName === "æº€è¶³åº¦") {
+      // å€¤ã®æº€è¶³åº¦ã‚’å–å¾—
       const intention = getIntentionOf(rawInput);
       return intention?.satisfaction ?? 0;
     }
 
     // ???????????????????????????????????????????
-    // v0.4+: ©—¥“I‘ŠŒİ”F¯iAutonomy Enginej
-    // ”’lE‹L†EŒ¾Œê‚Ì“ˆê“IƒGƒ“ƒeƒBƒeƒB”F¯
+    // v0.4+: è‡ªå¾‹çš„ç›¸äº’èªè­˜ï¼ˆAutonomy Engineï¼‰
+    // æ•°å€¤ãƒ»è¨˜å·ãƒ»è¨€èªã®çµ±ä¸€çš„ã‚¨ãƒ³ãƒ†ã‚£ãƒ†ã‚£èªè­˜
     // ???????????????????????????????????????????
 
-    if (cmdName === "recognize" || cmdName === "”F¯") {
-      // value |> recognize         ? ŠÂ‹«“à‚Ì‘S•Ï”‚ğ”F¯
-      // value |> recognize(0.5)    ? ‚µ‚«‚¢’lw’è
+    if (cmdName === "recognize" || cmdName === "èªè­˜") {
+      // value |> recognize         ? ç’°å¢ƒå†…ã®å…¨å¤‰æ•°ã‚’èªè­˜
+      // value |> recognize(0.5)    ? ã—ãã„å€¤æŒ‡å®š
       const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.1;
       const selfName = this.findRefByValue(input);
-      // ŠÂ‹«‚Ì‘S•Ï”‚ğûW
+      // ç’°å¢ƒã®å…¨å¤‰æ•°ã‚’åé›†
       const envMap = new Map<string, any>();
       for (const [k, v] of this.env.allBindings()) {
         envMap.set(k, v);
@@ -3472,23 +1202,23 @@ export class Evaluator {
       return recognize(rawInput, envMap, selfName ?? undefined, threshold);
     }
 
-    if (cmdName === "fuse_with" || cmdName === "—Z‡") {
-      // a |> fuse_with("b")              ? •Ï”b‚Æ‚Ì—Z‡ií—ª©“®‘I‘ğj
-      // a |> fuse_with("b", "resonate")  ? í—ªw’è
-      if (args.length < 1) throw new Error("fuse_with: ƒ^[ƒQƒbƒg•Ï”–¼‚ª•K—v‚Å‚·");
+    if (cmdName === "fuse_with" || cmdName === "èåˆ") {
+      // a |> fuse_with("b")              ? å¤‰æ•°bã¨ã®èåˆï¼ˆæˆ¦ç•¥è‡ªå‹•é¸æŠï¼‰
+      // a |> fuse_with("b", "resonate")  ? æˆ¦ç•¥æŒ‡å®š
+      if (args.length < 1) throw new Error("fuse_with: ã‚¿ãƒ¼ã‚²ãƒƒãƒˆå¤‰æ•°åãŒå¿…è¦ã§ã™");
       const targetRef = String(args[0]);
       if (!this.env.has(targetRef)) {
-        throw new Error(`fuse_with: •Ï” '${targetRef}' ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ`);
+        throw new Error(`fuse_with: å¤‰æ•° '${targetRef}' ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“`);
       }
       const targetValue = this.env.get(targetRef);
 
-      // —Z‡í—ª‚Ì“ú–{Œêƒ}ƒbƒsƒ“ƒO
+      // èåˆæˆ¦ç•¥ã®æ—¥æœ¬èªãƒãƒƒãƒ”ãƒ³ã‚°
       const strategyMap: Record<string, FusionStrategy> = {
-        'absorb': 'absorb', '‹zû': 'absorb',
-        'merge': 'merge', '“‡': 'merge',
-        'overlay': 'overlay', 'dô': 'overlay',
-        'resonate': 'resonate', '‹¤–Â': 'resonate',
-        'cascade': 'cascade', '˜A½': 'cascade',
+        'absorb': 'absorb', 'å¸å': 'absorb',
+        'merge': 'merge', 'çµ±åˆ': 'merge',
+        'overlay': 'overlay', 'é‡ç•³': 'overlay',
+        'resonate': 'resonate', 'å…±é³´': 'resonate',
+        'cascade': 'cascade', 'é€£é–': 'cascade',
       };
       const strategyArg = args.length >= 2 ? String(args[1]) : undefined;
       const strategy: FusionStrategy | undefined = strategyArg
@@ -3498,21 +1228,21 @@ export class Evaluator {
       return fuse(rawInput, targetValue, strategy);
     }
 
-    if (cmdName === "separate" || cmdName === "•ª—£") {
-      // fused_value |> separate ? —Z‡‚ğ‰ğœ‚µ‚Ä•ª—£
+    if (cmdName === "separate" || cmdName === "åˆ†é›¢") {
+      // fused_value |> separate ? èåˆã‚’è§£é™¤ã—ã¦åˆ†é›¢
       return separate(rawInput);
     }
 
-    if (cmdName === "transform_to" || cmdName === "•Ï—e") {
-      // value |> transform_to("numeric")    ? ”’l•\Œ»‚Ö
-      // value |> transform_to("symbolic")   ? ‹L†•\Œ»‚Ö
-      // value |> transform_to("linguistic") ? Œ¾Œê•\Œ»‚Ö
-      // value |> transform_to              ? Å“K‚ÈŒ`‘Ô‚Öioptimalj
+    if (cmdName === "transform_to" || cmdName === "å¤‰å®¹") {
+      // value |> transform_to("numeric")    ? æ•°å€¤è¡¨ç¾ã¸
+      // value |> transform_to("symbolic")   ? è¨˜å·è¡¨ç¾ã¸
+      // value |> transform_to("linguistic") ? è¨€èªè¡¨ç¾ã¸
+      // value |> transform_to              ? æœ€é©ãªå½¢æ…‹ã¸ï¼ˆoptimalï¼‰
       const directionMap: Record<string, TransformDirection> = {
-        'numeric': 'to_numeric', '”’l': 'to_numeric',
-        'symbolic': 'to_symbolic', '‹L†': 'to_symbolic',
-        'linguistic': 'to_linguistic', 'Œ¾Œê': 'to_linguistic',
-        'optimal': 'optimal', 'Å“K': 'optimal',
+        'numeric': 'to_numeric', 'æ•°å€¤': 'to_numeric',
+        'symbolic': 'to_symbolic', 'è¨˜å·': 'to_symbolic',
+        'linguistic': 'to_linguistic', 'è¨€èª': 'to_linguistic',
+        'optimal': 'optimal', 'æœ€é©': 'optimal',
       };
       const dirArg = args.length >= 1 ? String(args[0]) : 'optimal';
       const direction: TransformDirection = directionMap[dirArg] ?? 'optimal';
@@ -3520,14 +1250,14 @@ export class Evaluator {
       return transform(rawInput, direction);
     }
 
-    if (cmdName === "entity_sigma" || cmdName === "‘¶İƒĞ") {
-      // value |> entity_sigma ? ƒGƒ“ƒeƒBƒeƒB‚Ì©—¥“I©ŒÈ‹Lq
+    if (cmdName === "entity_sigma" || cmdName === "å­˜åœ¨Ïƒ") {
+      // value |> entity_sigma ? ã‚¨ãƒ³ãƒ†ã‚£ãƒ†ã‚£ã®è‡ªå¾‹çš„è‡ªå·±è¨˜è¿°
       return buildEntitySigma(rawInput);
     }
 
-    if (cmdName === "auto_recognize" || cmdName === "©“®”F¯_‘S‘Ì") {
-      // space |> auto_recognize       ? Space“à‚Ì‘Sƒm[ƒhŠÔ‚Å‘ŠŒİ”F¯
-      // space |> auto_recognize(0.5)  ? ‚µ‚«‚¢’lw’è
+    if (cmdName === "auto_recognize" || cmdName === "è‡ªå‹•èªè­˜_å…¨ä½“") {
+      // space |> auto_recognize       ? Spaceå†…ã®å…¨ãƒãƒ¼ãƒ‰é–“ã§ç›¸äº’èªè­˜
+      // space |> auto_recognize(0.5)  ? ã—ãã„å€¤æŒ‡å®š
       if (this.isSpace(rawInput)) {
         const sp = rawInput as ReiSpace;
         const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.3;
@@ -3545,7 +1275,7 @@ export class Evaluator {
         }
         const recognitions = spaceAutoRecognize(nodes, threshold);
 
-        // ”F¯Œ‹‰Ê‚ÉŠî‚Ã‚¢‚ÄBindingRegistry‚É©“®“o˜^
+        // èªè­˜çµæœã«åŸºã¥ã„ã¦BindingRegistryã«è‡ªå‹•ç™»éŒ²
         let bindCount = 0;
         let fuseCount = 0;
         for (const rec of recognitions) {
@@ -3567,14 +1297,14 @@ export class Evaluator {
           bindingsCreated: bindCount,
           fusionCandidates: fuseCount,
           threshold,
-          recognitions: recognitions.slice(0, 20), // ãˆÊ20Œ
+          recognitions: recognitions.slice(0, 20), // ä¸Šä½20ä»¶
         };
       }
-      throw new Error("auto_recognize: SpaceŒ^‚Ì’l‚ª•K—v‚Å‚·");
+      throw new Error("auto_recognize: Spaceå‹ã®å€¤ãŒå¿…è¦ã§ã™");
     }
 
     // ???????????????????????????????????????????
-    // v0.2.1 Original pipe commands (rawInput‚ğg—p)
+    // v0.2.1 Original pipe commands (rawInputã‚’ä½¿ç”¨)
     // ???????????????????????????????????????????
     if (this.isMDim(rawInput)) {
       const md = rawInput;
@@ -3673,27 +1403,27 @@ export class Evaluator {
         case "reverse": return Array.from(rawInput).reverse().join("");
 
         // ???????????????????????????????????????????
-        // ’Œ‡A: Š¿š/“ú–{ŒêƒpƒCƒvƒRƒ}ƒ“ƒh
+        // æŸ±â‘¡: æ¼¢å­—/æ—¥æœ¬èªãƒ‘ã‚¤ãƒ—ã‚³ãƒãƒ³ãƒ‰
         // ???????????????????????????????????????????
-        case "kanji": case "Š¿š": {
-          // "‹x" |> kanji ¨ StringMDim{center:"‹x", neighbors:["l","–Ø"]}
+        case "kanji": case "æ¼¢å­—": {
+          // "ä¼‘" |> kanji â†’ StringMDim{center:"ä¼‘", neighbors:["äºº","æœ¨"]}
           const chars = Array.from(rawInput);
           if (chars.length === 1) return kanjiToStringMDim(chars[0]);
           return wordToStringMDim(rawInput);
         }
-        case "sentence": case "•¶": {
-          // "”L‚ª‹›‚ğH‚×‚½" |> sentence ¨ StringMDim{center:"H‚×‚½", neighbors:["”L‚ª","‹›‚ğ"]}
+        case "sentence": case "æ–‡": {
+          // "çŒ«ãŒé­šã‚’é£Ÿã¹ãŸ" |> sentence â†’ StringMDim{center:"é£Ÿã¹ãŸ", neighbors:["çŒ«ãŒ","é­šã‚’"]}
           return sentenceToStringMDim(rawInput);
         }
-        case "tone": case "º’²": {
-          // "ma" |> tone("?", "–ƒ", "?", "?") ¨ StringMDim
+        case "tone": case "å£°èª¿": {
+          // "ma" |> tone("?", "éº»", "?", "?") â†’ StringMDim
           return toneToStringMDim(rawInput, args.map(String));
         }
       }
     }
 
     // ???????????????????????????????????????????
-    // ’Œ‡A: StringMDim ƒpƒCƒvƒRƒ}ƒ“ƒh
+    // æŸ±â‘¡: StringMDim ãƒ‘ã‚¤ãƒ—ã‚³ãƒãƒ³ãƒ‰
     // ???????????????????????????????????????????
     if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'StringMDim') {
       const sm = rawInput as StringMDim;
@@ -3704,30 +1434,30 @@ export class Evaluator {
         case "mode": return sm.mode;
         case "metadata": return sm.metadata ?? {};
 
-        case "similarity": case "—Ş—": {
-          // StringMDim |> similarity("–¾") or similarity(otherStringMDim)
+        case "similarity": case "é¡ä¼¼": {
+          // StringMDim |> similarity("æ˜") or similarity(otherStringMDim)
           let other: StringMDim;
           if (typeof args[0] === 'string') {
             other = kanjiToStringMDim(args[0]);
           } else if (args[0]?.reiType === 'StringMDim') {
             other = args[0];
           } else {
-            throw new Error("similarity: ”äŠr‘ÎÛ‚ª•K—v‚Å‚·i•¶š—ñ‚Ü‚½‚ÍStringMDimj");
+            throw new Error("similarity: æ¯”è¼ƒå¯¾è±¡ãŒå¿…è¦ã§ã™ï¼ˆæ–‡å­—åˆ—ã¾ãŸã¯StringMDimï¼‰");
           }
           return kanjiSimilarity(sm, other);
         }
-        case "radicals": case "•”ñ": {
-          // •”ñî•ñ‚ğ•Ô‚·
+        case "radicals": case "éƒ¨é¦–": {
+          // éƒ¨é¦–æƒ…å ±ã‚’è¿”ã™
           if (sm.mode === 'kanji' && sm.metadata?.known) {
             return { radical: sm.metadata.radical, name: sm.metadata.radicalName };
           }
-          // •¡”•¶š‚Ìê‡‚ÍŠe•¶š‚Ì•”ñ
+          // è¤‡æ•°æ–‡å­—ã®å ´åˆã¯å„æ–‡å­—ã®éƒ¨é¦–
           return sm.neighbors.map((c: string) => {
             const info = KANJI_DB[c];
             return info ? { char: c, radical: info.radical, name: info.radicalName } : { char: c, radical: '?', name: 'unknown' };
           });
         }
-        case "readings": case "“Ç‚İ": {
+        case "readings": case "èª­ã¿": {
           if (sm.mode === 'kanji' && sm.metadata?.known) {
             return { on: sm.metadata.on, kun: sm.metadata.kun };
           }
@@ -3736,7 +1466,7 @@ export class Evaluator {
             return info ? { char: c, on: info.on, kun: info.kun } : { char: c, on: [], kun: [] };
           });
         }
-        case "strokes": case "‰æ”": {
+        case "strokes": case "ç”»æ•°": {
           if (sm.mode === 'kanji' && sm.metadata?.known) {
             return sm.metadata.strokes;
           }
@@ -3745,7 +1475,7 @@ export class Evaluator {
             return total + (info?.strokes ?? 0);
           }, 0);
         }
-        case "category": case "˜Z‘": {
+        case "category": case "å…­æ›¸": {
           if (sm.mode === 'kanji' && sm.metadata?.known) {
             return sm.metadata.category;
           }
@@ -3754,7 +1484,7 @@ export class Evaluator {
             return info ? { char: c, category: info.category } : { char: c, category: 'unknown' };
           });
         }
-        case "meaning": case "ˆÓ–¡": {
+        case "meaning": case "æ„å‘³": {
           if (sm.mode === 'kanji' && sm.metadata?.known) {
             return sm.metadata.meaning;
           }
@@ -3763,24 +1493,24 @@ export class Evaluator {
             return info ? { char: c, meaning: info.meaning } : { char: c, meaning: 'unknown' };
           });
         }
-        case "phonetic_group": case "‰¹•„": {
-          // “¯‚¶‰¹•„‚ğ‹¤—L‚·‚éŠ¿šŒQ
+        case "phonetic_group": case "éŸ³ç¬¦": {
+          // åŒã˜éŸ³ç¬¦ã‚’å…±æœ‰ã™ã‚‹æ¼¢å­—ç¾¤
           return getPhoneticGroup(sm.center);
         }
-        case "compose": case "‡¬": {
-          // \¬—v‘f‚©‚çŠ¿š‚ğ‹tˆø‚«
+        case "compose": case "åˆæˆ": {
+          // æ§‹æˆè¦ç´ ã‹ã‚‰æ¼¢å­—ã‚’é€†å¼•ã
           return reverseKanjiLookup(sm.neighbors);
         }
-        case "decompose": case "•ª‰ğ": {
-          // Ä‹A“I•ª‰ğ: Še\¬—v‘f‚à‚³‚ç‚É•ª‰ğ
+        case "decompose": case "åˆ†è§£": {
+          // å†å¸°çš„åˆ†è§£: å„æ§‹æˆè¦ç´ ã‚‚ã•ã‚‰ã«åˆ†è§£
           return sm.neighbors.map((c: string) => kanjiToStringMDim(c));
         }
-        case "kanji": case "Š¿š": {
-          // StringMDim‚Ì’†S‚ğÄ“xŠ¿š•ª‰ğ
+        case "kanji": case "æ¼¢å­—": {
+          // StringMDimã®ä¸­å¿ƒã‚’å†åº¦æ¼¢å­—åˆ†è§£
           return kanjiToStringMDim(sm.center);
         }
         case "sigma": {
-          // StringMDim‚ÌƒĞ ? \‘¢î•ñ‚ğSigmaResult‚Æ‚µ‚Ä•Ô‚·
+          // StringMDimã®Ïƒ ? æ§‹é€ æƒ…å ±ã‚’SigmaResultã¨ã—ã¦è¿”ã™
           return {
             reiType: 'SigmaResult',
             field: { center: sm.center, neighbors: sm.neighbors, mode: sm.mode, type: 'string' },
@@ -3806,11 +1536,11 @@ export class Evaluator {
     }
 
     // ???????????????????????????????????????????
-    // ’Œ‡C: Thought Loop ? vlƒ‹[ƒvi©—¥“I©ŒÈi‰»j
+    // æŸ±â‘£: Thought Loop ? æ€è€ƒãƒ«ãƒ¼ãƒ—ï¼ˆè‡ªå¾‹çš„è‡ªå·±é€²åŒ–ï¼‰
     // ???????????????????????????????????????????
 
-    // think / vl: ƒƒCƒ“vlƒ‹[ƒv
-    if (cmdName === "think" || cmdName === "vl") {
+    // think / æ€è€ƒ: ãƒ¡ã‚¤ãƒ³æ€è€ƒãƒ«ãƒ¼ãƒ—
+    if (cmdName === "think" || cmdName === "æ€è€ƒ") {
       // think("converge") / think(10) / think("seek", 15) / think("awaken")
       const config: Partial<ThoughtConfig> = {};
 
@@ -3837,11 +1567,11 @@ export class Evaluator {
         config.maxIterations = args[2];
       }
 
-      // ??? Phase 3“‡: ˆÓu•t‚«vl ???
-      // “ü—Í‚É __intention__ ‚ª‚ ‚éê‡Avlƒ‹[ƒv‚ÉˆÓu‚ğ”½‰f
+      // ??? Phase 3çµ±åˆ: æ„å¿—ä»˜ãæ€è€ƒ ???
+      // å…¥åŠ›ã« __intention__ ãŒã‚ã‚‹å ´åˆã€æ€è€ƒãƒ«ãƒ¼ãƒ—ã«æ„å¿—ã‚’åæ˜ 
       const inputIntention = getIntentionOf(rawInput);
       if (inputIntention && !config.strategy) {
-        // ˆÓu‚Ìí—Ş‚©‚çvlí—ª‚ğ“±o
+        // æ„å¿—ã®ç¨®é¡ã‹ã‚‰æ€è€ƒæˆ¦ç•¥ã‚’å°å‡º
         switch (inputIntention.type) {
           case 'seek':
             config.strategy = 'seek';
@@ -3854,7 +1584,7 @@ export class Evaluator {
             config.strategy = 'explore';
             break;
           case 'maximize':
-            config.strategy = 'explore'; // ‘Sƒ‚[ƒhs
+            config.strategy = 'explore'; // å…¨ãƒ¢ãƒ¼ãƒ‰è©¦è¡Œ
             break;
           case 'minimize':
             config.strategy = 'converge';
@@ -3875,7 +1605,7 @@ export class Evaluator {
 
       const thinkResult = thinkLoop(rawInput, config);
 
-      // ˆÓu•t‚«vl‚Ìê‡AŒ‹‰Ê‚ÉˆÓuî•ñ‚ğ•t‰Á
+      // æ„å¿—ä»˜ãæ€è€ƒã®å ´åˆã€çµæœã«æ„å¿—æƒ…å ±ã‚’ä»˜åŠ 
       if (inputIntention) {
         (thinkResult as any).__intention_guided__ = true;
         (thinkResult as any).__original_intention__ = inputIntention;
@@ -3884,76 +1614,76 @@ export class Evaluator {
       return thinkResult;
     }
 
-    // think_trajectory / ‹OÕ: vl‚Ì”’l‹OÕ‚ğ”z—ñ‚Å•Ô‚·
-    if (cmdName === "think_trajectory" || cmdName === "‹OÕ") {
+    // think_trajectory / è»Œè·¡: æ€è€ƒã®æ•°å€¤è»Œè·¡ã‚’é…åˆ—ã§è¿”ã™
+    if (cmdName === "think_trajectory" || cmdName === "è»Œè·¡") {
       if (rawInput?.reiType === 'ThoughtResult') return thoughtTrajectory(rawInput);
-      // ’¼Ú“ü—Í‚Ìê‡‚Ívl‚µ‚Ä‚©‚ç‹OÕ‚ğ•Ô‚·
+      // ç›´æ¥å…¥åŠ›ã®å ´åˆã¯æ€è€ƒã—ã¦ã‹ã‚‰è»Œè·¡ã‚’è¿”ã™
       const config: Partial<ThoughtConfig> = {};
       if (args.length >= 1 && typeof args[0] === 'string') config.strategy = args[0];
       if (args.length >= 1 && typeof args[0] === 'number') config.maxIterations = args[0];
       return thoughtTrajectory(thinkLoop(rawInput, config));
     }
 
-    // think_modes: ŠeƒXƒeƒbƒv‚Å‘I‚Î‚ê‚½ƒ‚[ƒh”z—ñ
+    // think_modes: å„ã‚¹ãƒ†ãƒƒãƒ—ã§é¸ã°ã‚ŒãŸãƒ¢ãƒ¼ãƒ‰é…åˆ—
     if (cmdName === "think_modes") {
       if (rawInput?.reiType === 'ThoughtResult') return thoughtModes(rawInput);
       return thoughtModes(thinkLoop(rawInput, {}));
     }
 
-    // think_dominant / x”zƒ‚[ƒh: Å‚à‘½‚­‘I‚Î‚ê‚½ƒ‚[ƒh
-    if (cmdName === "think_dominant" || cmdName === "x”zƒ‚[ƒh") {
+    // think_dominant / æ”¯é…ãƒ¢ãƒ¼ãƒ‰: æœ€ã‚‚å¤šãé¸ã°ã‚ŒãŸãƒ¢ãƒ¼ãƒ‰
+    if (cmdName === "think_dominant" || cmdName === "æ”¯é…ãƒ¢ãƒ¼ãƒ‰") {
       if (rawInput?.reiType === 'ThoughtResult') return dominantMode(rawInput);
       return dominantMode(thinkLoop(rawInput, {}));
     }
 
-    // think_format / vl•\¦: vlŒ‹‰Ê‚Ì•¶š—ñƒtƒH[ƒ}ƒbƒg
-    if (cmdName === "think_format" || cmdName === "vl•\¦") {
+    // think_format / æ€è€ƒè¡¨ç¤º: æ€è€ƒçµæœã®æ–‡å­—åˆ—ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆ
+    if (cmdName === "think_format" || cmdName === "æ€è€ƒè¡¨ç¤º") {
       if (rawInput?.reiType === 'ThoughtResult') return formatThought(rawInput);
       return formatThought(thinkLoop(rawInput, {}));
     }
 
-    // ThoughtResult ‚ÌƒAƒNƒZƒTƒpƒCƒv
+    // ThoughtResult ã®ã‚¢ã‚¯ã‚»ã‚µãƒ‘ã‚¤ãƒ—
     if (rawInput?.reiType === 'ThoughtResult') {
       const tr = rawInput as ThoughtResult;
       switch (cmdName) {
-        case "final_value": case "ÅI’l": return tr.finalValue;
-        case "iterations": case "”½•œ”": return tr.totalIterations;
-        case "stop_reason": case "’â~——R": return tr.stopReason;
-        case "trajectory": case "‹OÕ": return tr.trajectory;
-        case "convergence": case "û‘©—¦": return tr.convergenceRate;
-        case "awareness": case "ŠoÁ“x": return tr.peakAwareness;
-        case "tendency": case "ˆÓu": return { tendency: tr.loopTendency, strength: tr.loopStrength };
-        case "steps": case "‘S—š—ğ": return tr.steps;
-        case "dominant_mode": case "x”zƒ‚[ƒh": return dominantMode(tr);
+        case "final_value": case "æœ€çµ‚å€¤": return tr.finalValue;
+        case "iterations": case "åå¾©æ•°": return tr.totalIterations;
+        case "stop_reason": case "åœæ­¢ç†ç”±": return tr.stopReason;
+        case "trajectory": case "è»Œè·¡": return tr.trajectory;
+        case "convergence": case "åæŸç‡": return tr.convergenceRate;
+        case "awareness": case "è¦šé†’åº¦": return tr.peakAwareness;
+        case "tendency": case "æ„å¿—": return { tendency: tr.loopTendency, strength: tr.loopStrength };
+        case "steps": case "å…¨å±¥æ­´": return tr.steps;
+        case "dominant_mode": case "æ”¯é…ãƒ¢ãƒ¼ãƒ‰": return dominantMode(tr);
         case "sigma": return getThoughtSigma(tr);
       }
     }
 
     // ???????????????????????????????????????????
-    // ’Œ‡D: Game & Randomness ? ƒQ[ƒ€“ˆê & ƒsƒ…ƒAƒ‰ƒ“ƒ_ƒ€ƒlƒX
+    // æŸ±â‘¤: Game & Randomness ? ã‚²ãƒ¼ãƒ çµ±ä¸€ & ãƒ”ãƒ¥ã‚¢ãƒ©ãƒ³ãƒ€ãƒ ãƒã‚¹
     // ???????????????????????????????????????????
 
     // --- Random commands ---
 
-    // random / ƒ‰ƒ“ƒ_ƒ€: ??‚Ìneighbors‚©‚çƒ‰ƒ“ƒ_ƒ€‘I‘ğ
-    if (cmdName === "random" || cmdName === "ƒ‰ƒ“ƒ_ƒ€") {
+    // random / ãƒ©ãƒ³ãƒ€ãƒ : ??ã®neighborsã‹ã‚‰ãƒ©ãƒ³ãƒ€ãƒ é¸æŠ
+    if (cmdName === "random" || cmdName === "ãƒ©ãƒ³ãƒ€ãƒ ") {
       if (rawInput?.reiType === 'MDim') return randomFromMDim(rawInput);
       if (Array.isArray(rawInput)) return randomUniform(rawInput);
       if (typeof rawInput === 'number') {
-        // random(n) ¨ 0?n-1‚Ìƒ‰ƒ“ƒ_ƒ€®”
+        // random(n) â†’ 0?n-1ã®ãƒ©ãƒ³ãƒ€ãƒ æ•´æ•°
         return Math.floor(rawInput * Math.random());
       }
       return randomUniform([rawInput]);
     }
 
-    // seed: —”ƒV[ƒhİ’è
+    // seed: ä¹±æ•°ã‚·ãƒ¼ãƒ‰è¨­å®š
     if (cmdName === "seed") {
       const s = typeof rawInput === 'number' ? rawInput : 42;
       seedRandom(s);
       return s;
     }
 
-    // random_walk: ƒ‰ƒ“ƒ_ƒ€ƒEƒH[ƒN
+    // random_walk: ãƒ©ãƒ³ãƒ€ãƒ ã‚¦ã‚©ãƒ¼ã‚¯
     if (cmdName === "random_walk") {
       const start = typeof rawInput === 'number' ? rawInput : 0;
       const steps = args.length >= 1 ? Number(args[0]) : 20;
@@ -3961,14 +1691,14 @@ export class Evaluator {
       return randomWalk(start, steps, stepSize);
     }
 
-    // entropy / ƒGƒ“ƒgƒƒs[: ƒVƒƒƒmƒ“ƒGƒ“ƒgƒƒs[•ªÍ
-    if (cmdName === "entropy" || cmdName === "ƒGƒ“ƒgƒƒs[") {
+    // entropy / ã‚¨ãƒ³ãƒˆãƒ­ãƒ”ãƒ¼: ã‚·ãƒ£ãƒãƒ³ã‚¨ãƒ³ãƒˆãƒ­ãƒ”ãƒ¼åˆ†æ
+    if (cmdName === "entropy" || cmdName === "ã‚¨ãƒ³ãƒˆãƒ­ãƒ”ãƒ¼") {
       if (Array.isArray(rawInput)) return analyzeEntropy(rawInput);
       if (rawInput?.reiType === 'MDim') return analyzeEntropy(rawInput.neighbors);
       return analyzeEntropy([rawInput]);
     }
 
-    // monte_carlo: ƒ‚ƒ“ƒeƒJƒ‹ƒƒTƒ“ƒvƒŠƒ“ƒO
+    // monte_carlo: ãƒ¢ãƒ³ãƒ†ã‚«ãƒ«ãƒ­ã‚µãƒ³ãƒ—ãƒªãƒ³ã‚°
     if (cmdName === "monte_carlo") {
       const n = args.length >= 1 ? Number(args[0]) : 100;
       if (rawInput?.reiType === 'MDim') return monteCarloSample(rawInput, n);
@@ -3977,8 +1707,8 @@ export class Evaluator {
 
     // --- Game commands ---
 
-    // game / ƒQ[ƒ€: ƒQ[ƒ€ƒXƒy[ƒX‚Ìì¬
-    if (cmdName === "game" || cmdName === "ƒQ[ƒ€") {
+    // game / ã‚²ãƒ¼ãƒ : ã‚²ãƒ¼ãƒ ã‚¹ãƒšãƒ¼ã‚¹ã®ä½œæˆ
+    if (cmdName === "game" || cmdName === "ã‚²ãƒ¼ãƒ ") {
       const gameName = typeof rawInput === 'string' ? rawInput :
                        args.length >= 1 ? String(args[0]) : 'tic_tac_toe';
       const config: any = {};
@@ -3991,30 +1721,30 @@ export class Evaluator {
     if (rawInput?.reiType === 'GameSpace') {
       const gs = rawInput as GameSpace;
       switch (cmdName) {
-        case "play": case "‘Å‚Â": {
+        case "play": case "æ‰“ã¤": {
           const pos = args.length >= 1 ? Number(args[0]) : undefined;
           return playMove(gs, pos);
         }
-        case "auto_play": case "©“®‘Î‹Ç": {
+        case "auto_play": case "è‡ªå‹•å¯¾å±€": {
           const s1 = args.length >= 1 ? String(args[0]) : gs.strategy;
           const s2 = args.length >= 2 ? String(args[1]) : gs.strategy;
           return autoPlay(gs, s1, s2);
         }
-        case "best_move": case "Å‘Pè":
+        case "best_move": case "æœ€å–„æ‰‹":
           return selectBestMove(gs);
-        case "legal_moves": case "‡–@è":
+        case "legal_moves": case "åˆæ³•æ‰‹":
           return getLegalMoves(gs);
-        case "board": case "”Õ–Ê":
+        case "board": case "ç›¤é¢":
           return gs.state.board;
-        case "status": case "ó‘Ô":
+        case "status": case "çŠ¶æ…‹":
           return gs.state.status;
-        case "winner": case "ŸÒ":
+        case "winner": case "å‹è€…":
           return gs.state.winner;
-        case "turn": case "è”Ô":
+        case "turn": case "æ‰‹ç•ª":
           return gs.state.currentPlayer;
-        case "history": case "Šû•ˆ":
+        case "history": case "æ£‹è­œ":
           return gs.state.moveHistory;
-        case "game_format": case "”Õ–Ê•\¦":
+        case "game_format": case "ç›¤é¢è¡¨ç¤º":
           return formatGame(gs);
         case "as_mdim":
           return gameAsMDim(gs);
@@ -4022,18 +1752,18 @@ export class Evaluator {
           return getGameSigma(gs);
 
         // ???????????????????????????????????????????
-        // Phase 3“‡: Game ~ Will ? ˆÓu‹ì“®‚Ìí—ª‘I‘ğ
+        // Phase 3çµ±åˆ: Game Ã— Will ? æ„å¿—é§†å‹•ã®æˆ¦ç•¥é¸æŠ
         // ???????????????????????????????????????????
 
-        // game_intend / ƒQ[ƒ€ˆÓu: ƒQ[ƒ€‚ÉˆÓu‚ğ•t—^
-        case "game_intend": case "ƒQ[ƒ€ˆÓu": {
+        // game_intend / ã‚²ãƒ¼ãƒ æ„å¿—: ã‚²ãƒ¼ãƒ ã«æ„å¿—ã‚’ä»˜ä¸
+        case "game_intend": case "ã‚²ãƒ¼ãƒ æ„å¿—": {
           const intentTypeArg = args.length >= 1 ? String(args[0]) : 'maximize';
           const typeMap: Record<string, IntentionType> = {
-            'maximize': 'maximize', 'Å‘å‰»': 'maximize',
-            'minimize': 'minimize', 'Å¬‰»': 'minimize',
-            'seek': 'seek', 'Ú‹ß': 'seek',
-            'explore': 'explore', '’Tõ': 'explore',
-            'stabilize': 'stabilize', 'ˆÀ’è': 'stabilize',
+            'maximize': 'maximize', 'æœ€å¤§åŒ–': 'maximize',
+            'minimize': 'minimize', 'æœ€å°åŒ–': 'minimize',
+            'seek': 'seek', 'æ¥è¿‘': 'seek',
+            'explore': 'explore', 'æ¢ç´¢': 'explore',
+            'stabilize': 'stabilize', 'å®‰å®š': 'stabilize',
           };
           const intentType = typeMap[intentTypeArg] ?? 'maximize';
           const target = args.length >= 2 ? Number(args[1]) : undefined;
@@ -4043,13 +1773,13 @@ export class Evaluator {
           return result;
         }
 
-        // will_play / ˆÓu‘Å‚¿: ˆÓuŒvZ‚ÅÅ‘Pè‚ğ‘I‘ğ‚µ‚Ä1èi‚ß‚é
-        case "will_play": case "ˆÓu‘Å‚¿": {
+        // will_play / æ„å¿—æ‰“ã¡: æ„å¿—è¨ˆç®—ã§æœ€å–„æ‰‹ã‚’é¸æŠã—ã¦1æ‰‹é€²ã‚ã‚‹
+        case "will_play": case "æ„å¿—æ‰“ã¡": {
           const moves = getLegalMoves(gs);
           if (moves.length === 0 || gs.state.status !== 'playing') return gs;
 
-          // Še‡–@è‚ğ??‚Ìneighbor‚Æ‚µ‚Ä•\Œ»
-          // center = Œ»İƒ^[ƒ“”Aneighbors = Šeè‚Ì•]‰¿’l
+          // å„åˆæ³•æ‰‹ã‚’??ã®neighborã¨ã—ã¦è¡¨ç¾
+          // center = ç¾åœ¨ã‚¿ãƒ¼ãƒ³æ•°ã€neighbors = å„æ‰‹ã®è©•ä¾¡å€¤
           const evaluations = moves.map(move => {
             const newState = gs.rules.applyMove(gs.state, move);
             return gs.rules.evaluate(newState, gs.state.currentPlayer);
@@ -4062,14 +1792,14 @@ export class Evaluator {
             mode: 'weighted',
           };
 
-          // ˆÓu‚ğŒˆ’èiƒQ[ƒ€‚É•t—^Ï‚İ‚ÌˆÓu or ƒfƒtƒHƒ‹ƒg maximizej
+          // æ„å¿—ã‚’æ±ºå®šï¼ˆã‚²ãƒ¼ãƒ ã«ä»˜ä¸æ¸ˆã¿ã®æ„å¿— or ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆ maximizeï¼‰
           const gameIntention = (gs as any).__intention__
             ?? createIntention('maximize');
 
           const willResult = willCompute(gameMd, gameIntention);
 
-          // will_compute ‚ª‘I‚ñ‚¾ƒ‚[ƒh‚©‚çÅ‘Pè‚ÌƒCƒ“ƒfƒbƒNƒX‚ğŒˆ’è
-          // maximize ¨ Å‘å•]‰¿‚ÌèAminimize ¨ Å¬•]‰¿‚Ìè
+          // will_compute ãŒé¸ã‚“ã ãƒ¢ãƒ¼ãƒ‰ã‹ã‚‰æœ€å–„æ‰‹ã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’æ±ºå®š
+          // maximize â†’ æœ€å¤§è©•ä¾¡ã®æ‰‹ã€minimize â†’ æœ€å°è©•ä¾¡ã®æ‰‹
           let bestIdx = 0;
           if (gameIntention.type === 'maximize') {
             bestIdx = evaluations.indexOf(Math.max(...evaluations));
@@ -4082,7 +1812,7 @@ export class Evaluator {
               if (dist < minDist) { minDist = dist; bestIdx = i; }
             });
           } else if (gameIntention.type === 'explore') {
-            // ƒ‰ƒ“ƒ_ƒ€‚É‘I‘ği’TõˆÓuj
+            // ãƒ©ãƒ³ãƒ€ãƒ ã«é¸æŠï¼ˆæ¢ç´¢æ„å¿—ï¼‰
             bestIdx = Math.floor(Math.random() * moves.length);
           } else {
             bestIdx = evaluations.indexOf(Math.max(...evaluations));
@@ -4090,7 +1820,7 @@ export class Evaluator {
 
           const chosenMove = moves[bestIdx];
           const result = playMove(gs, chosenMove);
-          // ˆÓuŒvZ‚Ìî•ñ‚ğ•t‰Á
+          // æ„å¿—è¨ˆç®—ã®æƒ…å ±ã‚’ä»˜åŠ 
           (result as any).__will_choice__ = {
             chosenMove,
             evaluation: evaluations[bestIdx],
@@ -4101,8 +1831,8 @@ export class Evaluator {
           return result;
         }
 
-        // will_auto_play / ˆÓu‘Î‹Ç: ˆÓu‹ì“®‚Å©“®‘Î‹Ç
-        case "will_auto_play": case "ˆÓu‘Î‹Ç": {
+        // will_auto_play / æ„å¿—å¯¾å±€: æ„å¿—é§†å‹•ã§è‡ªå‹•å¯¾å±€
+        case "will_auto_play": case "æ„å¿—å¯¾å±€": {
           let current = { ...gs } as any;
           const p1Intent = args.length >= 1 ? String(args[0]) : 'maximize';
           const p2Intent = args.length >= 2 ? String(args[1]) : 'maximize';
@@ -4114,12 +1844,12 @@ export class Evaluator {
             const typeMap: Record<string, IntentionType> = {
               'maximize': 'maximize', 'minimize': 'minimize',
               'seek': 'seek', 'explore': 'explore', 'stabilize': 'stabilize',
-              'Å‘å‰»': 'maximize', '’Tõ': 'explore',
+              'æœ€å¤§åŒ–': 'maximize', 'æ¢ç´¢': 'explore',
             };
             const intentType = typeMap[currentIntent] ?? 'maximize';
             current.__intention__ = createIntention(intentType);
 
-            // will_play ‚Æ“¯‚¶ƒƒWƒbƒN
+            // will_play ã¨åŒã˜ãƒ­ã‚¸ãƒƒã‚¯
             const moves = getLegalMoves(current);
             if (moves.length === 0) break;
 
@@ -4142,8 +1872,8 @@ export class Evaluator {
           return current;
         }
 
-        // game_will_sigma / ƒQ[ƒ€ˆÓuƒĞ: ƒQ[ƒ€‚ÌˆÓuî•ñ‚ğŠÜ‚ŞƒĞ
-        case "game_will_sigma": case "ƒQ[ƒ€ˆÓuƒĞ": {
+        // game_will_sigma / ã‚²ãƒ¼ãƒ æ„å¿—Ïƒ: ã‚²ãƒ¼ãƒ ã®æ„å¿—æƒ…å ±ã‚’å«ã‚€Ïƒ
+        case "game_will_sigma": case "ã‚²ãƒ¼ãƒ æ„å¿—Ïƒ": {
           const baseSigma = getGameSigma(gs);
           const gameIntention = (gs as any).__intention__;
           const willChoice = (gs as any).__will_choice__;
@@ -4160,8 +1890,8 @@ export class Evaluator {
       }
     }
 
-    // simulate / ƒVƒ~ƒ…ƒŒ[ƒg: •¡”‘Î‹ÇƒVƒ~ƒ…ƒŒ[ƒVƒ‡ƒ“
-    if (cmdName === "simulate" || cmdName === "ƒVƒ~ƒ…ƒŒ[ƒg") {
+    // simulate / ã‚·ãƒŸãƒ¥ãƒ¬ãƒ¼ãƒˆ: è¤‡æ•°å¯¾å±€ã‚·ãƒŸãƒ¥ãƒ¬ãƒ¼ã‚·ãƒ§ãƒ³
+    if (cmdName === "simulate" || cmdName === "ã‚·ãƒŸãƒ¥ãƒ¬ãƒ¼ãƒˆ") {
       const gameName = typeof rawInput === 'string' ? rawInput : 'tic_tac_toe';
       const n = args.length >= 1 ? Number(args[0]) : 10;
       const s1 = args.length >= 2 ? String(args[1]) : 'minimax';
@@ -4174,8 +1904,8 @@ export class Evaluator {
       const rr = rawInput as RandomResult;
       switch (cmdName) {
         case "value": return rr.value;
-        case "probability": case "Šm—¦": return rr.probability;
-        case "entropy": case "ƒGƒ“ƒgƒƒs[": return rr.entropy;
+        case "probability": case "ç¢ºç‡": return rr.probability;
+        case "entropy": case "ã‚¨ãƒ³ãƒˆãƒ­ãƒ”ãƒ¼": return rr.entropy;
       }
     }
 
@@ -4190,36 +1920,36 @@ export class Evaluator {
     }
 
     // ???????????????????????????????????????????
-    // ’Œ‡B: Puzzle Unification ? ƒpƒYƒ‹“ˆê
+    // æŸ±â‘¢: Puzzle Unification ? ãƒ‘ã‚ºãƒ«çµ±ä¸€
     // ???????????????????????????????????????????
 
-    // puzzle / ƒpƒYƒ‹ / ”“Æ / sudoku: ƒpƒYƒ‹‹óŠÔ‚Ìì¬
-    if (cmdName === "puzzle" || cmdName === "ƒpƒYƒ‹" || cmdName === "sudoku" || cmdName === "”“Æ") {
-      // •¶š—ñ“ü—Í ¨ parseGrid
+    // puzzle / ãƒ‘ã‚ºãƒ« / æ•°ç‹¬ / sudoku: ãƒ‘ã‚ºãƒ«ç©ºé–“ã®ä½œæˆ
+    if (cmdName === "puzzle" || cmdName === "ãƒ‘ã‚ºãƒ«" || cmdName === "sudoku" || cmdName === "æ•°ç‹¬") {
+      // æ–‡å­—åˆ—å…¥åŠ› â†’ parseGrid
       if (typeof rawInput === 'string') {
         const grid = parseGrid(rawInput);
         return createSudokuSpace(grid);
       }
-      // ”z—ñ“ü—Í ¨ ’¼ÚƒOƒŠƒbƒh or ƒtƒ‰ƒbƒg”z—ñ
+      // é…åˆ—å…¥åŠ› â†’ ç›´æ¥ã‚°ãƒªãƒƒãƒ‰ or ãƒ•ãƒ©ãƒƒãƒˆé…åˆ—
       if (Array.isArray(rawInput)) {
         if (Array.isArray(rawInput[0])) {
           return createSudokuSpace(rawInput as number[][]);
         }
-        // ƒtƒ‰ƒbƒg”z—ñ
+        // ãƒ•ãƒ©ãƒƒãƒˆé…åˆ—
         const grid = parseGrid(rawInput as number[]);
         return createSudokuSpace(grid);
       }
-      // ”’l“ü—Í ¨ ƒqƒ“ƒg”‚Å¶¬
+      // æ•°å€¤å…¥åŠ› â†’ ãƒ’ãƒ³ãƒˆæ•°ã§ç”Ÿæˆ
       if (typeof rawInput === 'number') {
         const seed = args.length > 0 ? Number(args[0]) : undefined;
         const grid = generateSudoku(rawInput, seed);
         return createSudokuSpace(grid);
       }
-      throw new Error('puzzle: •¶š—ñE”z—ñE”’l‚Ì‚¢‚¸‚ê‚©‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢');
+      throw new Error('puzzle: æ–‡å­—åˆ—ãƒ»é…åˆ—ãƒ»æ•°å€¤ã®ã„ãšã‚Œã‹ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„');
     }
 
-    // latin_square / ƒ‰ƒeƒ“•ûw
-    if (cmdName === "latin_square" || cmdName === "ƒ‰ƒeƒ“•ûw") {
+    // latin_square / ãƒ©ãƒ†ãƒ³æ–¹é™£
+    if (cmdName === "latin_square" || cmdName === "ãƒ©ãƒ†ãƒ³æ–¹é™£") {
       if (Array.isArray(rawInput)) {
         if (Array.isArray(rawInput[0])) {
           return createLatinSquareSpace(rawInput as number[][]);
@@ -4227,11 +1957,11 @@ export class Evaluator {
         const grid = parseGrid(rawInput as number[]);
         return createLatinSquareSpace(grid);
       }
-      throw new Error('latin_square: “ñŸŒ³”z—ñ‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢');
+      throw new Error('latin_square: äºŒæ¬¡å…ƒé…åˆ—ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„');
     }
 
-    // generate_sudoku / ”“Æ¶¬
-    if (cmdName === "generate_sudoku" || cmdName === "”“Æ¶¬") {
+    // generate_sudoku / æ•°ç‹¬ç”Ÿæˆ
+    if (cmdName === "generate_sudoku" || cmdName === "æ•°ç‹¬ç”Ÿæˆ") {
       const clues = typeof rawInput === 'number' ? rawInput : 30;
       const seed = args.length > 0 ? Number(args[0]) : undefined;
       const grid = generateSudoku(clues, seed);
@@ -4243,58 +1973,58 @@ export class Evaluator {
       const ps = rawInput as PuzzleSpace;
 
       switch (cmdName) {
-        // ‰ğ‚­
-        case "solve": case "‰ğ‚­":
+        // è§£ã
+        case "solve": case "è§£ã":
           return solvePuzzle(ps);
 
-        // §–ñ“`”d‚Ì‚İ
-        case "propagate": case "“`”d": {
+        // åˆ¶ç´„ä¼æ’­ã®ã¿
+        case "propagate": case "ä¼æ’­": {
           const maxSteps = args.length > 0 ? Number(args[0]) : 100;
           return propagateOnly(ps, maxSteps);
         }
 
-        // 1ƒXƒeƒbƒv“`”d
-        case "step": case "ƒXƒeƒbƒv":
+        // 1ã‚¹ãƒ†ãƒƒãƒ—ä¼æ’­
+        case "step": case "ã‚¹ãƒ†ãƒƒãƒ—":
           propagateStep(ps);
           return ps;
 
         // Naked Pair
-        case "propagate_pair": case "—‡ƒyƒA":
+        case "propagate_pair": case "è£¸ãƒšã‚¢":
           propagateNakedPair(ps);
           return ps;
 
-        // ƒZƒ‹æ“¾i??Œ`®j
-        case "cell": case "ƒZƒ‹": {
+        // ã‚»ãƒ«å–å¾—ï¼ˆ??å½¢å¼ï¼‰
+        case "cell": case "ã‚»ãƒ«": {
           const row = args.length > 0 ? Number(args[0]) : 0;
           const col = args.length > 1 ? Number(args[1]) : 0;
           return cellAsMDim(ps, row, col);
         }
 
-        // Œó•âæ“¾
-        case "candidates": case "Œó•â": {
+        // å€™è£œå–å¾—
+        case "candidates": case "å€™è£œ": {
           const row = args.length > 0 ? Number(args[0]) : 0;
           const col = args.length > 1 ? Number(args[1]) : 0;
           return getCandidates(ps, row, col);
         }
 
-        // ƒOƒŠƒbƒhæ“¾
-        case "grid": case "”Õ–Ê":
+        // ã‚°ãƒªãƒƒãƒ‰å–å¾—
+        case "grid": case "ç›¤é¢":
           return getGrid(ps);
 
-        // •\¦
-        case "puzzle_format": case "”“Æ•\¦":
+        // è¡¨ç¤º
+        case "puzzle_format": case "æ•°ç‹¬è¡¨ç¤º":
           return formatSudoku(ps);
 
-        // “ïˆÕ“x
-        case "difficulty": case "“ïˆÕ“x":
+        // é›£æ˜“åº¦
+        case "difficulty": case "é›£æ˜“åº¦":
           return estimateDifficulty(ps);
 
-        // ƒĞ
+        // Ïƒ
         case "sigma":
           return getPuzzleSigma(ps);
 
-        // ó‘Ô
-        case "status": case "ó‘Ô":
+        // çŠ¶æ…‹
+        case "status": case "çŠ¶æ…‹":
           return {
             solved: ps.solved,
             confirmedCells: ps.confirmedCells,
@@ -4304,11 +2034,11 @@ export class Evaluator {
             puzzleType: ps.puzzleType,
           };
 
-        // —š—ğ
-        case "history": case "—š—ğ":
+        // å±¥æ­´
+        case "history": case "å±¥æ­´":
           return ps.history;
 
-        // ??Œ`®•ÏŠ·
+        // ??å½¢å¼å¤‰æ›
         case "as_mdim": {
           const row = args.length > 0 ? Number(args[0]) : 0;
           const col = args.length > 1 ? Number(args[1]) : 0;
@@ -4316,22 +2046,22 @@ export class Evaluator {
         }
 
         // ???????????????????????????????????????????
-        // Phase 3“‡: Puzzle ~ Bind ? §–ñ‚ğŠÖŒW‚Æ‚µ‚Ä•\Œ»
+        // Phase 3çµ±åˆ: Puzzle Ã— Bind ? åˆ¶ç´„ã‚’é–¢ä¿‚ã¨ã—ã¦è¡¨ç¾
         // ???????????????????????????????????????????
 
-        // puzzle_bind_constraints / §–ñŒ‹‡: §–ñƒOƒ‹[ƒv‚ğBindingRegistry‚É“o˜^
-        case "puzzle_bind_constraints": case "§–ñŒ‹‡": {
+        // puzzle_bind_constraints / åˆ¶ç´„çµåˆ: åˆ¶ç´„ã‚°ãƒ«ãƒ¼ãƒ—ã‚’BindingRegistryã«ç™»éŒ²
+        case "puzzle_bind_constraints": case "åˆ¶ç´„çµåˆ": {
           let bindCount = 0;
           for (const group of ps.constraints) {
             if (group.type !== 'all_different') continue;
-            // ƒOƒ‹[ƒv“à‚ÌŠeƒZƒ‹ƒyƒA‚ğ causal Œ‹‡i§–ñ = ‘ŠŒİˆö‰Êj
+            // ã‚°ãƒ«ãƒ¼ãƒ—å†…ã®å„ã‚»ãƒ«ãƒšã‚¢ã‚’ causal çµåˆï¼ˆåˆ¶ç´„ = ç›¸äº’å› æœï¼‰
             for (let i = 0; i < group.cells.length; i++) {
               for (let j = i + 1; j < group.cells.length; j++) {
                 const [ri, ci] = group.cells[i];
                 const [rj, cj] = group.cells[j];
                 const refA = `cell_${ri}_${ci}`;
                 const refB = `cell_${rj}_${cj}`;
-                // “¯‚¶ƒyƒA‚ªŠù‚É“o˜^Ï‚İ‚È‚çƒXƒLƒbƒv
+                // åŒã˜ãƒšã‚¢ãŒæ—¢ã«ç™»éŒ²æ¸ˆã¿ãªã‚‰ã‚¹ã‚­ãƒƒãƒ—
                 const existing = this.bindingRegistry.getBindingsFor(refA);
                 if (existing.some(b => b.target === refB)) continue;
                 this.bindingRegistry.bind(refA, refB, 'entangle', 1.0, true);
@@ -4348,19 +2078,19 @@ export class Evaluator {
           };
         }
 
-        // cell_relations / ƒZƒ‹ŠÖŒW: w’èƒZƒ‹‚Ì‘SŠÖŒW‚ğÆ‰ï
-        case "cell_relations": case "ƒZƒ‹ŠÖŒW": {
+        // cell_relations / ã‚»ãƒ«é–¢ä¿‚: æŒ‡å®šã‚»ãƒ«ã®å…¨é–¢ä¿‚ã‚’ç…§ä¼š
+        case "cell_relations": case "ã‚»ãƒ«é–¢ä¿‚": {
           const row = args.length > 0 ? Number(args[0]) : 0;
           const col = args.length > 1 ? Number(args[1]) : 0;
           const cellRef = `cell_${row}_${col}`;
           const bindings = this.bindingRegistry.getBindingsFor(cellRef);
-          // ŠÖŒW‚Ì‰ğ“Ç: cell_R_C ¨ (R, C) ‚É–ß‚·
+          // é–¢ä¿‚ã®è§£èª­: cell_R_C â†’ (R, C) ã«æˆ»ã™
           const relations = bindings.map(b => {
             const targetMatch = b.target.match(/cell_(\d+)_(\d+)/);
             if (!targetMatch) return null;
             const tr = Number(targetMatch[1]);
             const tc = Number(targetMatch[2]);
-            // ‚Ç‚Ì§–ñƒOƒ‹[ƒv‚É‘®‚·‚é‚©“Á’è
+            // ã©ã®åˆ¶ç´„ã‚°ãƒ«ãƒ¼ãƒ—ã«å±ã™ã‚‹ã‹ç‰¹å®š
             const groups: string[] = [];
             for (const g of ps.constraints) {
               const hasSource = g.cells.some(([r, c]) => r === row && c === col);
@@ -4385,25 +2115,25 @@ export class Evaluator {
           };
         }
 
-        // puzzle_will_solve / ˆÓu‰ğ–@: ˆÓu‹ì“®‚ÅƒpƒYƒ‹‚ğ‰ğ‚­
-        case "puzzle_will_solve": case "ˆÓu‰ğ–@": {
-          // Še–¢Šm’èƒZƒ‹‚ÉuseekvˆÓu‚ğ•t—^‚µ‚ÄŒó•â‚ğ•]‰¿
+        // puzzle_will_solve / æ„å¿—è§£æ³•: æ„å¿—é§†å‹•ã§ãƒ‘ã‚ºãƒ«ã‚’è§£ã
+        case "puzzle_will_solve": case "æ„å¿—è§£æ³•": {
+          // å„æœªç¢ºå®šã‚»ãƒ«ã«ã€Œseekã€æ„å¿—ã‚’ä»˜ä¸ã—ã¦å€™è£œã‚’è©•ä¾¡
           const solveLog: string[] = [];
           let confirms = 0;
           for (let r = 0; r < ps.size; r++) {
             for (let c = 0; c < ps.size; c++) {
               const cell = ps.cells[r][c];
               if (cell.value > 0 || cell.candidates.length !== 1) continue;
-              // Œó•â‚ª1‚Â‚ÌƒZƒ‹‚ğŠm’èiwill“I‚É‚Íseek¬Œ÷j
+              // å€™è£œãŒ1ã¤ã®ã‚»ãƒ«ã‚’ç¢ºå®šï¼ˆwillçš„ã«ã¯seekæˆåŠŸï¼‰
               cell.value = cell.candidates[0];
               cell.candidates = [];
               confirms++;
-              solveLog.push(`(${r},${c})=${cell.value} [ˆÓuŠm’è]`);
+              solveLog.push(`(${r},${c})=${cell.value} [æ„å¿—ç¢ºå®š]`);
             }
           }
-          // ’Êí‚Ì“`”d‚àÀs
+          // é€šå¸¸ã®ä¼æ’­ã‚‚å®Ÿè¡Œ
           const propagated = propagateOnly(ps, 50);
-          // ƒĞXV
+          // Ïƒæ›´æ–°
           let totalCandidates = 0;
           let confirmedCells = 0;
           for (let r = 0; r < ps.size; r++) {
@@ -4433,7 +2163,7 @@ export class Evaluator {
       if (this.isFunction(fn)) return this.callFunction(fn, [rawInput, ...args]);
     }
 
-    throw new Error(`–¢’m‚ÌƒpƒCƒvƒRƒ}ƒ“ƒh: ${cmdName}`);
+    throw new Error(`æœªçŸ¥ã®ãƒ‘ã‚¤ãƒ—ã‚³ãƒãƒ³ãƒ‰: ${cmdName}`);
   }
 
   private evalFnCall(ast: any): any {
@@ -4441,7 +2171,7 @@ export class Evaluator {
     const args = ast.args.map((a: any) => this.eval(a));
     if (ast.callee.type === "Ident" && ast.callee.name === "genesis") return createGenesis();
     if (this.isFunction(callee)) return this.callFunction(callee, args);
-    throw new Error(`ŒÄ‚Ño‚µ•s‰Â”\: ${JSON.stringify(callee)}`);
+    throw new Error(`å‘¼ã³å‡ºã—ä¸å¯èƒ½: ${JSON.stringify(callee)}`);
   }
 
   private callFunction(fn: any, args: any[]): any {
@@ -4478,7 +2208,7 @@ export class Evaluator {
         if (typeof args[0] === "string") return args[0].length;
         return 0;
       case "print": return args[0] ?? null;
-      default: throw new Error(`–¢’m‚Ì‘g‚İŠÖ”: ${name}`);
+      default: throw new Error(`æœªçŸ¥ã®çµ„è¾¼ã¿é–¢æ•°: ${name}`);
     }
   }
 
@@ -4486,12 +2216,12 @@ export class Evaluator {
     const rawObj = this.eval(ast.object);
     const obj = unwrapReiVal(rawObj);
 
-    // „Ÿ„Ÿ Tier 1: ƒĞƒƒ^ƒf[ƒ^‚Ö‚Ìƒƒ“ƒo[ƒAƒNƒZƒX „Ÿ„Ÿ
+    // â”€â”€ Tier 1: Ïƒãƒ¡ã‚¿ãƒ‡ãƒ¼ã‚¿ã¸ã®ãƒ¡ãƒ³ãƒãƒ¼ã‚¢ã‚¯ã‚»ã‚¹ â”€â”€
     if (ast.member === "__sigma__") {
       return getSigmaOf(rawObj);
     }
 
-    // „Ÿ„Ÿ Evolve: EvolveResult member access „Ÿ„Ÿ
+    // â”€â”€ Evolve: EvolveResult member access â”€â”€
     if (this.isObj(obj) && obj.reiType === "EvolveResult") {
       switch (ast.member) {
         case "value": return obj.value;
@@ -4504,7 +2234,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ ’Œ‡A: StringMDim member access „Ÿ„Ÿ
+    // â”€â”€ æŸ±â‘¡: StringMDim member access â”€â”€
     if (this.isObj(obj) && obj.reiType === "StringMDim") {
       switch (ast.member) {
         case "center": return obj.center;
@@ -4512,7 +2242,7 @@ export class Evaluator {
         case "mode": return obj.mode;
         case "dim": return obj.neighbors.length;
         case "metadata": return obj.metadata ?? {};
-        // Š¿šƒƒ^ƒf[ƒ^‚Ö‚Ì’¼ÚƒAƒNƒZƒX
+        // æ¼¢å­—ãƒ¡ã‚¿ãƒ‡ãƒ¼ã‚¿ã¸ã®ç›´æ¥ã‚¢ã‚¯ã‚»ã‚¹
         case "radical": return obj.metadata?.radical ?? null;
         case "radicalName": return obj.metadata?.radicalName ?? null;
         case "strokes": return obj.metadata?.strokes ?? 0;
@@ -4524,7 +2254,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ ’Œ‡A: KanjiSimilarity member access „Ÿ„Ÿ
+    // â”€â”€ æŸ±â‘¡: KanjiSimilarity member access â”€â”€
     if (this.isObj(obj) && obj.reiType === "KanjiSimilarity") {
       switch (ast.member) {
         case "strength": return obj.strength;
@@ -4538,7 +2268,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ v0.4: BindResult member access „Ÿ„Ÿ
+    // â”€â”€ v0.4: BindResult member access â”€â”€
     if (this.isObj(obj) && obj.reiType === "BindResult") {
       switch (ast.member) {
         case "binding": return obj.binding;
@@ -4551,7 +2281,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ v0.4: WillComputeResult member access „Ÿ„Ÿ
+    // â”€â”€ v0.4: WillComputeResult member access â”€â”€
     if (this.isObj(obj) && obj.reiType === "WillComputeResult") {
       switch (ast.member) {
         case "value": return obj.value;
@@ -4564,7 +2294,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ v0.4: WillSigma member access „Ÿ„Ÿ
+    // â”€â”€ v0.4: WillSigma member access â”€â”€
     if (this.isObj(obj) && obj.reiType === undefined && obj.dominantMode !== undefined && obj.totalChoices !== undefined) {
       switch (ast.member) {
         case "type": return obj.type;
@@ -4578,7 +2308,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ v0.3: SigmaResult member access „Ÿ„Ÿ
+    // â”€â”€ v0.3: SigmaResult member access â”€â”€
     if (this.isObj(obj) && obj.reiType === "SigmaResult") {
       switch (ast.member) {
         case "flow": return obj.flow;
@@ -4590,7 +2320,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ v0.3: Sigma sub-object member access „Ÿ„Ÿ
+    // â”€â”€ v0.3: Sigma sub-object member access â”€â”€
     if (this.isObj(obj) && obj.stage !== undefined && obj.momentum !== undefined && obj.directions !== undefined) {
       switch (ast.member) {
         case "stage": return obj.stage;
@@ -4624,7 +2354,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ v0.3: DNode member access „Ÿ„Ÿ
+    // â”€â”€ v0.3: DNode member access â”€â”€
     if (this.isDNode(obj)) {
       const dn = obj as DNode;
       switch (ast.member) {
@@ -4637,7 +2367,7 @@ export class Evaluator {
       }
     }
 
-    // „Ÿ„Ÿ v0.2.1 original member access „Ÿ„Ÿ
+    // â”€â”€ v0.2.1 original member access â”€â”€
     if (this.isMDim(obj)) {
       switch (ast.member) {
         case "center": return obj.center;
@@ -4668,7 +2398,7 @@ export class Evaluator {
         case "last": return obj[obj.length - 1] ?? null;
       }
     }
-    throw new Error(`ƒƒ“ƒo[ ${ast.member} ‚ÉƒAƒNƒZƒX‚Å‚«‚Ü‚¹‚ñ`);
+    throw new Error(`ãƒ¡ãƒ³ãƒãƒ¼ ${ast.member} ã«ã‚¢ã‚¯ã‚»ã‚¹ã§ãã¾ã›ã‚“`);
   }
 
   private evalIndexAccess(ast: any): any {
@@ -4677,7 +2407,7 @@ export class Evaluator {
     if (Array.isArray(obj)) return obj[idx] ?? null;
     if (typeof obj === "string") return obj[idx] ?? null;
     if (this.isMDim(obj)) return obj.neighbors[idx] ?? null;
-    throw new Error("ƒCƒ“ƒfƒbƒNƒXƒAƒNƒZƒX•s‰Â");
+    throw new Error("ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚¢ã‚¯ã‚»ã‚¹ä¸å¯");
   }
 
   private evalExtend(ast: any): any {
@@ -4686,7 +2416,7 @@ export class Evaluator {
       if (ast.subscript) return createExtended(target.base, target.subscripts + ast.subscript);
       return createExtended(target.base, target.subscripts + "o");
     }
-    throw new Error("Šg’£‚ÍŠg’£”‚É‚Ì‚İ“K—p‰Â”\");
+    throw new Error("æ‹¡å¼µã¯æ‹¡å¼µæ•°ã«ã®ã¿é©ç”¨å¯èƒ½");
   }
 
   private evalReduce(ast: any): any {
@@ -4695,7 +2425,7 @@ export class Evaluator {
       if (target.order <= 1) return target.base;
       return createExtended(target.base, target.subscripts.slice(0, -1));
     }
-    throw new Error("k–ñ‚ÍŠg’£”‚É‚Ì‚İ“K—p‰Â”\");
+    throw new Error("ç¸®ç´„ã¯æ‹¡å¼µæ•°ã«ã®ã¿é©ç”¨å¯èƒ½");
   }
 
   private evalConverge(ast: any): any {
@@ -4746,12 +2476,12 @@ export class Evaluator {
       const patVal = this.eval(pattern);
       if (this.matches(target, patVal)) return this.eval(body);
     }
-    throw new Error("ƒ}ƒbƒ`‚·‚é•ªŠò‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ");
+    throw new Error("ãƒãƒƒãƒã™ã‚‹åˆ†å²ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“");
   }
 
   // --- Helpers ---
   toNumber(val: any): number {
-    // Tier 1: ReiVal“§‰ß
+    // Tier 1: ReiValé€é
     if (val !== null && typeof val === 'object' && val.reiType === 'ReiVal') return this.toNumber(val.value);
     if (typeof val === "number") return val;
     if (typeof val === "boolean") return val ? 1 : 0;
@@ -4781,27 +2511,27 @@ export class Evaluator {
   isGenesis(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "State"; }
   isFunction(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "Function"; }
   isQuad(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "Quad"; }
-  // „Ÿ„Ÿ v0.3 „Ÿ„Ÿ
+  // â”€â”€ v0.3 â”€â”€
   isSpace(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "Space"; }
   isDNode(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "DNode"; }
-  // „Ÿ„Ÿ Tier 1 „Ÿ„Ÿ
+  // â”€â”€ Tier 1 â”€â”€
   isReiVal(v: any): boolean { return v !== null && typeof v === 'object' && v.reiType === 'ReiVal'; }
-  // „Ÿ„Ÿ ’Œ‡A „Ÿ„Ÿ
+  // â”€â”€ æŸ±â‘¡ â”€â”€
   isStringMDim(v: any): boolean { const u = unwrapReiVal(v); return u !== null && typeof u === "object" && u.reiType === "StringMDim"; }
-  /** ’l‚©‚çƒĞƒƒ^ƒf[ƒ^‚ğæ“¾iTier 1j */
+  /** å€¤ã‹ã‚‰Ïƒãƒ¡ã‚¿ãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—ï¼ˆTier 1ï¼‰ */
   getSigmaMetadata(v: any): SigmaMetadata { return getSigmaOf(v); }
-  /** ReiVal‚ğ“§‰ß“I‚ÉƒAƒ“ƒ‰ƒbƒv */
+  /** ReiValã‚’é€éçš„ã«ã‚¢ãƒ³ãƒ©ãƒƒãƒ— */
   unwrap(v: any): any { return unwrapReiVal(v); }
 
-  // „Ÿ„Ÿ v0.4: ŠÖŒWEˆÓuƒwƒ‹ƒp[ „Ÿ„Ÿ
+  // â”€â”€ v0.4: é–¢ä¿‚ãƒ»æ„å¿—ãƒ˜ãƒ«ãƒ‘ãƒ¼ â”€â”€
 
-  /** ’l‚©‚ç‚»‚Ì•Ï”–¼‚ğ‹tˆø‚«‚·‚éiQÆˆê’vj */
+  /** å€¤ã‹ã‚‰ãã®å¤‰æ•°åã‚’é€†å¼•ãã™ã‚‹ï¼ˆå‚ç…§ä¸€è‡´ï¼‰ */
   findRefByValue(value: any): string | null {
     const raw = unwrapReiVal(value);
     for (const [name, binding] of this.env.allBindings()) {
       const bv = unwrapReiVal(binding.value);
       if (bv === raw) return name;
-      // ƒIƒuƒWƒFƒNƒgQÆ‚ªˆÙ‚È‚éê‡‚àƒĞƒƒ^ƒf[ƒ^‚Å“¯ˆê«‚ğ”»’è
+      // ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆå‚ç…§ãŒç•°ãªã‚‹å ´åˆã‚‚Ïƒãƒ¡ã‚¿ãƒ‡ãƒ¼ã‚¿ã§åŒä¸€æ€§ã‚’åˆ¤å®š
       if (raw !== null && typeof raw === 'object' && bv !== null && typeof bv === 'object') {
         if (raw.__sigma__ && raw.__sigma__ === bv.__sigma__) return name;
       }
@@ -4809,7 +2539,7 @@ export class Evaluator {
     return null;
   }
 
-  /** Œ‹‡‚Ì“`”d‚ğƒgƒŠƒK[‚·‚éi•Ï”–¼ + V’lj */
+  /** çµåˆã®ä¼æ’­ã‚’ãƒˆãƒªã‚¬ãƒ¼ã™ã‚‹ï¼ˆå¤‰æ•°å + æ–°å€¤ï¼‰ */
   triggerPropagation(ref: string, newValue: any): number {
     return this.bindingRegistry.propagate(
       ref,
