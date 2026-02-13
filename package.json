@@ -1,7 +1,7 @@
 {
   "name": "rei-lang",
-  "version": "0.3.1",
-  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction.",
+  "version": "0.4.0",
+  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. Now with RCT semantic compression and 6-attribute system.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -19,6 +19,8 @@
     "dist",
     "bin",
     "spec",
+    "theory",
+    "PEACE_USE_CLAUSE.md",
     "README.md",
     "LICENSE"
   ],
@@ -41,12 +43,16 @@
     "zero-extension",
     "center-periphery",
     "compress",
+    "semantic-compression",
+    "rct",
+    "peace-use",
+    "ethical-source",
     "nobuki-fujimoto"
   ],
   "author": {
     "name": "Nobuki Fujimoto"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/fc0web/rei-lang"
@@ -56,6 +62,7 @@
     "url": "https://github.com/fc0web/rei-lang/issues"
   },
   "devDependencies": {
+    "@types/node": "^25.2.3",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

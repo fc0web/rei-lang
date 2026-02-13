@@ -1,7 +1,8 @@
 ﻿// ============================================================
-// Rei v0.3 Evaluator — Integrated with Space-Layer-Diffusion
+// Rei v0.4 Evaluator — Integrated with Space-Layer-Diffusion
 // Original: v0.2.1 by Nobuki Fujimoto
 // Extended: v0.3 Space-Layer-Diffusion (collaborative design)
+// Extended: v0.4 RCT Semantic Compression + 6-Attribute Activation
 // ============================================================
 
 import { TokenType } from './lexer';
@@ -44,6 +45,8 @@ import {
   compressToGenerativeParams, generate,
   type GenerativeParams,
 } from '../../theory/theories-67';
+// RCT方向3: API版はtheory/semantic-compressor.tsを直接使用
+// evaluator内はローカル同期版（下部のreiLocalSemantic*関数）を使用
 
 // --- Tier 1: Sigma Metadata (公理C1 — 全値型の自己参照) ---
 
@@ -2175,6 +2178,199 @@ function valueToNumberArray(value: any): number[] {
   throw new Error('圧縮: 対応していないデータ型です');
 }
 
+// ============================================================
+// RCT 方向3: Semantic Compress / Decompress / Verify (ローカル同期版)
+// ============================================================
+// Evaluator内での同期実行用。API接続版はtheory/semantic-compressor.tsを使用。
+// Rei構文:
+//   data |> semantic_compress           → SemanticThetaLocal
+//   theta |> semantic_decompress        → 復元文字列
+//   [orig, recon] |> semantic_verify    → 検証結果
+//   data |> 意味圧縮 / theta |> 意味復元 / [a,b] |> 意味検証 （日本語版）
+
+interface SemanticThetaLocal {
+  reiType: 'SemanticTheta';
+  version: '3.0';
+  fidelity: string;
+  intent: string;
+  structure: string;
+  functions: string[];
+  imports: string[];
+  types: string[];
+  patterns: string[];
+  language: string;
+  originalSize: number;
+  thetaSize: number;
+  compressionRatio: number;
+}
+
+function reiLocalSemanticCompress(data: string, fidelity: string = 'high'): SemanticThetaLocal {
+  const lines = data.split('\n');
+  const originalSize = Buffer.byteLength(data, 'utf-8');
+
+  // 関数シグネチャ抽出
+  const functions: string[] = [];
+  for (const line of lines) {
+    const funcMatch = line.match(/(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)(?:\s*:\s*([^\s{]+))?/);
+    if (funcMatch) {
+      functions.push(`${funcMatch[1]}(${funcMatch[2].replace(/\s+/g, '')})${funcMatch[3] ? ':' + funcMatch[3] : ''}`);
+    }
+    const methodMatch = line.match(/^\s{2,}(?:async\s+)?(\w+)\s*\(([^)]*)\)(?:\s*:\s*([^\s{]+))?\s*\{/);
+    if (methodMatch && !['if','for','while','switch','catch','else'].includes(methodMatch[1])) {
+      functions.push(`.${methodMatch[1]}(${methodMatch[2].replace(/\s+/g, '')})`);
+    }
+  }
+
+  // import抽出
+  const imports: string[] = [];
+  for (const line of lines) {
+    const impMatch = line.match(/from\s+['"]([^'"]+)['"]/);
+    if (impMatch) imports.push(impMatch[1]);
+  }
+
+  // interface/class/type 抽出
+  const types: string[] = [];
+  for (const line of lines) {
+    const typeMatch = line.match(/(?:export\s+)?(?:interface|class|type)\s+(\w+)/);
+    if (typeMatch) types.push(typeMatch[1]);
+  }
+
+  // パターン検出
+  const patterns: string[] = [];
+  if (data.includes('async')) patterns.push('async/await');
+  if (data.includes('extends') || data.includes('implements')) patterns.push('inheritance');
+  if (data.match(/\.map\(|\.filter\(|\.reduce\(/)) patterns.push('functional');
+  if (data.includes('try') && data.includes('catch')) patterns.push('error-handling');
+
+  // コメントから意図を抽出
+  const comments = lines
+    .filter(l => l.trim().startsWith('//') || l.trim().startsWith('*'))
+    .slice(0, 5)
+    .map(c => c.replace(/^[\s/*]+/, '').trim())
+    .filter(Boolean);
+
+  // 言語検出
+  const language = data.includes('interface ') || data.includes(': string') ? 'TypeScript'
+    : data.includes('def ') ? 'Python'
+    : data.includes('fn ') ? 'Rust'
+    : 'JavaScript';
+
+  // fidelityによって詳細度を調整
+  const funcsToInclude = fidelity === 'low' ? functions.slice(0, 3)
+    : fidelity === 'medium' ? functions.slice(0, 8)
+    : functions;
+
+  const theta: SemanticThetaLocal = {
+    reiType: 'SemanticTheta',
+    version: '3.0',
+    fidelity,
+    intent: comments.join('. ').substring(0, 120) || 'code module',
+    structure: `${types.length}types, ${functions.length}fns, ${imports.length}deps`,
+    functions: funcsToInclude,
+    imports,
+    types,
+    patterns,
+    language,
+    originalSize,
+    thetaSize: 0,
+    compressionRatio: 0,
+  };
+
+  const thetaJson = JSON.stringify(theta);
+  theta.thetaSize = Buffer.byteLength(thetaJson, 'utf-8');
+  theta.compressionRatio = theta.thetaSize / originalSize;
+
+  return theta;
+}
+
+function reiLocalSemanticDecompress(input: any): string {
+  if (!input || typeof input !== 'object' || input.reiType !== 'SemanticTheta') {
+    throw new Error('semantic_decompress: SemanticTheta型のデータが必要です (data |> semantic_compress の結果を渡してください)');
+  }
+
+  const theta = input as SemanticThetaLocal;
+
+  // θから概要コードを再生成（ローカルモード）
+  const lines: string[] = [];
+
+  lines.push(`// ${theta.intent}`);
+  lines.push(`// Structure: ${theta.structure}`);
+  lines.push('');
+
+  // imports
+  for (const dep of theta.imports) {
+    lines.push(`import { /* ... */ } from '${dep}';`);
+  }
+  if (theta.imports.length > 0) lines.push('');
+
+  // types
+  for (const t of theta.types) {
+    lines.push(`interface ${t} { /* ... */ }`);
+  }
+  if (theta.types.length > 0) lines.push('');
+
+  // functions
+  for (const fn of theta.functions) {
+    if (fn.startsWith('.')) {
+      lines.push(`  ${fn.slice(1)} { /* ... */ }`);
+    } else {
+      lines.push(`export function ${fn} {`);
+      lines.push('  // TODO: implement');
+      lines.push('}');
+      lines.push('');
+    }
+  }
+
+  lines.push(`// RCT Semantic Reconstruction (local mode)`);
+  lines.push(`// Connect ANTHROPIC_API_KEY for full LLM-powered reconstruction`);
+
+  return lines.join('\n');
+}
+
+function reiLocalSemanticVerify(original: string, reconstructed: string): {
+  reiType: string; score: number; functional: number; structural: number; details: string;
+} {
+  // 関数名の一致率
+  const extractNames = (code: string) => new Set(
+    (code.match(/(?:function|class|interface)\s+(\w+)/g) || [])
+      .map(m => m.replace(/(?:function|class|interface)\s+/, ''))
+  );
+
+  const origNames = extractNames(original);
+  const reconNames = extractNames(reconstructed);
+
+  let matches = 0;
+  for (const name of origNames) {
+    if (reconNames.has(name)) matches++;
+  }
+
+  const structural = origNames.size > 0 ? matches / origNames.size : 0;
+
+  // import一致率
+  const extractImports = (code: string) => new Set(
+    (code.match(/from\s+['"]([^'"]+)['"]/g) || []).map(m => m.replace(/from\s+['"]|['"]/g, ''))
+  );
+  const origImports = extractImports(original);
+  const reconImports = extractImports(reconstructed);
+  let importMatches = 0;
+  for (const imp of origImports) {
+    if (reconImports.has(imp)) importMatches++;
+  }
+  const importScore = origImports.size > 0 ? importMatches / origImports.size : 1;
+
+  // 総合スコア
+  const score = structural * 0.6 + importScore * 0.2 + 0.2;
+  const functional = structural * 0.7;
+
+  return {
+    reiType: 'SemanticVerify',
+    score: Math.round(score * 1000) / 1000,
+    functional: Math.round(functional * 1000) / 1000,
+    structural: Math.round(structural * 1000) / 1000,
+    details: `${matches}/${origNames.size} identifiers, ${importMatches}/${origImports.size} imports matched`,
+  };
+}
+
 function quadNot(v: string): string {
   switch (v) {
     case "top": return "bottom";
@@ -2437,6 +2633,24 @@ export class Evaluator {
       }
       if (cmd.cmd === "compress_info" || cmd.cmd === "圧縮情報") {
         return reiCompressInfo(rawInput);
+      }
+      // ── RCT 方向3: semantic_compress/decompress/verify ──
+      if (cmd.cmd === "semantic_compress" || cmd.cmd === "意味圧縮") {
+        const data = typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput);
+        const evalArgs = (cmd.args || []).map((a: any) => this.eval(a));
+        const fidelity = (evalArgs.length > 1 && typeof evalArgs[1] === 'string' ? evalArgs[1] : 'high');
+        return reiLocalSemanticCompress(data, fidelity);
+      }
+      if (cmd.cmd === "semantic_decompress" || cmd.cmd === "意味復元") {
+        return reiLocalSemanticDecompress(rawInput);
+      }
+      if (cmd.cmd === "semantic_verify" || cmd.cmd === "意味検証") {
+        if (!Array.isArray(rawInput) || rawInput.length < 2) {
+          throw new Error('semantic_verify expects [original, reconstructed] array');
+        }
+        const orig = typeof rawInput[0] === 'string' ? rawInput[0] : JSON.stringify(rawInput[0]);
+        const recon = typeof rawInput[1] === 'string' ? rawInput[1] : JSON.stringify(rawInput[1]);
+        return reiLocalSemanticVerify(orig, recon);
       }
       // ── Evolve: evolve_value はラップしない（直値返却） ──
       if (cmd.cmd === "evolve_value") {

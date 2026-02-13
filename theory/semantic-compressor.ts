@@ -856,4 +856,48 @@ export async function reiSemanticDecompress(
   return engine.decompress(theta);
 }
 
+/**
+ * 意味的等価性検証
+ *
+ * 使用例（Rei構文）:
+ *   [original, reconstructed] |> semantic_verify
+ */
+export interface SemanticVerifyResult {
+  score: number;           // 総合スコア (0-1)
+  functional: number;      // 機能的等価性 (0-1)
+  structural: number;      // 構造的等価性 (0-1)
+  details: string;         // 詳細説明
+}
+
+export async function reiSemanticVerify(
+  original: string,
+  reconstructed: string
+): Promise<SemanticVerifyResult> {
+  const engine = new RCTSemanticEngine();
+  const compressor = new LLMSemanticCompressor();
+  const semanticScore = await compressor.verifySemantic(original, reconstructed);
+
+  // 構造的類似度: 関数名・クラス名の一致率
+  const origFuncs = new Set(
+    (original.match(/(?:function|class|interface)\s+(\w+)/g) || [])
+      .map(m => m.replace(/(?:function|class|interface)\s+/, ''))
+  );
+  const reconFuncs = new Set(
+    (reconstructed.match(/(?:function|class|interface)\s+(\w+)/g) || [])
+      .map(m => m.replace(/(?:function|class|interface)\s+/, ''))
+  );
+  let matches = 0;
+  for (const f of origFuncs) {
+    if (reconFuncs.has(f)) matches++;
+  }
+  const structural = origFuncs.size > 0 ? matches / origFuncs.size : 0;
+
+  return {
+    score: semanticScore,
+    functional: semanticScore * 0.9,
+    structural,
+    details: `Semantic: ${(semanticScore * 100).toFixed(1)}%, Structural: ${matches}/${origFuncs.size} identifiers matched`,
+  };
+}
+
 export default RCTSemanticEngine;

@@ -7,14 +7,15 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "lib": ["ES2022"]
+    "lib": ["ES2022"],
+    "types": ["node"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "theory/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }
