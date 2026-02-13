@@ -466,15 +466,18 @@ NOTES: Brief explanation`;
     const intent = comments.slice(0, 5).map(c => c.replace(/^[\s/*]+/, '').trim()).filter(Boolean).join('. ');
 
     // 4. θ構築
+    const classNames = classes.map(c => c.name);
+    const interfaceNames = interfaces.map(i => i.name);
+
     const theta = {
       intent: intent || `${language} module with ${functions.length} functions`,
-      structure: `${classes.length} classes, ${interfaces.length} interfaces, ${functions.length} functions`,
+      structure: `${classNames.length > 0 ? classNames.join(',') + ' ' : ''}${classes.length} classes, ${interfaceNames.length > 0 ? interfaceNames.join(',') + ' ' : ''}${interfaces.length} interfaces, ${functions.length} functions`,
       algorithms: functions.map(f => `${f.name}: ${f.signature}`),
       dependencies: imports,
       types: interfaces.map(i => `${i.name}: ${i.members.join(', ')}`),
       edge_cases: [],
       constants: Object.fromEntries(constants.map(c => [c.name, c.value])),
-      patterns: [],
+      patterns: classNames.length > 0 ? [`classes: ${classNames.join(', ')}`] : [],
       io_contract: functions.map(f => `${f.name}(${f.params}) → ${f.returnType || 'void'}`).join('; '),
       language,
     };
@@ -487,7 +490,7 @@ NOTES: Brief explanation`;
   // ============================================================
 
   private detectLanguage(code: string): string {
-    if (code.includes('import ') && (code.includes(': string') || code.includes(': number'))) return 'TypeScript';
+    if ((code.includes(': string') || code.includes(': number') || code.includes(': boolean') || code.includes('interface ')) && (code.includes('export ') || code.includes('import '))) return 'TypeScript';
     if (code.includes('import ') || code.includes('const ') || code.includes('let ')) return 'JavaScript';
     if (code.includes('def ') && code.includes('self')) return 'Python';
     if (code.includes('#include') || code.includes('int main')) return 'C/C++';
