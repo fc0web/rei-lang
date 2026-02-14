@@ -373,7 +373,8 @@ describe("Phase 3: 6属性横断統合", () => {
     expect(s.field).toBeDefined();
     expect(s.flow).toBeDefined();
     expect(s.memory).toBeDefined();
-    expect(typeof s.layer).toBe('number');
+    expect(typeof s.layer).toBe('object');
+    expect(typeof s.layer.depth).toBe('number');
     expect(s.relation.length).toBe(1);
     expect(s.relation[0].mode).toBe('mirror');
     expect(s.will).toBeDefined();

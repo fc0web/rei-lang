@@ -319,7 +319,8 @@ describe("Phase 2統合: σにrelation/will情報が含まれる", () => {
     expect(sigma.field).toBeDefined();         // 場
     expect(sigma.flow).toBeDefined();          // 流れ
     expect(sigma.memory).toBeDefined();        // 記憶
-    expect(typeof sigma.layer).toBe('number'); // 層
+    expect(typeof sigma.layer).toBe('object'); // 層（sigma-deep深化構造）
+    expect(typeof sigma.layer.depth).toBe('number');
     expect(sigma.relation.length).toBe(1);     // 関係 ← v0.4
     expect(sigma.will.type).toBe('seek');      // 意志 ← v0.4
   });
