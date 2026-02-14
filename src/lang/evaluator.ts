@@ -238,6 +238,25 @@ import {
   type EthicsResult,
 } from './domains/humanities';
 
+// ── Phase 5.5c: ドメイン横断統合 ──
+import {
+  simToPipeline,
+  simEnergyToPipeline,
+  simToCausal,
+  simEthics,
+  dataToText,
+  dataEthics,
+  pipelineToSim,
+  causalToSim,
+  textToPipeline,
+  composeDomains,
+  wrapCrossDomain,
+  getCrossDomainSigma,
+  getDomainCompositionSigma,
+  type CrossDomainResult,
+  type DomainComposition,
+} from './domains/cross-domain';
+
 // ── Phase 5.5: 6属性深化 ──
 import {
   extractFieldInfo,
@@ -3310,6 +3329,73 @@ export class Evaluator {
     if (cmdName === "ethics_sigma" || cmdName === "倫理σ") {
       if (rawInput?.reiType === 'EthicsResult') return getEthicsSigma(rawInput);
       throw new Error('ethics_sigma: EthicsResultが必要です');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 5.5c: ドメイン横断統合
+    // ═══════════════════════════════════════════════════════════
+
+    // B→C: 自然科学 → 情報工学
+    if (cmdName === "sim_to_pipeline" || cmdName === "シミュ→パイプ") {
+      if (rawInput?.reiType === 'SimulationSpace') return simToPipeline(rawInput);
+      throw new Error('sim_to_pipeline: SimulationSpaceが必要です');
+    }
+    if (cmdName === "sim_energy_pipeline" || cmdName === "エネルギー→パイプ") {
+      if (rawInput?.reiType === 'SimulationSpace') return simEnergyToPipeline(rawInput);
+      throw new Error('sim_energy_pipeline: SimulationSpaceが必要です');
+    }
+
+    // B→D: 自然科学 → 人文科学
+    if (cmdName === "sim_to_causal" || cmdName === "シミュ→因果") {
+      if (rawInput?.reiType === 'SimulationSpace') return simToCausal(rawInput);
+      throw new Error('sim_to_causal: SimulationSpaceが必要です');
+    }
+    if (cmdName === "sim_ethics" || cmdName === "シミュ倫理") {
+      if (rawInput?.reiType === 'SimulationSpace') return simEthics(rawInput, args[0] as string);
+      throw new Error('sim_ethics: SimulationSpaceが必要です');
+    }
+
+    // C→D: 情報工学 → 人文科学
+    if (cmdName === "data_to_text" || cmdName === "データ→テキスト") {
+      if (rawInput?.reiType === 'PipelineSpace') return dataToText(rawInput);
+      throw new Error('data_to_text: PipelineSpaceが必要です');
+    }
+    if (cmdName === "data_ethics" || cmdName === "データ倫理") {
+      if (rawInput?.reiType === 'PipelineSpace') return dataEthics(rawInput);
+      throw new Error('data_ethics: PipelineSpaceが必要です');
+    }
+
+    // C→B: 情報工学 → 自然科学
+    if (cmdName === "pipeline_to_sim" || cmdName === "パイプ→シミュ") {
+      if (rawInput?.reiType === 'PipelineSpace') return pipelineToSim(rawInput);
+      throw new Error('pipeline_to_sim: PipelineSpaceが必要です');
+    }
+
+    // D→B: 人文科学 → 自然科学
+    if (cmdName === "causal_to_sim" || cmdName === "因果→シミュ") {
+      if (rawInput?.reiType === 'GraphSpace') return causalToSim(rawInput);
+      throw new Error('causal_to_sim: GraphSpaceが必要です');
+    }
+
+    // D→C: 人文科学 → 情報工学
+    if (cmdName === "text_to_pipeline" || cmdName === "テキスト→パイプ") {
+      if (rawInput?.reiType === 'TextAnalysis') return textToPipeline(rawInput);
+      throw new Error('text_to_pipeline: TextAnalysisが必要です');
+    }
+
+    // 三領域統合
+    if (cmdName === "domain_compose" || cmdName === "三領域統合") {
+      if (args.length >= 2) {
+        return composeDomains(rawInput, args[0], args[1]);
+      }
+      throw new Error('domain_compose: 3つのドメイン値が必要です (input, arg1, arg2)');
+    }
+
+    // 横断σ
+    if (cmdName === "cross_sigma" || cmdName === "横断σ") {
+      if (rawInput?.reiType === 'CrossDomainResult') return getCrossDomainSigma(rawInput);
+      if (rawInput?.reiType === 'DomainComposition') return getDomainCompositionSigma(rawInput);
+      throw new Error('cross_sigma: CrossDomainResult or DomainCompositionが必要です');
     }
 
     // User-defined pipe function

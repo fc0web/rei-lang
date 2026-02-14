@@ -373,8 +373,8 @@ export class Lexer {
   private peek(offset: number): string | undefined { return this.chars[this.pos + offset]; }
   private emit(type: string, value: string) { this.tokens.push({ type, value, line: this.line, col: this.col }); }
   private isDigit(ch: string) { return ch >= "0" && ch <= "9"; }
-  private isIdentStart(ch: string) { return /[a-zA-Z_α-ωΑ-Ω𝕄𝕌\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(ch); }
-  private isIdentPart(ch: string) { return /[a-zA-Z0-9_α-ωΑ-Ω⁰¹²³∞𝕄𝕌\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(ch); }
+  private isIdentStart(ch: string) { return /[a-zA-Z_α-ωΑ-Ω𝕄𝕌\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u2190-\u2199]/.test(ch); }
+  private isIdentPart(ch: string) { return /[a-zA-Z0-9_α-ωΑ-Ω⁰¹²³∞𝕄𝕌\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u2190-\u2199]/.test(ch); }
   private shouldNegateBePrefix(): boolean {
     if (this.tokens.length === 0) return true;
     const last = this.tokens[this.tokens.length - 1];
