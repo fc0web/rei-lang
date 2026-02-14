@@ -284,6 +284,7 @@ export function pipelineToSim(pipeline: PipelineSpace): SimulationSpace {
     rules: [],
     time: 0,
     dt: 0.01,
+    dimensions: 2,
     history: [],
     params: {},
     metadata: {
@@ -345,6 +346,7 @@ export function causalToSim(graph: GraphSpace): SimulationSpace {
     rules: [causalForceRule],
     time: 0,
     dt: 0.01,
+    dimensions: 2,
     history: [],
     params: {},
     metadata: {

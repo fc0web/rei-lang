@@ -257,6 +257,39 @@ import {
   type DomainComposition,
 } from './domains/cross-domain';
 
+// ── Phase 6: 新ドメイン (E.芸術 / F.音楽 / G.経済学 / H.言語学) ──
+import {
+  colorHarmony, generateFractal, generateLSystem,
+  analyzeAesthetics, getArtSigma,
+  type PatternResult, type ColorHarmony as ColorHarmonyType, type AestheticAnalysis,
+} from './domains/art';
+
+import {
+  createScale, createChord, analyzeProgression,
+  createRhythm, createMelody, getMusicSigma,
+  type ScaleResult, type ChordResult, type RhythmPattern, type MelodyResult,
+} from './domains/music';
+
+import {
+  supplyDemand, createMarket, marketStep, marketRun,
+  createGame, getEconomicsSigma,
+  type MarketState, type SupplyDemandResult, type GameTheoryResult,
+} from './domains/economics';
+
+import {
+  parseSyntax, createSemanticFrame, analyzeWord,
+  translate, getLinguisticsSigma,
+  type SyntaxTree, type SemanticFrame, type WordRelation, type TranslationResult,
+} from './domains/linguistics';
+
+// ── 型システム強化 ──
+import {
+  inferType, typeCheck, typeDomain, checkPipeCompatibility,
+  getTypeCheckSigma,
+  ReiTypeError, ReiPipeError, ReiDomainError,
+  type ReiTypeId, type TypeCheckResult,
+} from './type-system';
+
 // ── Phase 5.5: 6属性深化 ──
 import {
   extractFieldInfo,
@@ -3396,6 +3429,155 @@ export class Evaluator {
       if (rawInput?.reiType === 'CrossDomainResult') return getCrossDomainSigma(rawInput);
       if (rawInput?.reiType === 'DomainComposition') return getDomainCompositionSigma(rawInput);
       throw new Error('cross_sigma: CrossDomainResult or DomainCompositionが必要です');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 6: E.芸術ドメイン
+    // ═══════════════════════════════════════════════════════════
+
+    if (cmdName === "fractal" || cmdName === "フラクタル") {
+      const w = args.length >= 1 ? this.toNumber(args[0]) : 20;
+      const h = args.length >= 2 ? this.toNumber(args[1]) : 20;
+      const iter = args.length >= 3 ? this.toNumber(args[2]) : 50;
+      return generateFractal(w, h, iter);
+    }
+    if (cmdName === "lsystem" || cmdName === "L系") {
+      const axiom = typeof rawInput === 'string' ? rawInput : 'F';
+      const rules = args.length >= 1 && typeof args[0] === 'object' ? args[0] as Record<string, string> : { F: 'F+F-F-F+F' };
+      const iter = args.length >= 2 ? this.toNumber(args[1]) : 3;
+      return generateLSystem(axiom, rules, iter);
+    }
+    if (cmdName === "color_harmony" || cmdName === "色彩調和") {
+      const hue = typeof rawInput === 'number' ? rawInput : 0;
+      const scheme = args.length >= 1 ? String(args[0]) : 'complementary';
+      return colorHarmony(hue, scheme);
+    }
+    if (cmdName === "aesthetics" || cmdName === "美学分析") {
+      return analyzeAesthetics(rawInput, args[0] as string);
+    }
+    if (cmdName === "art_sigma" || cmdName === "芸術σ") {
+      return getArtSigma(rawInput);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 6: F.音楽ドメイン
+    // ═══════════════════════════════════════════════════════════
+
+    if (cmdName === "scale" || cmdName === "音階") {
+      const root = typeof rawInput === 'string' ? rawInput : 'C';
+      const mode = args.length >= 1 ? String(args[0]) : 'major';
+      return createScale(root, mode);
+    }
+    if (cmdName === "chord" || cmdName === "和音") {
+      const root = typeof rawInput === 'string' ? rawInput : 'C';
+      const type = args.length >= 1 ? String(args[0]) : 'major';
+      return createChord(root, type);
+    }
+    if (cmdName === "progression" || cmdName === "進行分析") {
+      if (Array.isArray(rawInput) && rawInput[0]?.reiType === 'ChordResult') {
+        return analyzeProgression(rawInput);
+      }
+      throw new Error('progression: ChordResult[] が必要です');
+    }
+    if (cmdName === "rhythm" || cmdName === "リズム") {
+      const beats = typeof rawInput === 'number' ? rawInput : 4;
+      const sub = args.length >= 1 ? this.toNumber(args[0]) : 4;
+      const density = args.length >= 2 ? this.toNumber(args[1]) : 0.5;
+      const bpm = args.length >= 3 ? this.toNumber(args[2]) : 120;
+      return createRhythm(beats, sub, density, bpm);
+    }
+    if (cmdName === "melody" || cmdName === "旋律") {
+      if (rawInput?.reiType === 'ScaleResult') {
+        const length = args.length >= 1 ? this.toNumber(args[0]) : 8;
+        const style = args.length >= 2 ? String(args[1]) : 'stepwise';
+        return createMelody(rawInput, length, style);
+      }
+      throw new Error('melody: ScaleResult が必要です');
+    }
+    if (cmdName === "music_sigma" || cmdName === "音楽σ") {
+      return getMusicSigma(rawInput);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 6: G.経済学ドメイン
+    // ═══════════════════════════════════════════════════════════
+
+    if (cmdName === "supply_demand" || cmdName === "需給") {
+      const sSlope = typeof rawInput === 'number' ? rawInput : 1;
+      const sIntercept = args.length >= 1 ? this.toNumber(args[0]) : 0;
+      const dSlope = args.length >= 2 ? this.toNumber(args[1]) : -1;
+      const dIntercept = args.length >= 3 ? this.toNumber(args[2]) : 100;
+      return supplyDemand(sSlope, sIntercept, dSlope, dIntercept);
+    }
+    if (cmdName === "market" || cmdName === "市場") {
+      const name = typeof rawInput === 'string' ? rawInput : 'market';
+      const price = args.length >= 1 ? this.toNumber(args[0]) : 100;
+      const agents = args.length >= 2 ? this.toNumber(args[1]) : 10;
+      return createMarket(name, price, agents);
+    }
+    if (cmdName === "market_step" || cmdName === "市場ステップ") {
+      if (rawInput?.reiType === 'MarketState') return marketStep(rawInput);
+      throw new Error('market_step: MarketState が必要です');
+    }
+    if (cmdName === "market_run" || cmdName === "市場実行") {
+      if (rawInput?.reiType === 'MarketState') {
+        const steps = args.length >= 1 ? this.toNumber(args[0]) : 100;
+        return marketRun(rawInput, steps);
+      }
+      throw new Error('market_run: MarketState が必要です');
+    }
+    if (cmdName === "game_theory" || cmdName === "ゲーム理論") {
+      const name = typeof rawInput === 'string' ? rawInput : 'prisoners_dilemma';
+      return createGame(name);
+    }
+    if (cmdName === "economics_sigma" || cmdName === "経済σ") {
+      return getEconomicsSigma(rawInput);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 6: H.言語学ドメイン
+    // ═══════════════════════════════════════════════════════════
+
+    if (cmdName === "parse" || cmdName === "構文解析") {
+      const text = typeof rawInput === 'string' ? rawInput : String(rawInput);
+      return parseSyntax(text);
+    }
+    if (cmdName === "semantic_frame" || cmdName === "意味フレーム") {
+      const predicate = typeof rawInput === 'string' ? rawInput : String(rawInput);
+      const roles = args.length >= 1 && typeof args[0] === 'object' ? args[0] as Record<string, string> : {};
+      return createSemanticFrame(predicate, roles);
+    }
+    if (cmdName === "word_analyze" || cmdName === "語分析") {
+      const word = typeof rawInput === 'string' ? rawInput : String(rawInput);
+      return analyzeWord(word);
+    }
+    if (cmdName === "translate" || cmdName === "翻訳") {
+      const text = typeof rawInput === 'string' ? rawInput : String(rawInput);
+      const from = args.length >= 1 ? String(args[0]) : 'ja';
+      const to = args.length >= 2 ? String(args[1]) : 'en';
+      return translate(text, from, to);
+    }
+    if (cmdName === "linguistics_sigma" || cmdName === "言語σ") {
+      return getLinguisticsSigma(rawInput);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 型システム
+    // ═══════════════════════════════════════════════════════════
+
+    if (cmdName === "type_of" || cmdName === "型") {
+      return inferType(rawInput);
+    }
+    if (cmdName === "type_check" || cmdName === "型検査") {
+      return typeCheck(rawInput);
+    }
+    if (cmdName === "type_domain" || cmdName === "型ドメイン") {
+      const t = inferType(rawInput);
+      return typeDomain(t);
+    }
+    if (cmdName === "type_sigma" || cmdName === "型σ") {
+      if (rawInput?.reiType === 'TypeCheckResult') return getTypeCheckSigma(rawInput);
+      return getTypeCheckSigma(typeCheck(rawInput));
     }
 
     // User-defined pipe function
