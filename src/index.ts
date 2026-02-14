@@ -13,6 +13,7 @@ export {
   agentSpaceRunRound, agentSpaceRun,
   getAgentSpaceSigma, getAgentSpaceGrid, getAgentSpaceGameState,
   formatAgentSpacePuzzle, formatAgentSpaceGame,
+  getDifficultyAnalysis, getReasoningTrace, getMatchAnalysis,
 } from './lang/agent-space';
 
 function unwrapReiVal(v: any): any {

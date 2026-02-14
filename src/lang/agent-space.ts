@@ -84,6 +84,10 @@ export interface AgentSpaceResult {
   winner?: number | null;
   moveHistory?: GameMove[];
   finalBoard?: any[];
+  // Phase 4b/4c
+  difficulty?: DifficultyAnalysis;
+  reasoningTrace?: ReasoningTrace[];
+  matchAnalysis?: MatchAnalysis;
 }
 
 /** AgentSpace σ */
@@ -136,21 +140,95 @@ interface PuzzleAgentData {
   posMap: Map<string, { row: number; col: number }>;
   totalEliminations: number;
   totalConfirmations: number;
+  reasoningTrace: ReasoningTrace[];
 }
-
-/** ゲーム Agent 用データ */
 interface GameAgentData {
   gameName: string;
   rules: GameRules;
   state: GameState;
   maxDepth: number;
   strategies: [string, string];  // [P1戦略, P2戦略]
+  behaviors: [string, string];   // [P1行動パターン, P2行動パターン] (Phase 4c)
   searchNodes: number;
+  tacticalHistory: Array<{ player: number; patterns: TacticalPattern[] }>;
 }
 
 // ═══════════════════════════════════════════
 // Part 2: パズル → AgentSpace 変換
 // ═══════════════════════════════════════════
+
+// ═══════════════════════════════════════════
+// Part 2.5: Phase 4b/4c 拡張型定義
+// ═══════════════════════════════════════════
+
+/** 推論層レベル (Phase 4b) */
+export type ReasoningLayer =
+  | 'layer1_elimination'     // 基本消去
+  | 'layer2_naked_pair'      // Naked Pair
+  | 'layer2_hidden_single'   // Hidden Single
+  | 'layer2_pointing_pair'   // Pointing Pair / Box-Line Reduction
+  | 'layer3_backtrack';      // 仮定→検証
+
+/** 推論追跡エントリ (Phase 4b) */
+export interface ReasoningTrace {
+  round: number;
+  layer: ReasoningLayer;
+  cell: [number, number];
+  detail: string;
+  value?: number;
+}
+
+/** 難易度レベル (Phase 4b) */
+export type DifficultyLevel = 'easy' | 'medium' | 'hard' | 'expert';
+
+/** 難易度分析結果 (Phase 4b) */
+export interface DifficultyAnalysis {
+  reiType: 'DifficultyAnalysis';
+  level: DifficultyLevel;
+  score: number;              // 0-100
+  layersUsed: ReasoningLayer[];
+  layerCounts: Record<ReasoningLayer, number>;
+  totalSteps: number;
+  backtrackCount: number;
+}
+
+/** 戦術パターン (Phase 4c) */
+export type TacticalPattern =
+  | 'threat'          // 相手のリーチ
+  | 'opportunity'     // 自分のリーチ
+  | 'fork'            // 二重脅威
+  | 'block'           // 防御必須
+  | 'center'          // 中央支配
+  | 'corner'          // 隅支配
+  | 'none';           // 特になし
+
+/** 戦術知覚結果 (Phase 4c) */
+export interface TacticalPerception {
+  patterns: TacticalPattern[];
+  urgency: number;        // 0.0-1.0 (0=余裕, 1=緊急)
+  threats: number[];       // 脅威のある位置
+  opportunities: number[]; // チャンスのある位置
+}
+
+/** 対局分析結果 (Phase 4c) */
+export interface MatchAnalysis {
+  reiType: 'MatchAnalysis';
+  winner: number | null;
+  totalMoves: number;
+  players: PlayerAnalysis[];
+  tacticalSummary: string;
+}
+
+/** プレイヤー分析 (Phase 4c) */
+export interface PlayerAnalysis {
+  player: number;
+  behavior: string;
+  strategy: string;
+  avgSearchNodes: number;
+  totalSearchNodes: number;
+  moveCount: number;
+  tacticalPatterns: Record<TacticalPattern, number>;
+}
 
 /**
  * PuzzleSpace を AgentSpace に変換する
@@ -213,6 +291,7 @@ export function createPuzzleAgentSpace(puzzle: PuzzleSpace): AgentSpace {
       posMap,
       totalEliminations: 0,
       totalConfirmations: 0,
+      reasoningTrace: [],
     },
     rounds: [],
     solved: false,
@@ -241,12 +320,31 @@ export function createGameAgentSpace(
   const s1 = p1Strategy ?? game.strategy;
   const s2 = p2Strategy ?? game.strategy;
 
+  // Phase 4c: 戦略名 → Agent behavior マッピング
+  const strategyToBehavior = (s: string): AgentBehavior => {
+    switch (s) {
+      case 'reactive': return 'reactive';
+      case 'proactive': return 'autonomous';
+      case 'cooperative': return 'cooperative';
+      case 'competitive': case 'minimax': return 'explorative';
+      case 'contemplative': case 'montecarlo': return 'explorative';
+      default: return 'explorative';
+    }
+  };
+
+  // 実際のプレイスタイル名を保存（behavior より詳細）
+  const playStyle1 = s1 === 'minimax' ? 'competitive' : s1;
+  const playStyle2 = s2 === 'minimax' ? 'competitive' : s2;
+
+  const b1 = strategyToBehavior(s1);
+  const b2 = strategyToBehavior(s2);
+
   const agentIds: string[] = [];
 
   // Player 1 Agent
   const p1Agent = registry.spawn(
     { reiType: 'Player', player: 1, strategy: s1 },
-    { id: 'player_1', behavior: 'explorative' },
+    { id: 'player_1', behavior: b1 },
   );
   agentIds.push(p1Agent.id);
   mediator.setAgentPriority(p1Agent.id, 1.0);
@@ -254,7 +352,7 @@ export function createGameAgentSpace(
   // Player 2 Agent
   const p2Agent = registry.spawn(
     { reiType: 'Player', player: 2, strategy: s2 },
-    { id: 'player_2', behavior: 'explorative' },
+    { id: 'player_2', behavior: b2 },
   );
   agentIds.push(p2Agent.id);
   mediator.setAgentPriority(p2Agent.id, 1.0);
@@ -272,7 +370,9 @@ export function createGameAgentSpace(
       state: { ...game.state },
       maxDepth: game.maxDepth,
       strategies: [s1, s2],
+      behaviors: [playStyle1, playStyle2],
       searchNodes: 0,
+      tacticalHistory: [],
     },
     rounds: [],
     solved: false,
@@ -390,6 +490,15 @@ function puzzleRunRound(space: AgentSpace): AgentSpaceRound {
           row: v.row, col: v.col,
           value: newValue.value,
         }, agentId);
+
+        // Phase 4b: 推論層追跡
+        pd.reasoningTrace.push({
+          round: roundNum,
+          layer: 'layer1_elimination',
+          cell: [v.row, v.col],
+          detail: `基本消去 → 確定: ${newValue.value}`,
+          value: newValue.value,
+        });
       } else {
         actions.push({
           agentId,
@@ -419,6 +528,13 @@ function puzzleRunRound(space: AgentSpace): AgentSpaceRound {
           `Naked Pair検出: ${nakedPairResult.detail} (層2推論 round ${roundNum})`
         );
 
+        pd.reasoningTrace.push({
+          round: roundNum,
+          layer: 'layer2_naked_pair',
+          cell: [v.row, v.col],
+          detail: nakedPairResult.detail,
+        });
+
         actions.push({
           agentId,
           type: 'eliminate',
@@ -426,11 +542,39 @@ function puzzleRunRound(space: AgentSpace): AgentSpaceRound {
           data: nakedPairResult.data,
         });
       } else {
-        actions.push({
-          agentId,
-          type: 'none',
-          detail: `セル(${v.row},${v.col}): 変化なし (候補[${v.candidates.join(',')}])`,
-        });
+        // ── Hidden Single 検出（層2推論） ──
+        const hiddenResult = puzzleHiddenSingleCheck(space, v.row, v.col, v.candidates);
+        if (hiddenResult) {
+          confirmationCount++;
+          noneCount--;
+
+          actions.push({
+            agentId,
+            type: 'confirm',
+            detail: hiddenResult.detail,
+            data: hiddenResult.data,
+          });
+        } else {
+          // ── Pointing Pair 検出（層2.5推論） ──
+          const pointingResult = puzzlePointingPairCheck(space, v.row, v.col, v.candidates);
+          if (pointingResult) {
+            eliminationCount += pointingResult.eliminated;
+            noneCount--;
+
+            actions.push({
+              agentId,
+              type: 'eliminate',
+              detail: pointingResult.detail,
+              data: pointingResult.data,
+            });
+          } else {
+            actions.push({
+              agentId,
+              type: 'none',
+              detail: `セル(${v.row},${v.col}): 変化なし (候補[${v.candidates.join(',')}])`,
+            });
+          }
+        }
       }
     }
   }
@@ -614,6 +758,186 @@ function puzzleNakedPairCheck(
   return null;
 }
 
+/**
+ * Hidden Single 検出（層2推論）
+ * 制約グループ内で、ある候補値が1つのセルにしか存在しない場合 → そのセルを確定
+ */
+function puzzleHiddenSingleCheck(
+  space: AgentSpace,
+  row: number, col: number,
+  candidates: number[],
+): { confirmed: number; detail: string; data: Record<string, any> } | null {
+  const pd = space.puzzleData!;
+
+  for (const constraint of pd.constraints) {
+    const inGroup = constraint.cells.some(
+      ([cr, cc]) => cr === row && cc === col
+    );
+    if (!inGroup) continue;
+
+    // 各候補値について、グループ内で何セルが持っているかカウント
+    for (const val of candidates) {
+      let count = 0;
+      let onlyCell: [number, number] | null = null;
+
+      for (const [cr, cc] of constraint.cells) {
+        const peerId = pd.cellMap.get(`${cr},${cc}`);
+        if (!peerId) continue;
+        const peer = space.registry.get(peerId);
+        if (!peer) continue;
+
+        if (peer.value.value === val) {
+          count = 999; // 既に確定済み
+          break;
+        }
+        if (peer.value.value === 0 && (peer.value.candidates as number[]).includes(val)) {
+          count++;
+          onlyCell = [cr, cc];
+        }
+      }
+
+      // この値を持てるセルが自分だけ → Hidden Single
+      if (count === 1 && onlyCell && onlyCell[0] === row && onlyCell[1] === col) {
+        const agentId = pd.cellMap.get(`${row},${col}`);
+        if (!agentId) continue;
+        const agent = space.registry.get(agentId);
+        if (!agent) continue;
+
+        agent.value = {
+          ...agent.value,
+          value: val,
+          candidates: [],
+        };
+        pd.totalConfirmations++;
+        agent.addMemory('action',
+          `Hidden Single: ${val} in ${constraint.label} (層2推論)`
+        );
+
+        pd.reasoningTrace.push({
+          round: space.rounds.length + 1,
+          layer: 'layer2_hidden_single',
+          cell: [row, col],
+          detail: `Hidden Single: ${val} in ${constraint.label}`,
+          value: val,
+        });
+
+        return {
+          confirmed: val,
+          detail: `Hidden Single: ${val} @ (${row},${col}) in ${constraint.label}`,
+          data: { value: val, cell: [row, col], group: constraint.label },
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Pointing Pair 検出（層2.5推論）
+ * Box内のある候補値が1行(or 1列)に限定される場合
+ * → その行(or列)の他のBox内のセルからその候補を消去
+ */
+function puzzlePointingPairCheck(
+  space: AgentSpace,
+  row: number, col: number,
+  candidates: number[],
+): { eliminated: number; detail: string; data: Record<string, any> } | null {
+  const pd = space.puzzleData!;
+  if (pd.size !== 9) return null; // 9x9専用
+
+  const boxSize = 3;
+  const boxRow = Math.floor(row / boxSize) * boxSize;
+  const boxCol = Math.floor(col / boxSize) * boxSize;
+
+  // このセルが属するBox制約を見つける
+  const boxConstraint = pd.constraints.find(c =>
+    c.label?.includes('box') &&
+    c.cells.some(([cr, cc]) => cr === row && cc === col)
+  );
+  if (!boxConstraint) return null;
+
+  let totalElim = 0;
+
+  for (const val of candidates) {
+    // Box内でこの候補値を持つセルの位置を収集
+    const cellsWithVal: [number, number][] = [];
+    for (const [cr, cc] of boxConstraint.cells) {
+      const peerId = pd.cellMap.get(`${cr},${cc}`);
+      if (!peerId) continue;
+      const peer = space.registry.get(peerId);
+      if (!peer || peer.value.value !== 0) continue;
+      if ((peer.value.candidates as number[]).includes(val)) {
+        cellsWithVal.push([cr, cc]);
+      }
+    }
+
+    if (cellsWithVal.length < 2 || cellsWithVal.length > 3) continue;
+
+    // 全て同じ行にあるか？
+    const allSameRow = cellsWithVal.every(([cr]) => cr === cellsWithVal[0][0]);
+    // 全て同じ列にあるか？
+    const allSameCol = cellsWithVal.every(([, cc]) => cc === cellsWithVal[0][1]);
+
+    if (!allSameRow && !allSameCol) continue;
+
+    // Pointing Pair/Triple 発見！行or列の他のBox内セルから候補消去
+    const targetRow = allSameRow ? cellsWithVal[0][0] : -1;
+    const targetCol = allSameCol ? cellsWithVal[0][1] : -1;
+
+    for (let i = 0; i < pd.size; i++) {
+      const tr = allSameRow ? targetRow : i;
+      const tc = allSameCol ? targetCol : i;
+
+      // 同じBox内のセルは除外
+      if (tr >= boxRow && tr < boxRow + boxSize &&
+          tc >= boxCol && tc < boxCol + boxSize) continue;
+
+      const otherId = pd.cellMap.get(`${tr},${tc}`);
+      if (!otherId) continue;
+      const other = space.registry.get(otherId);
+      if (!other || other.value.value !== 0) continue;
+
+      const otherCands: number[] = other.value.candidates;
+      if (!otherCands.includes(val)) continue;
+
+      const newCands = otherCands.filter((c: number) => c !== val);
+      totalElim++;
+
+      const newVal = { ...other.value, candidates: newCands };
+      if (newCands.length === 1) {
+        newVal.value = newCands[0];
+        newVal.candidates = [];
+        pd.totalConfirmations++;
+      }
+      other.value = newVal;
+      other.addMemory('action',
+        `Pointing Pair: ${val} in ${allSameRow ? 'row' : 'col'} (層2.5推論)`
+      );
+    }
+
+    if (totalElim > 0) {
+      pd.totalEliminations += totalElim;
+      const direction = allSameRow ? `row ${cellsWithVal[0][0]}` : `col ${cellsWithVal[0][1]}`;
+
+      pd.reasoningTrace.push({
+        round: space.rounds.length + 1,
+        layer: 'layer2_pointing_pair',
+        cell: [row, col],
+        detail: `Pointing Pair: ${val} locked in ${boxConstraint.label} → ${direction}`,
+      });
+
+      return {
+        eliminated: totalElim,
+        detail: `Pointing Pair: ${val} in ${boxConstraint.label} → ${direction}: ${totalElim}候補消去`,
+        data: { value: val, cells: cellsWithVal, direction },
+      };
+    }
+  }
+
+  return null;
+}
+
 // ═══════════════════════════════════════════
 // Part 5: ゲーム Agent 実行エンジン
 // ═══════════════════════════════════════════
@@ -666,49 +990,99 @@ function gameRunRound(space: AgentSpace): AgentSpaceRound {
   }
 
   const strategy = gd.strategies[currentPlayer - 1];
+  const behavior = gd.behaviors[currentPlayer - 1];
 
-  // ── 知覚: 盤面を観察 ──
+  // ── 知覚: 盤面を観察 + 戦術パターン検出 (Phase 4c) ──
   const legalMoves = gd.rules.getLegalMoves(gd.state);
   const lastMove = gd.state.moveHistory.length > 0
     ? gd.state.moveHistory[gd.state.moveHistory.length - 1]
     : null;
 
+  // 戦術パターン知覚
+  const tactical = perceiveTacticalPatterns(gd, currentPlayer, legalMoves);
+
   currentAgent.addMemory('perception',
     `Round ${roundNum}: 盤面観察 — 合法手${legalMoves.length}個` +
-    (lastMove ? `, 相手の直前手: ${lastMove.label ?? lastMove.position}` : '')
+    (lastMove ? `, 相手の直前手: ${lastMove.label ?? lastMove.position}` : '') +
+    (tactical.patterns.length > 0 ? `, 戦術: [${tactical.patterns.join(',')}]` : '') +
+    `, 緊急度: ${tactical.urgency.toFixed(2)}`
   );
+
+  gd.tacticalHistory.push({ player: currentPlayer, patterns: tactical.patterns });
 
   space.eventBus.emit('agent:perceive', {
     agentId: currentAgentId,
     player: currentPlayer,
     legalMoves: legalMoves.length,
+    tactical,
   }, currentAgentId);
 
-  // ── 判断: 戦略に基づいて手を選択 ──
-  const tempGame: GameSpace = {
-    reiType: 'GameSpace',
-    state: gd.state,
-    rules: gd.rules,
-    strategy,
-    maxDepth: gd.maxDepth,
-    searchNodes: 0,
-  };
+  // ── 判断: behavior に基づいて手を選択 (Phase 4c) ──
+  let selectedMove: number;
+  let moveScore = 0;
+  let searchNodes = 0;
 
-  const bestResult = selectBestMove(tempGame);
-  const selectedMove = bestResult.move;
-  gd.searchNodes += bestResult.searchNodes;
+  // behavior による分岐
+  if (behavior === 'reactive' && tactical.urgency > 0.5 && tactical.threats.length > 0) {
+    // reactive: 脅威がある場合のみ防御、それ以外はランダム
+    selectedMove = tactical.threats[0];
+    moveScore = -1;
+    currentAgent.addMemory('decision', `reactive: 脅威防御 pos=${selectedMove}`);
+  } else if (behavior === 'reactive') {
+    // reactive: 脅威なし → ランダム
+    selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    moveScore = 0;
+    currentAgent.addMemory('decision', `reactive: ランダム着手 pos=${selectedMove}`);
+  } else if (behavior === 'proactive' && tactical.opportunities.length > 0) {
+    // proactive: チャンスがあれば攻め
+    selectedMove = tactical.opportunities[0];
+    moveScore = 1;
+    currentAgent.addMemory('decision', `proactive: 攻撃 pos=${selectedMove}`);
+  } else if (behavior === 'proactive') {
+    // proactive: チャンスなし → 中央/隅優先
+    const preferred = legalMoves.filter(m =>
+      m === 4 || m === 0 || m === 2 || m === 6 || m === 8
+    );
+    selectedMove = preferred.length > 0 ? preferred[0] : legalMoves[0];
+    moveScore = 0.5;
+    currentAgent.addMemory('decision', `proactive: 位置優先 pos=${selectedMove}`);
+  } else if (behavior === 'contemplative') {
+    // contemplative: モンテカルロ風ランダムサンプリング評価
+    const result = contemplativeDecision(gd, currentPlayer, legalMoves);
+    selectedMove = result.move;
+    moveScore = result.score;
+    searchNodes = result.samples;
+    currentAgent.addMemory('decision',
+      `contemplative: MC評価 pos=${selectedMove}, score=${moveScore.toFixed(2)}, samples=${result.samples}`
+    );
+  } else {
+    // competitive / cooperative / default → minimax
+    const tempGame: GameSpace = {
+      reiType: 'GameSpace',
+      state: gd.state,
+      rules: gd.rules,
+      strategy,
+      maxDepth: gd.maxDepth,
+      searchNodes: 0,
+    };
+    const bestResult = selectBestMove(tempGame);
+    selectedMove = bestResult.move;
+    moveScore = bestResult.score;
+    searchNodes = bestResult.searchNodes;
+    currentAgent.addMemory('decision',
+      `${behavior}: minimax pos=${selectedMove}, score=${moveScore}, nodes=${searchNodes}`
+    );
+  }
 
-  currentAgent.addMemory('decision',
-    `手選択: position=${selectedMove}, score=${bestResult.score}, ` +
-    `strategy=${strategy}, 探索ノード=${bestResult.searchNodes}`
-  );
+  gd.searchNodes += searchNodes;
 
   space.eventBus.emit('agent:decide', {
     agentId: currentAgentId,
     player: currentPlayer,
     move: selectedMove,
-    score: bestResult.score,
+    score: moveScore,
     strategy,
+    behavior,
   }, currentAgentId);
 
   // ── 行動: 手を打つ ──
@@ -730,9 +1104,10 @@ function gameRunRound(space: AgentSpace): AgentSpaceRound {
     data: {
       player: currentPlayer,
       position: selectedMove,
-      score: bestResult.score,
+      score: moveScore,
       strategy,
-      searchNodes: bestResult.searchNodes,
+      behavior,
+      searchNodes,
     },
   });
 
@@ -776,6 +1151,107 @@ function gameRunRound(space: AgentSpace): AgentSpaceRound {
   space.convergenceHistory.push(convergenceRatio);
 
   return round;
+}
+
+// ═══════════════════════════════════════════
+// Part 5.5: Phase 4c ゲーム補助関数
+// ═══════════════════════════════════════════
+
+/**
+ * 戦術パターン知覚 (Phase 4c)
+ * 三目並べ系ゲームでの脅威/チャンス/フォーク検出
+ */
+function perceiveTacticalPatterns(
+  gd: GameAgentData,
+  currentPlayer: number,
+  legalMoves: number[],
+): TacticalPerception {
+  const patterns: TacticalPattern[] = [];
+  const threats: number[] = [];
+  const opportunities: number[] = [];
+  const opponent = (currentPlayer === 1 ? 2 : 1) as Player;
+
+  // 各合法手について戦術的意味を分析
+  for (const move of legalMoves) {
+    // チャンス: この手で勝てるか？
+    try {
+      const afterMove = gd.rules.applyMove(gd.state, move);
+      if (afterMove.status === 'win' && afterMove.winner === currentPlayer) {
+        opportunities.push(move);
+      }
+    } catch { /* invalid */ }
+
+    // 脅威: 相手がこの手を打つと負けるか？
+    const simState: GameState = { ...gd.state, currentPlayer: opponent };
+    try {
+      const afterOpp = gd.rules.applyMove(simState, move);
+      if (afterOpp.status === 'win' && afterOpp.winner === opponent) {
+        threats.push(move);
+      }
+    } catch { /* invalid */ }
+  }
+
+  if (opportunities.length > 0) patterns.push('opportunity');
+  if (opportunities.length >= 2) patterns.push('fork');
+  if (threats.length > 0) patterns.push('threat');
+  if (threats.length > 0) patterns.push('block');
+
+  // 中央/隅の評価
+  if (legalMoves.includes(4)) patterns.push('center');
+  const corners = [0, 2, 6, 8].filter(c => legalMoves.includes(c));
+  if (corners.length > 0) patterns.push('corner');
+
+  if (patterns.length === 0) patterns.push('none');
+
+  // 緊急度: 脅威があれば高い
+  const urgency = threats.length > 0 ? Math.min(1.0, threats.length * 0.5) :
+                  opportunities.length > 0 ? 0.3 : 0.0;
+
+  return { patterns, urgency, threats, opportunities };
+}
+
+/**
+ * 思索型判断 (Phase 4c) — モンテカルロ風ランダムサンプリング
+ * 各候補手について、ランダムプレイアウトを数回行い平均スコアで評価
+ */
+function contemplativeDecision(
+  gd: GameAgentData,
+  currentPlayer: number,
+  legalMoves: number[],
+): { move: number; score: number; samples: number } {
+  const SAMPLES_PER_MOVE = 10;
+  let bestMove = legalMoves[0];
+  let bestScore = -Infinity;
+  let totalSamples = 0;
+
+  for (const move of legalMoves) {
+    let wins = 0;
+    let draws = 0;
+
+    for (let s = 0; s < SAMPLES_PER_MOVE; s++) {
+      totalSamples++;
+      let simState = gd.rules.applyMove({ ...gd.state }, move);
+
+      // ランダムプレイアウト（最大20手）
+      for (let depth = 0; depth < 20 && simState.status === 'playing'; depth++) {
+        const simMoves = gd.rules.getLegalMoves(simState);
+        if (simMoves.length === 0) break;
+        const rndMove = simMoves[Math.floor(Math.random() * simMoves.length)];
+        simState = gd.rules.applyMove(simState, rndMove);
+      }
+
+      if (simState.winner === currentPlayer) wins++;
+      else if (simState.status === 'draw') draws++;
+    }
+
+    const score = (wins + draws * 0.5) / SAMPLES_PER_MOVE;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = move;
+    }
+  }
+
+  return { move: bestMove, score: bestScore, samples: totalSamples };
 }
 
 // ═══════════════════════════════════════════
@@ -863,6 +1339,9 @@ function buildResult(space: AgentSpace): AgentSpaceResult {
     base.grid = grid;
     base.totalEliminations = pd.totalEliminations;
     base.totalConfirmations = pd.totalConfirmations;
+    // Phase 4b
+    base.difficulty = getDifficultyAnalysis(space);
+    base.reasoningTrace = getReasoningTrace(space);
   }
 
   if (space.kind === 'game') {
@@ -870,6 +1349,8 @@ function buildResult(space: AgentSpace): AgentSpaceResult {
     base.winner = gd.state.winner;
     base.moveHistory = gd.state.moveHistory;
     base.finalBoard = gd.state.board;
+    // Phase 4c
+    base.matchAnalysis = getMatchAnalysis(space);
   }
 
   return base;
@@ -1008,4 +1489,173 @@ export function formatAgentSpacePuzzle(space: AgentSpace): string {
 export function formatAgentSpaceGame(space: AgentSpace): string {
   if (space.kind !== 'game' || !space.gameData) return '';
   return space.gameData.rules.formatBoard(space.gameData.state);
+}
+
+// ═══════════════════════════════════════════
+// Part 8: Phase 4b/4c 分析関数
+// ═══════════════════════════════════════════
+
+/**
+ * パズル難易度分析 (Phase 4b)
+ * 使用された推論層に基づいて難易度を判定
+ */
+export function getDifficultyAnalysis(space: AgentSpace): DifficultyAnalysis {
+  if (space.kind !== 'puzzle' || !space.puzzleData) {
+    return {
+      reiType: 'DifficultyAnalysis',
+      level: 'easy',
+      score: 0,
+      layersUsed: [],
+      layerCounts: {
+        layer1_elimination: 0,
+        layer2_naked_pair: 0,
+        layer2_hidden_single: 0,
+        layer2_pointing_pair: 0,
+        layer3_backtrack: 0,
+      },
+      totalSteps: 0,
+      backtrackCount: 0,
+    };
+  }
+
+  const pd = space.puzzleData;
+  const trace = pd.reasoningTrace;
+
+  const layerCounts: Record<ReasoningLayer, number> = {
+    layer1_elimination: 0,
+    layer2_naked_pair: 0,
+    layer2_hidden_single: 0,
+    layer2_pointing_pair: 0,
+    layer3_backtrack: 0,
+  };
+
+  const layersUsed = new Set<ReasoningLayer>();
+
+  for (const entry of trace) {
+    layerCounts[entry.layer]++;
+    layersUsed.add(entry.layer);
+  }
+
+  // バックトラック回数をラウンドログから推定
+  let backtrackCount = 0;
+  for (const round of space.rounds) {
+    for (const action of round.actions) {
+      if (action.detail.includes('バックトラック') || action.detail.includes('仮定')) {
+        backtrackCount++;
+      }
+    }
+  }
+  layerCounts.layer3_backtrack = backtrackCount;
+  if (backtrackCount > 0) layersUsed.add('layer3_backtrack');
+
+  // スコア計算
+  let score = 0;
+  score += layerCounts.layer1_elimination * 1;
+  score += layerCounts.layer2_naked_pair * 5;
+  score += layerCounts.layer2_hidden_single * 4;
+  score += layerCounts.layer2_pointing_pair * 6;
+  score += backtrackCount * 15;
+  score = Math.min(100, score);
+
+  // 難易度レベル判定
+  let level: DifficultyLevel;
+  if (backtrackCount > 0) level = 'expert';
+  else if (layersUsed.has('layer2_pointing_pair')) level = 'hard';
+  else if (layersUsed.has('layer2_naked_pair') || layersUsed.has('layer2_hidden_single')) level = 'medium';
+  else level = 'easy';
+
+  return {
+    reiType: 'DifficultyAnalysis',
+    level,
+    score,
+    layersUsed: [...layersUsed],
+    layerCounts,
+    totalSteps: trace.length + backtrackCount,
+    backtrackCount,
+  };
+}
+
+/**
+ * 推論追跡取得 (Phase 4b)
+ */
+export function getReasoningTrace(space: AgentSpace): ReasoningTrace[] {
+  if (space.kind !== 'puzzle' || !space.puzzleData) return [];
+  return [...space.puzzleData.reasoningTrace];
+}
+
+/**
+ * 対局分析 (Phase 4c)
+ */
+export function getMatchAnalysis(space: AgentSpace): MatchAnalysis {
+  if (space.kind !== 'game' || !space.gameData) {
+    return {
+      reiType: 'MatchAnalysis',
+      winner: null,
+      totalMoves: 0,
+      players: [],
+      tacticalSummary: 'No game data',
+    };
+  }
+
+  const gd = space.gameData;
+
+  // プレイヤーごとの分析
+  const players: PlayerAnalysis[] = [1, 2].map(p => {
+    const agentId = `player_${p}`;
+    const agent = space.registry.get(agentId);
+
+    // 手数カウント
+    let moveCount = 0;
+    let totalNodes = 0;
+    for (const round of space.rounds) {
+      for (const action of round.actions) {
+        if (action.agentId === agentId && action.type === 'move') {
+          moveCount++;
+          totalNodes += action.data?.searchNodes ?? 0;
+        }
+      }
+    }
+
+    // 戦術パターン集計
+    const patternCounts: Record<TacticalPattern, number> = {
+      threat: 0, opportunity: 0, fork: 0, block: 0,
+      center: 0, corner: 0, none: 0,
+    };
+    for (const entry of gd.tacticalHistory) {
+      if (entry.player === p) {
+        for (const pat of entry.patterns) {
+          patternCounts[pat]++;
+        }
+      }
+    }
+
+    return {
+      player: p,
+      behavior: gd.behaviors[p - 1],
+      strategy: gd.strategies[p - 1],
+      avgSearchNodes: moveCount > 0 ? totalNodes / moveCount : 0,
+      totalSearchNodes: totalNodes,
+      moveCount,
+      tacticalPatterns: patternCounts,
+    };
+  });
+
+  // 戦術サマリー
+  const p1 = players[0];
+  const p2 = players[1];
+  const winnerStr = gd.state.winner
+    ? `Player ${gd.state.winner} (${gd.behaviors[gd.state.winner - 1]}) wins`
+    : 'Draw';
+  const tacticalSummary =
+    `${winnerStr} in ${gd.state.moveHistory.length} moves. ` +
+    `P1(${p1.behavior}): ${p1.moveCount} moves, ` +
+    `P2(${p2.behavior}): ${p2.moveCount} moves.`;
+
+  return {
+    reiType: 'MatchAnalysis',
+    winner: gd.state.winner ?? null,
+    totalMoves: gd.state.moveHistory.length,
+    players,
+    tacticalSummary,
+  };
 }

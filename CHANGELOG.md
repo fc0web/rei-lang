@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.5.2] — 2026-02-14
+
+### 🧠 Phase 4b: パズル推論深化
+- Hidden Single 検出（層2推論）
+- Pointing Pair / Box-Line Reduction 検出（層2.5推論）
+- 推論層追跡 (ReasoningTrace) — 各ステップの推論層を記録
+- 難易度分析 (DifficultyAnalysis) — easy/medium/hard/expert 自動判定
+- 新パイプ: `agent_difficulty` / `自律難易度`, `agent_trace` / `自律追跡`
+- 結果パイプ: `difficulty` / `難易度`, `trace` / `追跡`
+
+### 🎮 Phase 4c: ゲーム推論深化
+- 行動パターン分化: reactive, proactive, contemplative, competitive
+- 戦術パターン知覚: threat, opportunity, fork, block, center, corner
+- モンテカルロ風評価（contemplative Agent）
+- 対局分析 (MatchAnalysis) — プレイヤー別の手数・戦術集計
+- 新パイプ: `agent_analyze` / `自律分析`
+- 結果パイプ: `analyze` / `分析`
+
+### テスト
+- 799 tests passing (+37 new: 19 puzzle-agent + 18 game-agent)
+- Zero regressions
+
 ## [0.5.1] — 2026-02-14
 
 ### 🧩 AgentSpace — パズル統一理論 × ゲーム統一理論 (Phase 4a)

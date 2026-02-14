@@ -68,7 +68,9 @@ import {
   agentSpaceRunRound, agentSpaceRun,
   getAgentSpaceSigma, getAgentSpaceGrid, getAgentSpaceGameState,
   formatAgentSpacePuzzle, formatAgentSpaceGame,
+  getDifficultyAnalysis, getReasoningTrace, getMatchAnalysis,
   type AgentSpace, type AgentSpaceResult, type AgentSpaceSigma,
+  type DifficultyAnalysis, type MatchAnalysis, type ReasoningTrace,
 } from './agent-space';
 // RCT方向3: API版はtheory/semantic-compressor.tsを直接使用
 // evaluator内はローカル同期版（下部のreiLocalSemantic*関数）を使用
@@ -463,6 +465,8 @@ export class Evaluator {
           // Phase 4: Agent基盤
           "agent_play", "自律対戦", "agent_turn", "自律手番",
           "agent_match", "自律対局", "as_agent_space", "空間Agent化",
+          // Phase 4c: 分析
+          "agent_analyze", "自律分析",
         ];
         if (gameAccessors.includes(cmd.cmd)) {
           return this.execPipeCmd(rawInput, cmd);
@@ -495,6 +499,8 @@ export class Evaluator {
           // Phase 4: Agent基盤
           "agent_solve", "自律解法", "as_agent_space", "空間Agent化",
           "agent_propagate", "自律伝播",
+          // Phase 4b: 分析
+          "agent_difficulty", "自律難易度", "agent_trace", "自律追跡",
         ];
         if (puzzleAccessors.includes(cmd.cmd)) {
           return this.execPipeCmd(rawInput, cmd);
@@ -2167,6 +2173,16 @@ export class Evaluator {
           return createGameAgentSpace(gs, s1, s2);
         }
 
+        // Phase 4c: 対局分析
+        case "agent_analyze": case "自律分析": {
+          const s1 = args.length >= 1 ? String(args[0]) : gs.strategy;
+          const s2 = args.length >= 2 ? String(args[1]) : gs.strategy;
+          const maxRounds = args.length >= 3 ? Number(args[2]) : 50;
+          const space = createGameAgentSpace(gs, s1, s2);
+          agentSpaceRun(space, maxRounds);
+          return getMatchAnalysis(space);
+        }
+
         // ???????????????????????????????????????????
         // Phase 3統合: Game × Will ? 意志駆動の戦略選択
         // ???????????????????????????????????????????
@@ -2463,6 +2479,22 @@ export class Evaluator {
           return agentSpaceRun(space, 0);  // build result without additional rounds
         }
 
+        // Phase 4b: 難易度分析
+        case "agent_difficulty": case "自律難易度": {
+          const maxRounds = args.length > 0 ? Number(args[0]) : 100;
+          const space = createPuzzleAgentSpace(ps);
+          agentSpaceRun(space, maxRounds);
+          return getDifficultyAnalysis(space);
+        }
+
+        // Phase 4b: 推論追跡
+        case "agent_trace": case "自律追跡": {
+          const maxRounds = args.length > 0 ? Number(args[0]) : 100;
+          const space = createPuzzleAgentSpace(ps);
+          agentSpaceRun(space, maxRounds);
+          return getReasoningTrace(space);
+        }
+
         // 状態
         case "status": case "状態":
           return {
@@ -2642,6 +2674,14 @@ export class Evaluator {
           return ar.rounds;
         case "moves": case "棋譜":
           return ar.moveHistory ?? [];
+        // Phase 4b
+        case "difficulty": case "難易度":
+          return ar.difficulty ?? null;
+        case "trace": case "追跡":
+          return ar.reasoningTrace ?? [];
+        // Phase 4c
+        case "analyze": case "分析":
+          return ar.matchAnalysis ?? null;
       }
     }
 

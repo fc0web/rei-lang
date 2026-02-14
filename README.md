@@ -2,13 +2,38 @@
 
 [![npm version](https://img.shields.io/npm/v/rei-lang)](https://www.npmjs.com/package/rei-lang)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-gold.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-762%2F762-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-799%2F799-brightgreen)]()
 
 **Rei** (0₀式 / れいしき) is a mathematical computation language based on **D-FUMT** (Dimensional Fujimoto Universal Mathematical Theory). Its center-periphery patterns as language primitives achieve an **average 74% code reduction** over equivalent implementations in general-purpose languages.
 
 **Author:** Nobuki Fujimoto
 
 ---
+
+## What's New in v0.5.2 — Phase 4b/4c (Puzzle & Game Deepening)
+
+### Phase 4b: パズル推論深化
+- **Hidden Single 検出** — 制約グループ内で唯一の候補位置を自動確定
+- **Pointing Pair 検出** — Box-Line Reduction による高度候補消去
+- **推論層追跡 (ReasoningTrace)** — 各確定/消去ステップの推論層を記録
+- **難易度分析 (DifficultyAnalysis)** — easy/medium/hard/expert の自動判定（スコア0-100）
+- 新パイプ: `agent_difficulty` / `自律難易度`, `agent_trace` / `自律追跡`
+
+### Phase 4c: ゲーム推論深化
+- **行動パターン分化** — reactive（防御的）/ proactive（攻撃的）/ contemplative（MC評価）/ competitive（minimax）
+- **戦術パターン知覚** — threat, opportunity, fork, block, center, corner の自動検出
+- **対局分析 (MatchAnalysis)** — プレイヤー別の手数・戦術パターン集計・サマリー生成
+- 新パイプ: `agent_analyze` / `自律分析`
+
+```rei
+// Phase 4b: パズル難易度分析
+30 |> generate_sudoku(42) |> agent_difficulty
+// → { level: "easy", score: 12, layersUsed: ["layer1_elimination"], ... }
+
+// Phase 4c: 対局分析（reactive vs minimax）
+"tic_tac_toe" |> game |> agent_analyze("reactive", "minimax")
+// → { winner: 2, players: [{behavior: "reactive", ...}, {behavior: "competitive", ...}] }
+```
 
 ## What's New in v0.5.1 — AgentSpace (Phase 4a)
 
