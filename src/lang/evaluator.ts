@@ -81,7 +81,11 @@ import {
   toNumSafe, unwrapReiVal, getSigmaOf, buildSigmaResult,
   type SigmaMetadata, type ReiVal,
 } from './sigma';
-import { mergeRelationBindings, mergeWillIntention } from './sigma-deep';
+import {
+  mergeRelationBindings, mergeWillIntention,
+  traceRelationChain, computeInfluence, createEntanglement,
+  evolveWill, alignWills, detectWillConflict,
+} from './sigma-deep';
 export type { SigmaMetadata, ReiVal };
 
 // --- Environment (Scope) ---
@@ -547,6 +551,9 @@ export class Evaluator {
         "mediator_sigma", "調停σ", "agent_priority", "優先度",
         "mediate_strategy", "調停戦略",
         "mediate_message", "調停通信", "mediate_broadcast", "調停放送",
+        // v0.5+: relation/will 深化コマンド
+        "trace", "追跡", "influence", "影響", "entangle", "縁起",
+        "will_evolve", "意志進化", "will_align", "意志調律", "will_conflict", "意志衝突",
       ];
       if (relationWillCommands.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
@@ -1243,6 +1250,63 @@ export class Evaluator {
       // 値の満足度を取得
       const intention = getIntentionOf(rawInput);
       return intention?.satisfaction ?? 0;
+    }
+
+    // ═══════════════════════════════════════════
+    // v0.5+: relation/will 深化コマンド
+    // ═══════════════════════════════════════════
+
+    if (cmdName === "trace" || cmdName === "追跡") {
+      const ref = this.findRefByValue(input);
+      if (ref) {
+        const maxDepth = args.length >= 1 ? this.toNumber(args[0]) : 5;
+        return traceRelationChain(this.bindingRegistry, ref, maxDepth);
+      }
+      // fall through to existing trace handlers (e.g. puzzle agent trace)
+    }
+
+    if (cmdName === "influence" || cmdName === "影響") {
+      if (args.length < 1) throw new Error("influence: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const sourceRef = this.findRefByValue(input);
+      if (!sourceRef) throw new Error("influence: 変数に束縛された値にのみ使用できます");
+      return computeInfluence(this.bindingRegistry, sourceRef, targetRef);
+    }
+
+    if (cmdName === "entangle" || cmdName === "縁起") {
+      if (args.length < 1) throw new Error("entangle: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      const resonance = args.length >= 2 ? this.toNumber(args[1]) : 1.0;
+      const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
+      if (!this.env.has(targetRef)) throw new Error(`entangle: 変数 '${targetRef}' が見つかりません`);
+      return createEntanglement(this.bindingRegistry, sourceRef, targetRef, resonance);
+    }
+
+    if (cmdName === "will_evolve" || cmdName === "意志進化") {
+      const sigmaM = getSigmaOf(rawInput);
+      return evolveWill(rawInput, sigmaM);
+    }
+
+    if (cmdName === "will_align" || cmdName === "意志調律") {
+      if (args.length < 1) throw new Error("will_align: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      if (!this.env.has(targetRef)) throw new Error(`will_align: 変数 '${targetRef}' が見つかりません`);
+      const targetVal = unwrapReiVal(this.env.get(targetRef));
+      const sourceRef = this.findRefByValue(input) ?? '__anon';
+      const metaA = getSigmaOf(rawInput);
+      const metaB = getSigmaOf(targetVal);
+      return alignWills(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
+    }
+
+    if (cmdName === "will_conflict" || cmdName === "意志衝突") {
+      if (args.length < 1) throw new Error("will_conflict: ターゲット変数名が必要です");
+      const targetRef = String(args[0]);
+      if (!this.env.has(targetRef)) throw new Error(`will_conflict: 変数 '${targetRef}' が見つかりません`);
+      const targetVal = unwrapReiVal(this.env.get(targetRef));
+      const sourceRef = this.findRefByValue(input) ?? '__anon';
+      const metaA = getSigmaOf(rawInput);
+      const metaB = getSigmaOf(targetVal);
+      return detectWillConflict(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
     }
 
     // ???????????????????????????????????????????

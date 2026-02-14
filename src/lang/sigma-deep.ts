@@ -925,3 +925,374 @@ export function mergeWillIntention(
     },
   } as any;
 }
+
+
+// ============================================================
+// 関係 (relation) — 深化: 縁起的追跡
+// ============================================================
+
+export interface TraceNode {
+  ref: string;
+  depth: number;
+  mode: string;
+  strength: number;
+  children: TraceNode[];
+}
+
+export interface TraceResult {
+  reiType: 'TraceResult';
+  root: string;
+  nodes: TraceNode[];
+  totalRefs: number;
+  maxDepth: number;
+  chains: string[][];
+}
+
+export function traceRelationChain(
+  registry: { getBindingsFor(ref: string): Array<{ target: string; mode: string; strength: number; active: boolean }> },
+  rootRef: string,
+  maxDepth: number = 5,
+): TraceResult {
+  const visited = new Set<string>();
+  const allChains: string[][] = [];
+
+  function buildNode(ref: string, depth: number, chain: string[]): TraceNode {
+    visited.add(ref);
+    const children: TraceNode[] = [];
+    if (depth < maxDepth) {
+      const bindings = registry.getBindingsFor(ref);
+      for (const b of bindings) {
+        if (!b.active) continue;
+        if (visited.has(b.target)) continue;
+        const newChain = [...chain, b.target];
+        allChains.push(newChain);
+        children.push(buildNode(b.target, depth + 1, newChain));
+      }
+    }
+    return { ref, depth, mode: '', strength: 1, children };
+  }
+
+  const root = buildNode(rootRef, 0, [rootRef]);
+  const nodes = flattenTrace(root);
+
+  return {
+    reiType: 'TraceResult',
+    root: rootRef,
+    nodes,
+    totalRefs: visited.size,
+    maxDepth: nodes.reduce((m, n) => Math.max(m, n.depth), 0),
+    chains: allChains.length > 0 ? allChains : [[rootRef]],
+  };
+}
+
+function flattenTrace(node: TraceNode): TraceNode[] {
+  const result = [node];
+  for (const child of node.children) {
+    result.push(...flattenTrace(child));
+  }
+  return result;
+}
+
+export interface InfluenceResult {
+  reiType: 'InfluenceResult';
+  from: string;
+  to: string;
+  score: number;
+  path: string[];
+  hops: number;
+  directlyBound: boolean;
+}
+
+export function computeInfluence(
+  registry: { getBindingsFor(ref: string): Array<{ target: string; mode: string; strength: number; active: boolean }> },
+  fromRef: string,
+  toRef: string,
+  maxDepth: number = 10,
+): InfluenceResult {
+  if (fromRef === toRef) {
+    return { reiType: 'InfluenceResult', from: fromRef, to: toRef, score: 1, path: [fromRef], hops: 0, directlyBound: false };
+  }
+
+  const queue: Array<{ ref: string; path: string[]; strength: number }> = [
+    { ref: fromRef, path: [fromRef], strength: 1 },
+  ];
+  const visited = new Set<string>([fromRef]);
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current.path.length > maxDepth) continue;
+
+    const bindings = registry.getBindingsFor(current.ref);
+    for (const b of bindings) {
+      if (!b.active) continue;
+      if (b.target === toRef) {
+        const finalStrength = current.strength * b.strength;
+        return {
+          reiType: 'InfluenceResult',
+          from: fromRef,
+          to: toRef,
+          score: finalStrength,
+          path: [...current.path, toRef],
+          hops: current.path.length,
+          directlyBound: current.path.length === 1,
+        };
+      }
+      if (!visited.has(b.target)) {
+        visited.add(b.target);
+        queue.push({
+          ref: b.target,
+          path: [...current.path, b.target],
+          strength: current.strength * b.strength,
+        });
+      }
+    }
+  }
+
+  return {
+    reiType: 'InfluenceResult',
+    from: fromRef,
+    to: toRef,
+    score: 0,
+    path: [],
+    hops: -1,
+    directlyBound: false,
+  };
+}
+
+export interface EntanglementResult {
+  reiType: 'EntanglementResult';
+  refs: [string, string];
+  strength: number;
+  depth: 'surface' | 'deep' | 'quantum';
+  resonance: number;
+  bidirectional: true;
+}
+
+export function createEntanglement(
+  registry: { bind(source: string, target: string, mode: any, strength: number, bidir: boolean): any },
+  refA: string,
+  refB: string,
+  resonance: number = 1.0,
+): EntanglementResult {
+  const strength = Math.min(1.0, resonance);
+  const depth = strength > 0.8 ? 'quantum' : strength > 0.5 ? 'deep' : 'surface';
+  registry.bind(refA, refB, 'entangle' as any, strength, true);
+  return {
+    reiType: 'EntanglementResult',
+    refs: [refA, refB],
+    strength,
+    depth,
+    resonance,
+    bidirectional: true,
+  };
+}
+
+
+// ============================================================
+// 意志 (will) — 深化: 自律的進化
+// ============================================================
+
+export interface WillEvolution {
+  reiType: 'WillEvolution';
+  previous: { tendency: string; strength: number; intrinsic: string };
+  evolved: { tendency: string; strength: number; intrinsic: string };
+  reason: string;
+  confidence: number;
+  autonomous: boolean;
+}
+
+export function evolveWill(val: any, meta: DeepSigmaMeta): WillEvolution {
+  const currentWill = buildDeepWill(val, meta);
+  const trajectory = analyzeTrajectory(meta);
+  const intrinsic = currentWill.intrinsic;
+
+  let newTendency = currentWill.tendency;
+  let newStrength = currentWill.strength;
+  let reason = 'stable';
+
+  if (trajectory === 'expanding' && currentWill.confidence > 0.5) {
+    newTendency = 'expand';
+    newStrength = Math.min(1, currentWill.strength + 0.2);
+    reason = '一貫した拡張傾向';
+  } else if (trajectory === 'contracting' && currentWill.confidence > 0.5) {
+    newTendency = 'contract';
+    newStrength = Math.min(1, currentWill.strength + 0.2);
+    reason = '一貫した収縮傾向';
+  } else if (trajectory === 'oscillating') {
+    newTendency = 'harmonize';
+    newStrength = Math.min(1, currentWill.strength + 0.1);
+    reason = '振動→調和への移行';
+  } else if (intrinsic === 'irreducible' && trajectory === 'expanding') {
+    newTendency = 'transcend';
+    newStrength = Math.min(1, currentWill.strength + 0.3);
+    reason = '還元不能 × 拡張 → 超越';
+  } else if (intrinsic === 'harmonic' && trajectory === 'stable') {
+    newTendency = 'rest';
+    newStrength = Math.min(1, currentWill.strength + 0.1);
+    reason = '調和 × 安定 → 静止';
+  } else if (currentWill.strength < 0.2) {
+    newTendency = intrinsicToTendency(intrinsic);
+    newStrength = 0.3;
+    reason = '弱い意志 → 内在傾向に回帰';
+  } else {
+    const target = intrinsicToTendency(intrinsic);
+    if (target !== newTendency) {
+      reason = `内在傾向(${intrinsic})への微引力`;
+    }
+  }
+
+  meta.tendency = newTendency;
+
+  return {
+    reiType: 'WillEvolution',
+    previous: {
+      tendency: currentWill.tendency,
+      strength: currentWill.strength,
+      intrinsic: currentWill.intrinsic,
+    },
+    evolved: {
+      tendency: newTendency,
+      strength: newStrength,
+      intrinsic,
+    },
+    reason,
+    confidence: currentWill.confidence,
+    autonomous: true,
+  };
+}
+
+function intrinsicToTendency(intrinsic: string): string {
+  switch (intrinsic) {
+    case 'genesis': return 'rest';
+    case 'irreducible': return 'expand';
+    case 'harmonic': return 'harmonize';
+    case 'convergent': return 'contract';
+    case 'divergent': return 'expand';
+    case 'flowing': return 'expand';
+    case 'void': return 'rest';
+    case 'centered': return 'rest';
+    case 'diffusive': return 'expand';
+    case 'expansive': return 'expand';
+    case 'stable': return 'rest';
+    default: return 'rest';
+  }
+}
+
+export interface WillAlignment {
+  reiType: 'WillAlignment';
+  refs: [string, string];
+  before: [string, string];
+  after: string;
+  harmony: number;
+  method: string;
+}
+
+export function alignWills(
+  valA: any, valB: any,
+  metaA: DeepSigmaMeta, metaB: DeepSigmaMeta,
+  refA: string, refB: string,
+): WillAlignment {
+  const willA = buildDeepWill(valA, metaA);
+  const willB = buildDeepWill(valB, metaB);
+
+  const beforeA = willA.tendency;
+  const beforeB = willB.tendency;
+
+  let after: string;
+  let method: string;
+
+  if (beforeA === beforeB) {
+    after = beforeA;
+    method = '同一傾向 → 強化';
+  } else if (willA.strength > willB.strength + 0.2) {
+    after = beforeA;
+    method = `${refA}の意志が優勢`;
+    metaB.tendency = after;
+  } else if (willB.strength > willA.strength + 0.2) {
+    after = beforeB;
+    method = `${refB}の意志が優勢`;
+    metaA.tendency = after;
+  } else {
+    after = 'harmonize';
+    method = '拮抗 → 調和への収束';
+    metaA.tendency = after;
+    metaB.tendency = after;
+  }
+
+  const harmony = beforeA === beforeB ? 1.0
+    : after === 'harmonize' ? 0.5
+    : 0.7;
+
+  return {
+    reiType: 'WillAlignment',
+    refs: [refA, refB],
+    before: [beforeA, beforeB],
+    after,
+    harmony,
+    method,
+  };
+}
+
+export interface WillConflict {
+  reiType: 'WillConflict';
+  refs: [string, string];
+  tendencies: [string, string];
+  tension: number;
+  conflicting: boolean;
+  resolution: string;
+}
+
+const OPPOSING_PAIRS: Array<[string, string]> = [
+  ['expand', 'contract'],
+  ['divergent', 'convergent'],
+  ['rest', 'expand'],
+  ['harmonize', 'transcend'],
+];
+
+export function detectWillConflict(
+  valA: any, valB: any,
+  metaA: DeepSigmaMeta, metaB: DeepSigmaMeta,
+  refA: string, refB: string,
+): WillConflict {
+  const willA = buildDeepWill(valA, metaA);
+  const willB = buildDeepWill(valB, metaB);
+
+  const tA = willA.tendency;
+  const tB = willB.tendency;
+
+  if (tA === tB) {
+    return {
+      reiType: 'WillConflict',
+      refs: [refA, refB],
+      tendencies: [tA, tB],
+      tension: 0,
+      conflicting: false,
+      resolution: '同一傾向 — 衝突なし',
+    };
+  }
+
+  const isOpposing = OPPOSING_PAIRS.some(
+    ([a, b]) => (tA === a && tB === b) || (tA === b && tB === a)
+  );
+
+  const baseTension = isOpposing ? 0.8 : 0.3;
+  const tension = Math.min(1, baseTension * (willA.strength + willB.strength) / 2);
+
+  let resolution: string;
+  if (!isOpposing) {
+    resolution = '微小な差異 — will_align で調律可能';
+  } else if (tension > 0.7) {
+    resolution = '強い対立 — entangle で縁起的統合を推奨';
+  } else {
+    resolution = '対立あり — will_align で調律可能';
+  }
+
+  return {
+    reiType: 'WillConflict',
+    refs: [refA, refB],
+    tendencies: [tA, tB],
+    tension,
+    conflicting: isOpposing,
+    resolution,
+  };
+}
