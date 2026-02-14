@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei 6属性 — σ深化デモ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=Source+Code+Pro:wght@400;600&display=swap');
+
+:root {
+  --bg: #0f0f12;
+  --bg2: #18181e;
+  --bg3: #222230;
+  --silver: #a0a0b0;
+  --gold: #c4a55a;
+  --gold-dim: #8a7a40;
+  --accent: #5a8ac4;
+  --red: #c45a5a;
+  --green: #5ac47a;
+  --text: #d0d0dc;
+  --text-dim: #70707e;
+  --border: #2a2a38;
+  --font-jp: 'Noto Serif JP', serif;
+  --font-code: 'Source Code Pro', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-jp);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Texture overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Header ── */
+.header {
+  text-align: center;
+  padding: 48px 24px 32px;
+  position: relative;
+  z-index: 1;
+}
+.header-title {
+  font-size: 14px;
+  letter-spacing: 6px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  font-weight: 300;
+}
+.header h1 {
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.header h1 span { color: var(--gold); }
+.header-sub {
+  margin-top: 12px;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 300;
+}
+
+/* ── Input area ── */
+.input-area {
+  max-width: 720px;
+  margin: 0 auto 40px;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.pipe-input-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+  transition: border-color 0.3s;
+}
+.pipe-input-wrap:focus-within {
+  border-color: var(--gold-dim);
+}
+
+.pipe-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-family: var(--font-code);
+  font-size: 18px;
+  padding: 14px 16px;
+  outline: none;
+}
+.pipe-input::placeholder { color: var(--text-dim); font-size: 15px; }
+
+.run-btn {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--bg);
+  border: none;
+  padding: 0 28px;
+  font-family: var(--font-jp);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.run-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.run-btn:active { transform: translateY(0); }
+
+/* ── Presets ── */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: center;
+}
+.preset-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--font-code);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.preset-btn:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: rgba(196, 165, 90, 0.08);
+}
+
+/* ── Result grid ── */
+.result-area {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+  position: relative;
+  z-index: 1;
+}
+
+.sigma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* ── Attribute card ── */
+.attr-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.attr-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.attr-card:hover {
+  border-color: var(--gold-dim);
+  background: #1a1a24;
+}
+
+.attr-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.attr-kanji {
+  font-size: 24px;
+  color: var(--gold);
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(196, 165, 90, 0.08);
+  border-radius: 8px;
+}
+.attr-names {
+  flex: 1;
+}
+.attr-name-en {
+  font-family: var(--font-code);
+  font-size: 13px;
+  color: var(--silver);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.attr-name-jp {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+.attr-body {
+  font-family: var(--font-code);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.attr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+.attr-key { color: var(--text-dim); }
+.attr-val { color: var(--text); text-align: right; max-width: 60%; word-break: break-all; }
+.attr-val.gold { color: var(--gold); }
+.attr-val.accent { color: var(--accent); }
+.attr-val.green { color: var(--green); }
+.attr-val.red { color: var(--red); }
+
+/* ── Bar chart ── */
+.bar-wrap {
+  margin: 8px 0 4px;
+}
+.bar-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+.bar-track {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 0%;
+}
+.bar-fill.gold { background: linear-gradient(90deg, var(--gold-dim), var(--gold)); }
+.bar-fill.accent { background: linear-gradient(90deg, #3a6a9a, var(--accent)); }
+.bar-fill.green { background: linear-gradient(90deg, #3a8a4a, var(--green)); }
+
+/* ── Phase indicator ── */
+.phase-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(196, 165, 90, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--gold);
+  margin-top: 6px;
+}
+.phase-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+.phase-dot.animated {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ── Memory timeline ── */
+.timeline {
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  height: 40px;
+  margin: 10px 0;
+  padding: 0 2px;
+}
+.timeline-bar {
+  flex: 1;
+  min-width: 4px;
+  max-width: 20px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0.7;
+}
+.timeline-bar:last-child { opacity: 1; background: var(--gold); }
+
+/* ── Tag ── */
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 2px 2px;
+}
+.tag-gold { background: rgba(196,165,90,0.15); color: var(--gold); }
+.tag-accent { background: rgba(90,138,196,0.15); color: var(--accent); }
+.tag-green { background: rgba(90,196,122,0.15); color: var(--green); }
+.tag-silver { background: rgba(160,160,176,0.12); color: var(--silver); }
+
+/* ── Intrinsic badge ── */
+.intrinsic-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(196, 165, 90, 0.08);
+  border: 1px solid rgba(196, 165, 90, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+.intrinsic-symbol {
+  font-size: 22px;
+  line-height: 1;
+}
+.intrinsic-text {
+  flex: 1;
+}
+.intrinsic-name {
+  font-family: var(--font-code);
+  font-size: 14px;
+  color: var(--gold);
+}
+.intrinsic-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 80px 24px;
+  color: var(--text-dim);
+}
+.empty-sigma {
+  font-size: 72px;
+  color: var(--gold-dim);
+  opacity: 0.3;
+  margin-bottom: 16px;
+  font-weight: 300;
+}
+.empty-text { font-size: 14px; }
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  padding: 32px 24px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  position: relative;
+  z-index: 1;
+}
+.footer a { color: var(--gold-dim); text-decoration: none; }
+.footer a:hover { color: var(--gold); }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .sigma-grid { grid-template-columns: 1fr; }
+  .pipe-input { font-size: 15px; padding: 12px; }
+  .run-btn { padding: 0 18px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">Rei ✦ 0₀式</div>
+  <h1>6属性 <span>σ</span> 深化デモ</h1>
+  <p class="header-sub">数値にパイプチェーンを適用し、6つの属性を可視化します</p>
+</div>
+
+<div class="input-area">
+  <div class="pipe-input-wrap">
+    <input class="pipe-input" id="pipeInput" placeholder="例: 1, 2, 4, 8, 16, 32" spellcheck="false">
+    <button class="run-btn" id="runBtn" onclick="runSigma()">σ 実行</button>
+  </div>
+  <div class="presets">
+    <button class="preset-btn" onclick="setPreset('1, 2, 4, 8, 16, 32')">指数増加</button>
+    <button class="preset-btn" onclick="setPreset('100, 50, 25, 12, 6, 3')">指数減少</button>
+    <button class="preset-btn" onclick="setPreset('0, 10, 3, 15, 2, 18')">カオス的</button>
+    <button class="preset-btn" onclick="setPreset('5, 10, 7, 12, 8, 14, 9')">振動</button>
+    <button class="preset-btn" onclick="setPreset('7')">素数 (7)</button>
+    <button class="preset-btn" onclick="setPreset('6')">完全数 (6)</button>
+    <button class="preset-btn" onclick="setPreset('0')">零 (genesis)</button>
+    <button class="preset-btn" onclick="setPreset('3.14')">小数 (π)</button>
+    <button class="preset-btn" onclick="setPreset('28')">完全数 (28)</button>
+    <button class="preset-btn" onclick="setPreset('2, 3, 5, 7, 11, 13, 17, 19, 23')">素数列</button>
+  </div>
+</div>
+
+<div class="result-area" id="resultArea">
+  <div class="empty-state" id="emptyState">
+    <div class="empty-sigma">σ</div>
+    <div class="empty-text">上のフィールドに値をカンマ区切りで入力し「σ 実行」を押してください</div>
+  </div>
+  <div class="sigma-grid" id="sigmaGrid" style="display:none;"></div>
+</div>
+
+<div class="footer">
+  <a href="https://github.com/fc0web/rei-lang" target="_blank">GitHub: fc0web/rei-lang</a>
+  &nbsp;·&nbsp;
+  <a href="https://www.npmjs.com/package/rei-lang" target="_blank">npm: rei-lang</a>
+  &nbsp;·&nbsp;
+  D-FUMT — 藤本 伸樹 (Nobuki Fujimoto), 2026
+</div>
+
+<script>
+// ============================================================
+// Rei 6属性 σ深化 — ブラウザ版シミュレーター
+// sigma-deep.ts のロジックをJSに移植
+// ============================================================
+
+function setPreset(val) {
+  document.getElementById('pipeInput').value = val;
+  runSigma();
+}
+
+function runSigma() {
+  const raw = document.getElementById('pipeInput').value.trim();
+  if (!raw) return;
+
+  const values = raw.split(',').map(s => {
+    const n = parseFloat(s.trim());
+    return isNaN(n) ? 0 : n;
+  });
+
+  if (values.length === 0) return;
+
+  const result = computeDeepSigma(values);
+  renderResult(result, values);
+}
+
+// ── Core sigma computation (mirrors sigma-deep.ts) ──
+
+function computeDeepSigma(values) {
+  const finalVal = values[values.length - 1];
+  const memory = values.length > 1 ? values.slice(0, -1) : [];
+  const pipeCount = Math.max(values.length - 1, 0);
+
+  // velocity history
+  const velocityHistory = [];
+  for (let i = 1; i < values.length; i++) {
+    velocityHistory.push(values[i] - values[i - 1]);
+  }
+
+  // field
+  const field = { center: finalVal, neighbors: [] };
+
+  // flow
+  const tendency = computeTendency(memory, finalVal);
+  const velocity = velocityHistory.length > 0 ? velocityHistory[velocityHistory.length - 1] : 0;
+  let acceleration = 0;
+  if (velocityHistory.length >= 2) {
+    acceleration = velocityHistory[velocityHistory.length - 1] - velocityHistory[velocityHistory.length - 2];
+  }
+  const phase = determinePhase(velocity, acceleration, velocityHistory);
+  const flow = {
+    direction: tendency === 'rest' ? 'rest' : tendency,
+    momentum: pipeCount,
+    velocity,
+    acceleration: Math.round(acceleration * 1000) / 1000,
+    phase,
+  };
+
+  // memory
+  const trajectory = analyzeTrajectory(memory);
+  const dominantCause = 'pipe';
+  const memoryResult = {
+    raw: memory,
+    totalTransformations: pipeCount,
+    dominantCause,
+    trajectory,
+  };
+
+  // layer
+  const layer = { depth: 0, structure: 'flat', expandable: false, components: 0 };
+
+  // relation (simulated — no variable refs in browser demo)
+  const relation = { refs: [], dependencies: [], entanglements: 0, isolated: true };
+
+  // will
+  const intrinsic = computeIntrinsic(finalVal);
+  const confidence = computeConfidence(memory);
+  const prediction = predictNext(values);
+  const strength = pipeCount > 0 ? Math.min(pipeCount / 5, 1) : 0;
+  const history = memory.map((_, i) => {
+    if (i === 0) return 'rest';
+    return memory[i] > memory[i - 1] ? 'expand' : memory[i] < memory[i - 1] ? 'contract' : 'rest';
+  });
+  const will = { tendency, strength, intrinsic, confidence, prediction, history };
+
+  return { field, flow, memory: memoryResult, layer, relation, will, values };
+}
+
+function computeTendency(mem, cur) {
+  if (mem.length < 2) return 'rest';
+  const recent = mem.slice(-5);
+  let exp = 0, con = 0, alt = 0;
+  for (let i = 0; i < recent.length; i++) {
+    const prev = i === 0 ? recent[0] : recent[i - 1];
+    const c = i === recent.length - 1 ? cur : recent[i + 1];
+    if (c > prev) exp++;
+    else if (c < prev) con++;
+    if (i > 0 && (c > prev) !== (recent[i] > recent[i - 1])) alt++;
+  }
+  if (alt >= recent.length - 1) return 'spiral';
+  if (exp > con) return 'expand';
+  if (con > exp) return 'contract';
+  return 'rest';
+}
+
+function determinePhase(v, a, vh) {
+  if (v === 0 && a === 0) return 'rest';
+  if (vh.length >= 2) {
+    const l = vh.slice(-2);
+    if ((l[0] > 0 && l[1] < 0) || (l[0] < 0 && l[1] > 0)) return 'reversing';
+  }
+  if (Math.abs(a) < 0.01) return 'steady';
+  if (a > 0) return 'accelerating';
+  return 'decelerating';
+}
+
+function analyzeTrajectory(mem) {
+  if (mem.length < 2) return 'stable';
+  let exp = 0, con = 0, sign = 0;
+  const diffs = [];
+  for (let i = 1; i < mem.length; i++) {
+    const d = mem[i] - mem[i - 1];
+    diffs.push(d);
+    if (d > 0) exp++;
+    else if (d < 0) con++;
+    if (i >= 2) {
+      const pd = mem[i - 1] - mem[i - 2];
+      if ((d > 0 && pd < 0) || (d < 0 && pd > 0)) sign++;
+    }
+  }
+  const total = mem.length - 1;
+  if (total < 2) return 'stable';
+  if (sign > total * 0.4) {
+    const abs = diffs.map(Math.abs);
+    const avg = abs.reduce((a, b) => a + b, 0) / abs.length;
+    const variance = abs.reduce((s, d) => s + (d - avg) ** 2, 0) / abs.length;
+    const cv = avg > 0 ? Math.sqrt(variance) / avg : 0;
+    if (cv > 0.8 && total >= 4) return 'chaotic';
+    return 'oscillating';
+  }
+  if (exp > con * 2) return 'expanding';
+  if (con > exp * 2) return 'contracting';
+  return 'stable';
+}
+
+function isPrime(n) {
+  if (n < 2 || !Number.isInteger(n)) return false;
+  if (n <= 3) return true;
+  if (n % 2 === 0 || n % 3 === 0) return false;
+  for (let i = 5; i * i <= n; i += 6) {
+    if (n % i === 0 || n % (i + 2) === 0) return false;
+  }
+  return true;
+}
+
+function isPerfect(n) {
+  if (n <= 1 || !Number.isInteger(n)) return false;
+  let sum = 1;
+  for (let i = 2; i * i <= n; i++) {
+    if (n % i === 0) { sum += i; if (i !== n / i) sum += n / i; }
+  }
+  return sum === n;
+}
+
+function computeIntrinsic(val) {
+  if (val === 0) return { key: 'genesis', symbol: '◯', desc: '始まりの点 — 全ての出発' };
+  if (Number.isInteger(val) && val > 1 && isPrime(val)) return { key: 'irreducible', symbol: '◆', desc: '還元不能 — 独立を好む' };
+  if (Number.isInteger(val) && isPerfect(val)) return { key: 'harmonic', symbol: '✦', desc: '調和的 — 完全数の均衡' };
+  if (Math.abs(val) < 0.01) return { key: 'convergent', symbol: '⊙', desc: '収束的 — 零に近づく' };
+  if (Math.abs(val) > 1000) return { key: 'divergent', symbol: '↗', desc: '発散的 — 無限へ向かう' };
+  if (!Number.isInteger(val)) return { key: 'flowing', symbol: '〜', desc: '流動的 — 整数に留まらない' };
+  return { key: 'stable', symbol: '■', desc: '安定 — 堅実な整数' };
+}
+
+function computeConfidence(mem) {
+  if (mem.length < 3) return 0;
+  const vals = mem.slice(-10);
+  let same = 0, total = 0;
+  for (let i = 2; i < vals.length; i++) {
+    const p = vals[i - 1] - vals[i - 2];
+    const c = vals[i] - vals[i - 1];
+    total++;
+    if ((p > 0 && c > 0) || (p < 0 && c < 0) || (p === 0 && c === 0)) same++;
+  }
+  return total > 0 ? Math.round(same / total * 100) / 100 : 0;
+}
+
+function predictNext(values) {
+  if (values.length < 3) return null;
+  const v = values.slice(-5);
+  const n = v.length;
+  let sx = 0, sy = 0, sxy = 0, sx2 = 0;
+  for (let i = 0; i < n; i++) { sx += i; sy += v[i]; sxy += i * v[i]; sx2 += i * i; }
+  const denom = n * sx2 - sx * sx;
+  if (denom === 0) return v[n - 1];
+  const slope = (n * sxy - sx * sy) / denom;
+  const intercept = (sy - slope * sx) / n;
+  return Math.round((slope * n + intercept) * 1000) / 1000;
+}
+
+// ── Rendering ──
+
+function renderResult(r, values) {
+  document.getElementById('emptyState').style.display = 'none';
+  const grid = document.getElementById('sigmaGrid');
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+
+  const cards = [
+    renderField(r),
+    renderFlow(r),
+    renderMemory(r, values),
+    renderLayer(r),
+    renderRelation(r),
+    renderWill(r),
+  ];
+
+  cards.forEach((html, i) => {
+    const card = document.createElement('div');
+    card.className = 'attr-card';
+    card.innerHTML = html;
+    grid.appendChild(card);
+    setTimeout(() => card.classList.add('visible'), 60 * i);
+  });
+}
+
+function cardHeader(kanji, en, jp) {
+  return `<div class="attr-header">
+    <div class="attr-kanji">${kanji}</div>
+    <div class="attr-names">
+      <div class="attr-name-en">${en}</div>
+      <div class="attr-name-jp">${jp}</div>
+    </div>
+  </div>`;
+}
+
+function row(key, val, cls = '') {
+  return `<div class="attr-row"><span class="attr-key">${key}</span><span class="attr-val ${cls}">${val}</span></div>`;
+}
+
+function bar(label, value, max, cls = 'gold') {
+  const pct = max > 0 ? Math.min(value / max * 100, 100) : 0;
+  return `<div class="bar-wrap">
+    <div class="bar-label">${label}</div>
+    <div class="bar-track"><div class="bar-fill ${cls}" style="width:0%" data-target="${pct}"></div></div>
+  </div>`;
+}
+
+function renderField(r) {
+  return cardHeader('場', 'Field', '値が存在する空間') +
+    `<div class="attr-body">
+      ${row('center', r.field.center, 'gold')}
+      ${row('type', typeof r.field.center === 'number' ? 'number' : 'object')}
+    </div>`;
+}
+
+function renderFlow(r) {
+  const phaseLabels = {
+    rest: ['静止', false],
+    accelerating: ['加速中', true],
+    decelerating: ['減速中', true],
+    steady: ['定常', false],
+    reversing: ['反転中', true],
+  };
+  const [phaseJp, animated] = phaseLabels[r.flow.phase] || ['—', false];
+  const dirLabels = { rest: '静止', expand: '拡大', contract: '縮小', spiral: '螺旋' };
+
+  return cardHeader('流', 'Flow', '変化の方向と勢い') +
+    `<div class="attr-body">
+      ${row('direction', dirLabels[r.flow.direction] || r.flow.direction, 'accent')}
+      ${row('velocity', r.flow.velocity)}
+      ${row('acceleration', r.flow.acceleration, r.flow.acceleration > 0 ? 'green' : r.flow.acceleration < 0 ? 'red' : '')}
+      ${bar('momentum', r.flow.momentum, Math.max(r.flow.momentum, 5), 'accent')}
+      <div class="phase-indicator">
+        <div class="phase-dot ${animated ? 'animated' : ''}"></div>
+        ${r.flow.phase} — ${phaseJp}
+      </div>
+    </div>`;
+}
+
+function renderMemory(r, values) {
+  const maxVal = Math.max(...values.map(Math.abs), 1);
+  const bars = values.map(v => {
+    const h = Math.max(Math.abs(v) / maxVal * 36, 2);
+    return `<div class="timeline-bar" style="height:0px" data-h="${h}px"></div>`;
+  }).join('');
+
+  const trajLabels = {
+    expanding: '拡大', contracting: '縮小', oscillating: '振動',
+    stable: '安定', chaotic: 'カオス',
+  };
+  const trajCls = {
+    expanding: 'tag-green', contracting: 'tag-accent',
+    oscillating: 'tag-gold', stable: 'tag-silver', chaotic: 'tag-accent',
+  };
+
+  return cardHeader('記', 'Memory', '来歴と軌跡') +
+    `<div class="attr-body">
+      <div class="timeline">${bars}</div>
+      ${row('変換回数', r.memory.totalTransformations)}
+      ${row('支配的原因', r.memory.dominantCause)}
+      <div style="margin-top:6px">
+        <span class="attr-key">trajectory</span>
+        <span class="tag ${trajCls[r.memory.trajectory] || 'tag-silver'}">${r.memory.trajectory} — ${trajLabels[r.memory.trajectory] || '—'}</span>
+      </div>
+    </div>`;
+}
+
+function renderLayer(r) {
+  const structLabels = { flat: '平坦', nested: 'ネスト', recursive: '再帰', fractal: 'フラクタル' };
+  return cardHeader('層', 'Layer', '構造の深さ') +
+    `<div class="attr-body">
+      ${row('depth', r.layer.depth)}
+      ${row('structure', structLabels[r.layer.structure] || r.layer.structure, 'accent')}
+      ${row('expandable', r.layer.expandable ? '可' : '不可', r.layer.expandable ? 'green' : '')}
+      ${row('components', r.layer.components)}
+    </div>`;
+}
+
+function renderRelation(r) {
+  return cardHeader('関', 'Relation', '他の値との依存') +
+    `<div class="attr-body">
+      ${row('isolated', r.relation.isolated ? '孤立' : '接続', r.relation.isolated ? 'red' : 'green')}
+      ${row('entanglements', r.relation.entanglements)}
+      <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">
+        ※ ブラウザデモでは変数参照の追跡は省略されています。<br>
+        <code style="color:var(--gold-dim)">npx rei-lang</code> で完全版をお試しください。
+      </div>
+    </div>`;
+}
+
+function renderWill(r) {
+  const dirLabels = { rest: '静止', expand: '拡大', contract: '縮小', spiral: '螺旋' };
+  return cardHeader('志', 'Will', '内在的傾向性') +
+    `<div class="attr-body">
+      <div class="intrinsic-badge">
+        <div class="intrinsic-symbol">${r.will.intrinsic.symbol}</div>
+        <div class="intrinsic-text">
+          <div class="intrinsic-name">${r.will.intrinsic.key}</div>
+          <div class="intrinsic-desc">${r.will.intrinsic.desc}</div>
+        </div>
+      </div>
+      ${row('tendency', dirLabels[r.will.tendency] || r.will.tendency, 'gold')}
+      ${bar('strength', r.will.strength, 1, 'gold')}
+      ${bar('confidence', r.will.confidence, 1, 'green')}
+      ${row('prediction', r.will.prediction !== null ? '→ ' + r.will.prediction : '—', 'accent')}
+    </div>`;
+}
+
+// ── Animate bars on render ──
+const observer = new MutationObserver(() => {
+  setTimeout(() => {
+    document.querySelectorAll('.bar-fill[data-target]').forEach(el => {
+      el.style.width = el.dataset.target + '%';
+    });
+    document.querySelectorAll('.timeline-bar[data-h]').forEach((el, i) => {
+      setTimeout(() => { el.style.height = el.dataset.h; }, i * 40);
+    });
+  }, 100);
+});
+observer.observe(document.getElementById('sigmaGrid'), { childList: true });
+
+// ── Enter key ──
+document.getElementById('pipeInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runSigma();
+});
+
+// ── Auto-run first preset ──
+window.addEventListener('load', () => {
+  setPreset('1, 2, 4, 8, 16, 32');
+});
+</script>
+</body>
+</html>
