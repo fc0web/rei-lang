@@ -184,6 +184,60 @@ import {
   createGenesis, genesisForward,
 } from './quad-genesis';
 
+// ── Phase 5: マルチドメイン拡張 ──
+import {
+  type SimulationSpace,
+  createSimulationSpace,
+  addParticle,
+  simStep as simStepCore,
+  simRun as simRunCore,
+  getSimulationSigma,
+} from './domains/simulation-core';
+import {
+  createNBodySpace,
+  createWaveField,
+  waveStep as waveStepCore,
+  waveRun as waveRunCore,
+  getWaveFieldSigma,
+  type WaveFieldSpace,
+} from './domains/natural-science';
+import {
+  type PipelineSpace,
+  createPipelineSpace,
+  addStage as addPipelineStage,
+  pipelineRun as pipelineRunCore,
+  getPipelineSigma,
+} from './domains/pipeline-core';
+import {
+  createETLSpace,
+  addETLStage,
+  createLLMChain,
+  addLLMStage,
+  getLLMChainSigma,
+  type LLMChainSpace,
+} from './domains/info-engineering';
+import {
+  type GraphSpace,
+  createGraphSpace,
+  addGraphNode as addGNode,
+  addGraphEdge as addGEdge,
+  graphTraverse as graphTraverseCore,
+  propagateInfluence as propagateInfluenceCore,
+  getGraphSigma,
+} from './domains/graph-core';
+import {
+  analyzeText,
+  getTextSigma,
+  createGenealogy,
+  createCausalNetwork,
+  addCausalChain,
+  getGenealogySigma,
+  evaluateEthics,
+  getEthicsSigma,
+  type TextAnalysisResult,
+  type EthicsResult,
+} from './domains/humanities';
+
 export class Evaluator {
   env: Environment;
   // ── v0.4: 関係エンジン ──
@@ -2854,6 +2908,210 @@ export class Evaluator {
         case "will_history": case "意志履歴":
           return ar.willSummary?.willHistory ?? [];
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 5: マルチドメイン拡張
+    // ═══════════════════════════════════════════════════════════
+
+    // ── 共通層: SimulationSpace ──
+    if (cmdName === "nbody" || cmdName === "N体") {
+      const n = typeof rawInput === 'number' ? rawInput : (Array.isArray(rawInput) ? rawInput[0] : 3);
+      const forceType = args.length >= 1 ? String(args[0]) : 'gravity';
+      return createNBodySpace(n, forceType);
+    }
+
+    if (cmdName === "sim_step" || cmdName === "シミュレーション_ステップ") {
+      if (rawInput?.reiType === 'SimulationSpace') return simStepCore(rawInput);
+      throw new Error('sim_step: SimulationSpaceが必要です');
+    }
+
+    if (cmdName === "sim_run" || cmdName === "シミュレーション_実行") {
+      const steps = args.length >= 1 ? this.toNumber(args[0]) : 100;
+      if (rawInput?.reiType === 'SimulationSpace') return simRunCore(rawInput, steps);
+      throw new Error('sim_run: SimulationSpaceが必要です');
+    }
+
+    if (cmdName === "sim_sigma" || cmdName === "シミュレーションσ") {
+      if (rawInput?.reiType === 'SimulationSpace') return getSimulationSigma(rawInput);
+      throw new Error('sim_sigma: SimulationSpaceが必要です');
+    }
+
+    // ── 共通層: WaveField ──
+    if (cmdName === "wave_field" || cmdName === "波動場") {
+      if (Array.isArray(rawInput) && rawInput.length >= 2) {
+        return createWaveField(rawInput[0], rawInput[1]);
+      }
+      const size = typeof rawInput === 'number' ? rawInput : 10;
+      return createWaveField(size, size);
+    }
+
+    if (cmdName === "wave_step" || cmdName === "波動ステップ") {
+      if (rawInput?.reiType === 'WaveFieldSpace') return waveStepCore(rawInput);
+      throw new Error('wave_step: WaveFieldSpaceが必要です');
+    }
+
+    if (cmdName === "wave_run" || cmdName === "波動実行") {
+      const steps = args.length >= 1 ? this.toNumber(args[0]) : 50;
+      if (rawInput?.reiType === 'WaveFieldSpace') return waveRunCore(rawInput, steps);
+      throw new Error('wave_run: WaveFieldSpaceが必要です');
+    }
+
+    if (cmdName === "wave_sigma" || cmdName === "波動σ") {
+      if (rawInput?.reiType === 'WaveFieldSpace') return getWaveFieldSigma(rawInput);
+      throw new Error('wave_sigma: WaveFieldSpaceが必要です');
+    }
+
+    // ── 共通層: PipelineSpace ──
+    if (cmdName === "pipeline" || cmdName === "パイプライン") {
+      return createPipelineSpace(rawInput);
+    }
+
+    if (cmdName === "pipe_stage" || cmdName === "パイプステージ") {
+      if (rawInput?.reiType === 'PipelineSpace') {
+        const stageName = args.length >= 1 ? String(args[0]) : 'extract';
+        return addPipelineStage(rawInput, stageName, stageName as any, (data: any) => data);
+      }
+      throw new Error('pipe_stage: PipelineSpaceが必要です');
+    }
+
+    if (cmdName === "pipe_run" || cmdName === "パイプ実行") {
+      if (rawInput?.reiType === 'PipelineSpace') return pipelineRunCore(rawInput);
+      throw new Error('pipe_run: PipelineSpaceが必要です');
+    }
+
+    if (cmdName === "pipe_sigma" || cmdName === "パイプσ") {
+      if (rawInput?.reiType === 'PipelineSpace') return getPipelineSigma(rawInput);
+      throw new Error('pipe_sigma: PipelineSpaceが必要です');
+    }
+
+    // ── 共通層: GraphSpace ──
+    if (cmdName === "graph" || cmdName === "グラフ") {
+      return createGraphSpace('general');
+    }
+
+    if (cmdName === "graph_node" || cmdName === "グラフノード") {
+      if (rawInput?.reiType === 'GraphSpace') {
+        const id = args.length >= 1 ? String(args[0]) : 'node';
+        const label = args.length >= 2 ? String(args[1]) : undefined;
+        return addGNode(rawInput, id, label);
+      }
+      throw new Error('graph_node: GraphSpaceが必要です');
+    }
+
+    if (cmdName === "graph_edge" || cmdName === "グラフエッジ") {
+      if (rawInput?.reiType === 'GraphSpace') {
+        const from = args.length >= 1 ? String(args[0]) : '';
+        const to = args.length >= 2 ? String(args[1]) : '';
+        const type = args.length >= 3 ? String(args[2]) : 'related';
+        return addGEdge(rawInput, from, to, type);
+      }
+      throw new Error('graph_edge: GraphSpaceが必要です');
+    }
+
+    if (cmdName === "graph_traverse" || cmdName === "グラフ走査") {
+      if (rawInput?.reiType === 'GraphSpace') {
+        const startId = args.length >= 1 ? String(args[0]) : '';
+        const mode = args.length >= 2 ? String(args[1]) as 'bfs' | 'dfs' : 'bfs';
+        return graphTraverseCore(rawInput, startId, mode);
+      }
+      throw new Error('graph_traverse: GraphSpaceが必要です');
+    }
+
+    if (cmdName === "graph_sigma" || cmdName === "グラフσ") {
+      if (rawInput?.reiType === 'GraphSpace') return getGraphSigma(rawInput);
+      throw new Error('graph_sigma: GraphSpaceが必要です');
+    }
+
+    // ── ドメインC: 情報工学 - ETL ──
+    if (cmdName === "etl" || cmdName === "ETL") {
+      return createETLSpace(rawInput);
+    }
+
+    if (cmdName === "etl_stage" || cmdName === "ETLステージ") {
+      if (rawInput?.reiType === 'PipelineSpace') {
+        const stageName = args.length >= 1 ? String(args[0]) : 'extract';
+        const config = args.length >= 2 && typeof args[1] === 'object' ? args[1] : undefined;
+        return addETLStage(rawInput, stageName, config);
+      }
+      throw new Error('etl_stage: PipelineSpaceが必要です');
+    }
+
+    // ── ドメインC: 情報工学 - LLMチェーン ──
+    if (cmdName === "llm_chain" || cmdName === "LLMチェーン") {
+      if (typeof rawInput === 'string') return createLLMChain(rawInput);
+      throw new Error('llm_chain: 文字列が必要です');
+    }
+
+    if (cmdName === "llm_stage" || cmdName === "LLMステージ") {
+      if (rawInput?.reiType === 'LLMChainSpace') {
+        const role = args.length >= 1 ? String(args[0]) : 'process';
+        const instruction = args.length >= 2 ? String(args[1]) : undefined;
+        return addLLMStage(rawInput, role, instruction);
+      }
+      throw new Error('llm_stage: LLMChainSpaceが必要です');
+    }
+
+    if (cmdName === "llm_sigma" || cmdName === "LLMσ") {
+      if (rawInput?.reiType === 'LLMChainSpace') return getLLMChainSigma(rawInput);
+      throw new Error('llm_sigma: LLMChainSpaceが必要です');
+    }
+
+    // ── ドメインD: 人文科学 - テキスト分析 ──
+    if (cmdName === "text_analyze" || cmdName === "テキスト分析") {
+      if (typeof rawInput === 'string') return analyzeText(rawInput);
+      throw new Error('text_analyze: 文字列が必要です');
+    }
+
+    if (cmdName === "text_sigma" || cmdName === "テキストσ") {
+      if (rawInput?.reiType === 'TextAnalysis') return getTextSigma(rawInput);
+      throw new Error('text_sigma: TextAnalysisが必要です');
+    }
+
+    // ── ドメインD: 人文科学 - 系譜・因果ネットワーク ──
+    if (cmdName === "genealogy" || cmdName === "系譜") {
+      return createGenealogy(typeof rawInput === 'string' ? rawInput : undefined);
+    }
+
+    if (cmdName === "causal_network" || cmdName === "因果網") {
+      return createCausalNetwork(typeof rawInput === 'string' ? rawInput : undefined);
+    }
+
+    if (cmdName === "causal_chain" || cmdName === "因果連鎖") {
+      if (rawInput?.reiType === 'GraphSpace') {
+        const chain = args.map((a: any) => String(a));
+        return addCausalChain(rawInput, chain);
+      }
+      throw new Error('causal_chain: GraphSpaceが必要です');
+    }
+
+    if (cmdName === "influence_propagate" || cmdName === "影響伝播") {
+      if (rawInput?.reiType === 'GraphSpace') {
+        const sourceId = args.length >= 1 ? String(args[0]) : '';
+        const strength = args.length >= 2 ? this.toNumber(args[1]) : 1;
+        return propagateInfluenceCore(rawInput, sourceId, strength);
+      }
+      throw new Error('influence_propagate: GraphSpaceが必要です');
+    }
+
+    if (cmdName === "genealogy_sigma" || cmdName === "系譜σ") {
+      if (rawInput?.reiType === 'GraphSpace') return getGenealogySigma(rawInput);
+      throw new Error('genealogy_sigma: GraphSpaceが必要です');
+    }
+
+    // ── ドメインD: 人文科学 - 倫理推論 ──
+    if (cmdName === "ethics" || cmdName === "倫理") {
+      const frameworks = args.length >= 1 
+        ? (typeof args[0] === 'string' ? [args[0]] : args.map(String))
+        : undefined;
+      if (typeof rawInput === 'string') return evaluateEthics(rawInput, frameworks);
+      if (typeof rawInput === 'object' && rawInput !== null) return evaluateEthics(rawInput, frameworks);
+      throw new Error('ethics: 文字列またはオブジェクトが必要です');
+    }
+
+    if (cmdName === "ethics_sigma" || cmdName === "倫理σ") {
+      if (rawInput?.reiType === 'EthicsResult') return getEthicsSigma(rawInput);
+      throw new Error('ethics_sigma: EthicsResultが必要です');
     }
 
     // User-defined pipe function
