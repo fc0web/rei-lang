@@ -69,8 +69,11 @@ import {
   getAgentSpaceSigma, getAgentSpaceGrid, getAgentSpaceGameState,
   formatAgentSpacePuzzle, formatAgentSpaceGame,
   getDifficultyAnalysis, getReasoningTrace, getMatchAnalysis,
+  traceAgentRelations, computeAgentInfluence, cellRefToAgentId,
+  detectGameWillConflict, alignGameWills,
   type AgentSpace, type AgentSpaceResult, type AgentSpaceSigma,
   type DifficultyAnalysis, type MatchAnalysis, type ReasoningTrace,
+  type RelationSummary, type WillSummary,
 } from './agent-space';
 // RCT方向3: API版はtheory/semantic-compressor.tsを直接使用
 // evaluator内はローカル同期版（下部のreiLocalSemantic*関数）を使用
@@ -1279,11 +1282,16 @@ export class Evaluator {
     }
 
     if (cmdName === "influence" || cmdName === "影響") {
-      if (args.length < 1) throw new Error("influence: ターゲット変数名が必要です");
-      const targetRef = String(args[0]);
-      const sourceRef = this.findRefByValue(input);
-      if (!sourceRef) throw new Error("influence: 変数に束縛された値にのみ使用できます");
-      return computeInfluence(this.bindingRegistry, sourceRef, targetRef);
+      // AgentSpaceResult 上では後段のハンドラで処理
+      if (rawInput?.reiType === 'AgentSpaceResult') {
+        // fall through to AgentSpaceResult handlers below
+      } else {
+        if (args.length < 1) throw new Error("influence: ターゲット変数名が必要です");
+        const targetRef = String(args[0]);
+        const sourceRef = this.findRefByValue(input);
+        if (!sourceRef) throw new Error("influence: 変数に束縛された値にのみ使用できます");
+        return computeInfluence(this.bindingRegistry, sourceRef, targetRef);
+      }
     }
 
     if (cmdName === "entangle" || cmdName === "縁起") {
@@ -1314,33 +1322,43 @@ export class Evaluator {
     }
 
     if (cmdName === "will_align" || cmdName === "意志調律") {
-      if (args.length < 1) throw new Error("will_align: ターゲット変数名が必要です");
-      const targetRef = String(args[0]);
-      if (!this.env.has(targetRef)) throw new Error(`will_align: 変数 '${targetRef}' が見つかりません`);
-      const targetVal = unwrapReiVal(this.env.get(targetRef));
-      const sourceRef = this.findRefByValue(input) ?? '__anon';
-      const metaA = getSigmaOf(rawInput);
-      const metaB = getSigmaOf(targetVal);
-      const result = alignWills(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
-      // ── 6属性カスケード: will(align) → flow → memory → layer ──
-      const cascade = cascadeFromWill(metaA, 'align', result.harmony);
-      (result as any).cascade = cascade;
-      return result;
+      // AgentSpaceResult 上では後段のハンドラで処理
+      if (rawInput?.reiType === 'AgentSpaceResult') {
+        // fall through to AgentSpaceResult handlers below
+      } else {
+        if (args.length < 1) throw new Error("will_align: ターゲット変数名が必要です");
+        const targetRef = String(args[0]);
+        if (!this.env.has(targetRef)) throw new Error(`will_align: 変数 '${targetRef}' が見つかりません`);
+        const targetVal = unwrapReiVal(this.env.get(targetRef));
+        const sourceRef = this.findRefByValue(input) ?? '__anon';
+        const metaA = getSigmaOf(rawInput);
+        const metaB = getSigmaOf(targetVal);
+        const result = alignWills(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
+        // ── 6属性カスケード: will(align) → flow → memory → layer ──
+        const cascade = cascadeFromWill(metaA, 'align', result.harmony);
+        (result as any).cascade = cascade;
+        return result;
+      }
     }
 
     if (cmdName === "will_conflict" || cmdName === "意志衝突") {
-      if (args.length < 1) throw new Error("will_conflict: ターゲット変数名が必要です");
-      const targetRef = String(args[0]);
-      if (!this.env.has(targetRef)) throw new Error(`will_conflict: 変数 '${targetRef}' が見つかりません`);
-      const targetVal = unwrapReiVal(this.env.get(targetRef));
-      const sourceRef = this.findRefByValue(input) ?? '__anon';
-      const metaA = getSigmaOf(rawInput);
-      const metaB = getSigmaOf(targetVal);
-      const result = detectWillConflict(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
-      // ── 6属性カスケード: will(conflict) → flow → memory → layer ──
-      const cascade = cascadeFromWill(metaA, 'conflict', result.tension);
-      (result as any).cascade = cascade;
-      return result;
+      // AgentSpaceResult 上では後段のハンドラで処理
+      if (rawInput?.reiType === 'AgentSpaceResult') {
+        // fall through to AgentSpaceResult handlers below
+      } else {
+        if (args.length < 1) throw new Error("will_conflict: ターゲット変数名が必要です");
+        const targetRef = String(args[0]);
+        if (!this.env.has(targetRef)) throw new Error(`will_conflict: 変数 '${targetRef}' が見つかりません`);
+        const targetVal = unwrapReiVal(this.env.get(targetRef));
+        const sourceRef = this.findRefByValue(input) ?? '__anon';
+        const metaA = getSigmaOf(rawInput);
+        const metaB = getSigmaOf(targetVal);
+        const result = detectWillConflict(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
+        // ── 6属性カスケード: will(conflict) → flow → memory → layer ──
+        const cascade = cascadeFromWill(metaA, 'conflict', result.tension);
+        (result as any).cascade = cascade;
+        return result;
+      }
     }
 
     // ── pulse（脈動）: 6属性の相互反応を明示的に実行 ──
@@ -2799,10 +2817,42 @@ export class Evaluator {
         case "difficulty": case "難易度":
           return ar.difficulty ?? null;
         case "trace": case "追跡":
+          // 引数あり → 関係追跡、引数なし → 推論追跡
+          if (args.length > 0) {
+            const cellRef = cellRefToAgentId(String(args[0]));
+            const maxDepth = args.length > 1 ? Number(args[1]) : 5;
+            return traceAgentRelations(ar, cellRef, maxDepth);
+          }
           return ar.reasoningTrace ?? [];
         // Phase 4c
         case "analyze": case "分析":
           return ar.matchAnalysis ?? null;
+
+        // Phase 4d: relation deep（縁起的追跡）
+        case "relations": case "関係":
+          return ar.relationSummary ?? null;
+        case "relation_trace": case "関係追跡": {
+          if (args.length < 1) throw new Error("relation_trace: セル参照が必要です (例: \"R1C1\" or \"cell_0_0\")");
+          const cellRef = cellRefToAgentId(String(args[0]));
+          const maxDepth = args.length > 1 ? Number(args[1]) : 5;
+          return traceAgentRelations(ar, cellRef, maxDepth);
+        }
+        case "influence": case "影響": {
+          if (args.length < 2) throw new Error("influence: 2つのセル参照が必要です (例: \"R1C1\", \"R1C4\")");
+          const fromRef = cellRefToAgentId(String(args[0]));
+          const toRef = cellRefToAgentId(String(args[1]));
+          return computeAgentInfluence(ar, fromRef, toRef);
+        }
+
+        // Phase 4d: will deep（意志駆動）
+        case "will_summary": case "意志要約":
+          return ar.willSummary ?? null;
+        case "will_conflict": case "意志衝突":
+          return detectGameWillConflict(ar);
+        case "will_align": case "意志調律":
+          return alignGameWills(ar);
+        case "will_history": case "意志履歴":
+          return ar.willSummary?.willHistory ?? [];
       }
     }
 

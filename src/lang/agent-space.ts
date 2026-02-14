@@ -36,6 +36,13 @@ import {
   type GameSpace, type GameState, type GameRules, type GameMove,
   selectBestMove, type Player,
 } from './game';
+import { BindingRegistry } from './relation';
+import {
+  traceRelationChain, computeInfluence,
+  createDeepSigmaMeta, evolveWill, alignWills, detectWillConflict,
+  type TraceResult, type InfluenceResult,
+  type DeepSigmaMeta, type WillEvolution, type WillConflict, type WillAlignment,
+} from './sigma-deep';
 
 // ═══════════════════════════════════════════
 // Part 1: AgentSpace 型定義
@@ -88,6 +95,34 @@ export interface AgentSpaceResult {
   difficulty?: DifficultyAnalysis;
   reasoningTrace?: ReasoningTrace[];
   matchAnalysis?: MatchAnalysis;
+  // Phase 4d: relation deep（縁起的追跡）
+  relationSummary?: RelationSummary;
+  _bindingRegistry?: BindingRegistry;  // 動的クエリ用（trace/influence）
+  // Phase 4d: will deep（意志駆動）
+  willSummary?: WillSummary;
+  _willMetas?: [DeepSigmaMeta, DeepSigmaMeta]; // 動的クエリ用（will_conflict/will_align）
+}
+
+/** 意志サマリー（ゲーム対局の意志追跡要約） */
+export interface WillSummary {
+  players: Array<{
+    player: number;
+    initialTendency: string;
+    finalTendency: string;
+    strengthGrowth: number;
+    totalEvolutions: number;
+  }>;
+  willHistory: Array<{ round: number; player: number; evolution: WillEvolution }>;
+  conflictAnalysis: WillConflict | null;
+}
+
+/** 関係サマリー（縁起的追跡の要約） */
+export interface RelationSummary {
+  totalBindings: number;
+  constraintBindings: { row: number; column: number; block: number; other: number };
+  avgBindingsPerAgent: number;
+  mostConnectedAgent: { id: string; bindingCount: number } | null;
+  leastConnectedAgent: { id: string; bindingCount: number } | null;
 }
 
 /** AgentSpace σ */
@@ -116,6 +151,9 @@ export interface AgentSpace {
 
   // Agent ID マッピング
   agentIds: string[];
+
+  // 関係レジストリ（縁起的追跡用）
+  bindingRegistry?: BindingRegistry;
 
   // パズル固有データ
   puzzleData?: PuzzleAgentData;
@@ -151,6 +189,9 @@ interface GameAgentData {
   behaviors: [string, string];   // [P1行動パターン, P2行動パターン] (Phase 4c)
   searchNodes: number;
   tacticalHistory: Array<{ player: number; patterns: TacticalPattern[] }>;
+  // Phase 4d: will deep integration
+  willMetas: [DeepSigmaMeta, DeepSigmaMeta];
+  willHistory: Array<{ round: number; player: number; evolution: WillEvolution }>;
 }
 
 // ═══════════════════════════════════════════
@@ -276,6 +317,53 @@ export function createPuzzleAgentSpace(puzzle: PuzzleSpace): AgentSpace {
     }
   }
 
+  // 関係レジストリ: 制約グループに基づく縁起的結合
+  const bindingRegistry = new BindingRegistry();
+  const entanglementPairs = new Set<string>();  // 重複防止
+
+  for (const constraint of puzzle.constraints) {
+    // ラベルから制約タイプを判定
+    const label = constraint.label;
+    const mode = label.startsWith('行') ? 'row_constraint' as any
+      : label.startsWith('列') ? 'column_constraint' as any
+      : label.startsWith('ブロック') ? 'block_constraint' as any
+      : 'constraint' as any;
+
+    // 制約グループ内の全セルペアを結合
+    for (let i = 0; i < constraint.cells.length; i++) {
+      for (let j = i + 1; j < constraint.cells.length; j++) {
+        const [r1, c1] = constraint.cells[i];
+        const [r2, c2] = constraint.cells[j];
+        const idA = `cell_${r1}_${c1}`;
+        const idB = `cell_${r2}_${c2}`;
+        const pairKey = idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
+
+        if (!entanglementPairs.has(pairKey)) {
+          entanglementPairs.add(pairKey);
+          bindingRegistry.bind(idA, idB, mode, 1.0, true);
+        }
+      }
+    }
+  }
+
+  // Phase 4d P3: 各Agentにdeep metaを設定（関係情報）
+  for (const agentId of agentIds) {
+    const agent = registry.get(agentId);
+    if (agent) {
+      const bindings = bindingRegistry.getBindingsFor(agentId);
+      agent.setDeepMeta({
+        relation: {
+          constraintCount: bindings.length,
+          isolated: bindings.length === 0,
+        },
+        will: {
+          tendency: 'cooperate',
+          strength: 0.5,
+        },
+      });
+    }
+  }
+
   return {
     reiType: 'AgentSpace',
     kind: 'puzzle',
@@ -283,6 +371,7 @@ export function createPuzzleAgentSpace(puzzle: PuzzleSpace): AgentSpace {
     eventBus,
     mediator,
     agentIds,
+    bindingRegistry,
     puzzleData: {
       size: puzzle.size,
       puzzleType: puzzle.puzzleType,
@@ -357,6 +446,22 @@ export function createGameAgentSpace(
   agentIds.push(p2Agent.id);
   mediator.setAgentPriority(p2Agent.id, 1.0);
 
+  // Phase 4d P3: 各AgentにwillのdeepMetaを設定
+  p1Agent.setDeepMeta({
+    will: { tendency: behaviorToTendency(playStyle1), strength: 0.5 },
+    relation: { opponent: 'player_2', role: playStyle1 },
+  });
+  p2Agent.setDeepMeta({
+    will: { tendency: behaviorToTendency(playStyle2), strength: 0.5 },
+    relation: { opponent: 'player_1', role: playStyle2 },
+  });
+
+  // Phase 4d: 意志の初期化（behavior に基づく）
+  const willMeta1 = createDeepSigmaMeta();
+  const willMeta2 = createDeepSigmaMeta();
+  willMeta1.tendency = behaviorToTendency(playStyle1);
+  willMeta2.tendency = behaviorToTendency(playStyle2);
+
   return {
     reiType: 'AgentSpace',
     kind: 'game',
@@ -373,6 +478,8 @@ export function createGameAgentSpace(
       behaviors: [playStyle1, playStyle2],
       searchNodes: 0,
       tacticalHistory: [],
+      willMetas: [willMeta1, willMeta2],
+      willHistory: [],
     },
     rounds: [],
     solved: false,
@@ -1076,6 +1183,30 @@ function gameRunRound(space: AgentSpace): AgentSpaceRound {
 
   gd.searchNodes += searchNodes;
 
+  // ── Phase 4d: 意志進化（毎ターン） ──
+  const playerIdx = currentPlayer - 1;
+  const willMeta = gd.willMetas[playerIdx];
+  // 行動結果をメタデータに記録（trajectoryに影響）
+  willMeta.memory.push(moveScore);
+  willMeta.pipeCount++;
+  willMeta.operations.push(behavior);
+  const willEvolution = evolveWill(
+    { score: moveScore, behavior, tactical },
+    willMeta,
+  );
+  gd.willHistory.push({ round: roundNum, player: currentPlayer, evolution: willEvolution });
+
+  // Phase 4d P4: Agent の deepMeta を更新（意志状態の反映）
+  currentAgent.setDeepMeta({
+    ...(currentAgent.deepMeta ?? {}),
+    will: {
+      tendency: willEvolution.evolved.tendency,
+      strength: willEvolution.evolved.strength,
+      intrinsic: willEvolution.evolved.intrinsic,
+      lastReason: willEvolution.reason,
+    },
+  });
+
   space.eventBus.emit('agent:decide', {
     agentId: currentAgentId,
     player: currentPlayer,
@@ -1342,6 +1473,12 @@ function buildResult(space: AgentSpace): AgentSpaceResult {
     // Phase 4b
     base.difficulty = getDifficultyAnalysis(space);
     base.reasoningTrace = getReasoningTrace(space);
+
+    // Phase 4d: relation deep
+    if (space.bindingRegistry) {
+      base.relationSummary = buildRelationSummary(space);
+      base._bindingRegistry = space.bindingRegistry;
+    }
   }
 
   if (space.kind === 'game') {
@@ -1351,6 +1488,12 @@ function buildResult(space: AgentSpace): AgentSpaceResult {
     base.finalBoard = gd.state.board;
     // Phase 4c
     base.matchAnalysis = getMatchAnalysis(space);
+
+    // Phase 4d: will deep
+    if (gd.willMetas) {
+      base.willSummary = buildWillSummary(space);
+      base._willMetas = gd.willMetas;
+    }
   }
 
   return base;
@@ -1658,4 +1801,188 @@ export function getMatchAnalysis(space: AgentSpace): MatchAnalysis {
     players,
     tacticalSummary,
   };
+}
+
+// ═══════════════════════════════════════════
+// Part 10: 関係深化（Phase 4d — 縁起的追跡）
+// ═══════════════════════════════════════════
+
+/**
+ * AgentSpace の関係サマリーを構築
+ */
+function buildRelationSummary(space: AgentSpace): RelationSummary {
+  const reg = space.bindingRegistry!;
+  const counts = { row: 0, column: 0, block: 0, other: 0 };
+  const agentBindingCounts = new Map<string, number>();
+
+  // 全Agent のバインディング数を集計
+  for (const agentId of space.agentIds) {
+    const bindings = reg.getBindingsFor(agentId);
+    agentBindingCounts.set(agentId, bindings.length);
+
+    for (const b of bindings) {
+      if (b.mode === 'row_constraint') counts.row++;
+      else if (b.mode === 'column_constraint') counts.column++;
+      else if (b.mode === 'block_constraint') counts.block++;
+      else counts.other++;
+    }
+  }
+
+  // 各バインディングが2回カウントされるので半分にする
+  const totalBindings = (counts.row + counts.column + counts.block + counts.other) / 2;
+  counts.row = Math.floor(counts.row / 2);
+  counts.column = Math.floor(counts.column / 2);
+  counts.block = Math.floor(counts.block / 2);
+  counts.other = Math.floor(counts.other / 2);
+
+  // 最多/最少接続Agent
+  let most: { id: string; bindingCount: number } | null = null;
+  let least: { id: string; bindingCount: number } | null = null;
+  for (const [id, count] of agentBindingCounts) {
+    if (!most || count > most.bindingCount) most = { id, bindingCount: count };
+    if (!least || count < least.bindingCount) least = { id, bindingCount: count };
+  }
+
+  return {
+    totalBindings,
+    constraintBindings: counts,
+    avgBindingsPerAgent: space.agentIds.length > 0
+      ? totalBindings * 2 / space.agentIds.length
+      : 0,
+    mostConnectedAgent: most,
+    leastConnectedAgent: least,
+  };
+}
+
+/**
+ * AgentSpaceResult から特定セルの関係チェーンを追跡
+ * パイプ用: result |> relation_trace("cell_0_0")
+ */
+export function traceAgentRelations(
+  result: AgentSpaceResult,
+  cellRef: string,
+  maxDepth: number = 5,
+): TraceResult | null {
+  if (!result._bindingRegistry) return null;
+  return traceRelationChain(result._bindingRegistry, cellRef, maxDepth);
+}
+
+/**
+ * AgentSpaceResult から2セル間の影響度を計算
+ * パイプ用: result |> relation_influence("cell_0_0", "cell_3_3")
+ */
+export function computeAgentInfluence(
+  result: AgentSpaceResult,
+  fromRef: string,
+  toRef: string,
+): InfluenceResult | null {
+  if (!result._bindingRegistry) return null;
+  return computeInfluence(result._bindingRegistry, fromRef, toRef);
+}
+
+/**
+ * セル座標 "R1C1" → agentId "cell_0_0" への変換ヘルパー
+ */
+export function cellRefToAgentId(cellRef: string): string {
+  // "R1C1" → "cell_0_0", "R2C3" → "cell_1_2"
+  const match = cellRef.match(/^R(\d+)C(\d+)$/i);
+  if (match) {
+    return `cell_${parseInt(match[1]) - 1}_${parseInt(match[2]) - 1}`;
+  }
+  // "0,0" → "cell_0_0"
+  const match2 = cellRef.match(/^(\d+),(\d+)$/);
+  if (match2) {
+    return `cell_${match2[1]}_${match2[2]}`;
+  }
+  // 既に "cell_X_Y" 形式ならそのまま
+  if (cellRef.startsWith('cell_')) return cellRef;
+  return cellRef;
+}
+
+// ═══════════════════════════════════════════
+// Part 11: 意志深化（Phase 4d — 意志駆動対局）
+// ═══════════════════════════════════════════
+
+/**
+ * behavior → 初期 tendency マッピング
+ */
+function behaviorToTendency(behavior: string): string {
+  switch (behavior) {
+    case 'competitive': return 'expand';
+    case 'cooperative': return 'harmonize';
+    case 'reactive': return 'rest';
+    case 'proactive': return 'expand';
+    case 'contemplative': return 'harmonize';
+    default: return 'rest';
+  }
+}
+
+/**
+ * ゲーム対局の意志サマリーを構築
+ */
+function buildWillSummary(space: AgentSpace): WillSummary {
+  const gd = space.gameData!;
+
+  // 各プレイヤーの意志進化追跡
+  const players = [0, 1].map(idx => {
+    const playerHistory = gd.willHistory.filter(h => h.player === idx + 1);
+    const initial = playerHistory.length > 0
+      ? playerHistory[0].evolution.previous.tendency
+      : gd.willMetas[idx].tendency;
+    const final = playerHistory.length > 0
+      ? playerHistory[playerHistory.length - 1].evolution.evolved.tendency
+      : gd.willMetas[idx].tendency;
+    const initialStrength = playerHistory.length > 0
+      ? playerHistory[0].evolution.previous.strength
+      : 0;
+    const finalStrength = playerHistory.length > 0
+      ? playerHistory[playerHistory.length - 1].evolution.evolved.strength
+      : 0;
+
+    return {
+      player: idx + 1,
+      initialTendency: initial,
+      finalTendency: final,
+      strengthGrowth: finalStrength - initialStrength,
+      totalEvolutions: playerHistory.length,
+    };
+  });
+
+  // 意志衝突分析
+  const p1Agent = space.registry.get('player_1');
+  const p2Agent = space.registry.get('player_2');
+  let conflictAnalysis: WillConflict | null = null;
+  if (p1Agent && p2Agent) {
+    conflictAnalysis = detectWillConflict(
+      p1Agent.value, p2Agent.value,
+      gd.willMetas[0], gd.willMetas[1],
+      'player_1', 'player_2',
+    );
+  }
+
+  return {
+    players,
+    willHistory: gd.willHistory,
+    conflictAnalysis,
+  };
+}
+
+/**
+ * AgentSpaceResult から意志衝突を検出
+ */
+export function detectGameWillConflict(result: AgentSpaceResult): WillConflict | null {
+  if (!result._willMetas || !result.willSummary) return null;
+  return result.willSummary.conflictAnalysis;
+}
+
+/**
+ * AgentSpaceResult から意志調律を実行
+ */
+export function alignGameWills(result: AgentSpaceResult): WillAlignment | null {
+  if (!result._willMetas) return null;
+  return alignWills(
+    { player: 1 }, { player: 2 },
+    result._willMetas[0], result._willMetas[1],
+    'player_1', 'player_2',
+  );
 }

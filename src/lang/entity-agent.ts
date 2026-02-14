@@ -168,6 +168,7 @@ export class ReiAgent {
   private _parentId: string | null = null;
   private _childIds: string[] = [];
   private _depth: number;
+  private _deepMeta: Record<string, any> | null = null; // Phase 4d: sigma-deep統合
 
   // 記憶
   private _memory: AgentMemoryEntry[] = [];
@@ -868,6 +869,10 @@ export class ReiAgent {
     this._bindings = bindings;
   }
 
+  /** Phase 4d: sigma-deep メタデータの取得・設定 */
+  get deepMeta(): Record<string, any> | null { return this._deepMeta; }
+  setDeepMeta(meta: Record<string, any>): void { this._deepMeta = meta; }
+
   // ─── 意志管理 ─────────────────────────
 
   /** 意志を設定 */
@@ -951,10 +956,14 @@ export class ReiAgent {
       relation: {
         bindingCount: this._bindings.length,
         bindings: this._bindings,
+        // Phase 4d: sigma-deep 関係情報
+        ...(this._deepMeta?.relation ?? {}),
       },
       will: {
         intention: this._intention,
         satisfaction: this._intention?.satisfaction ?? 0,
+        // Phase 4d: sigma-deep 意志情報
+        ...(this._deepMeta?.will ?? {}),
       },
       step: this._step,
       autonomyLevel: this.autonomyLevel,
