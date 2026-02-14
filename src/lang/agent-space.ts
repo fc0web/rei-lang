@@ -1821,9 +1821,10 @@ function buildRelationSummary(space: AgentSpace): RelationSummary {
     agentBindingCounts.set(agentId, bindings.length);
 
     for (const b of bindings) {
-      if (b.mode === 'row_constraint') counts.row++;
-      else if (b.mode === 'column_constraint') counts.column++;
-      else if (b.mode === 'block_constraint') counts.block++;
+      const mode = b.mode as string;
+      if (mode === 'row_constraint') counts.row++;
+      else if (mode === 'column_constraint') counts.column++;
+      else if (mode === 'block_constraint') counts.block++;
       else counts.other++;
     }
   }
