@@ -1,6 +1,6 @@
 {
   "name": "rei-lang",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. v0.5.1: AgentSpace unifies puzzles and games on the agent runtime.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
