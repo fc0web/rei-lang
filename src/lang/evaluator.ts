@@ -81,6 +81,7 @@ import {
   toNumSafe, unwrapReiVal, getSigmaOf, buildSigmaResult,
   type SigmaMetadata, type ReiVal,
 } from './sigma';
+import { mergeRelationBindings, mergeWillIntention } from './sigma-deep';
 export type { SigmaMetadata, ReiVal };
 
 // --- Environment (Scope) ---
@@ -551,9 +552,9 @@ export class Evaluator {
         return this.execPipeCmd(rawInput, cmd);
       }
       const result = this.execPipeCmd(rawInput, cmd);
-      // パイプ通過時にσメタデータを付与
+      // パイプ通過時にσメタデータを付与（操作名を記録）
       const prevMeta = getSigmaOf(rawInput);
-      return wrapWithSigma(result, rawInput, prevMeta.pipeCount > 0 ? prevMeta : undefined);
+      return wrapWithSigma(result, rawInput, prevMeta.pipeCount > 0 ? prevMeta : undefined, cmd.cmd);
     }
     throw new Error("無効なパイプコマンド");
   }
@@ -616,14 +617,16 @@ export class Evaluator {
       }
       // 全値型 ? C1公理のσ関数
       const sigmaResult = buildSigmaResult(rawInput, sigmaMetadata);
-      // ── v0.4: σにrelation/will情報を注入 ──
+      // ── v0.5+: σにrelation/will情報をマージ注入（上書きではなくマージ） ──
       const ref = this.findRefByValue(input);
       if (ref) {
-        sigmaResult.relation = this.bindingRegistry.buildRelationSigma(ref);
+        const bindings = this.bindingRegistry.buildRelationSigma(ref);
+        sigmaResult.relation = mergeRelationBindings(sigmaResult.relation, bindings);
       }
       const intention = getIntentionOf(rawInput);
       if (intention) {
-        sigmaResult.will = buildWillSigma(intention);
+        const willSigma = buildWillSigma(intention);
+        sigmaResult.will = mergeWillIntention(sigmaResult.will, willSigma);
       }
       return sigmaResult;
     }

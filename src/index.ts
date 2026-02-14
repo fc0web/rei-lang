@@ -15,6 +15,21 @@ export {
   formatAgentSpacePuzzle, formatAgentSpaceGame,
   getDifficultyAnalysis, getReasoningTrace, getMatchAnalysis,
 } from './lang/agent-space';
+export {
+  type DeepSigmaMeta,
+  type DeepSigmaResult,
+  type SigmaMemoryEntry,
+  type MemoryTrajectory,
+  type FlowPhase,
+  type LayerStructure,
+  type RelationRole,
+  type RelationDependency,
+  createDeepSigmaMeta,
+  wrapWithDeepSigma,
+  buildDeepSigmaResult,
+  mergeRelationBindings,
+  mergeWillIntention,
+} from './lang/sigma-deep';
 
 function unwrapReiVal(v: any): any {
   if (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') {

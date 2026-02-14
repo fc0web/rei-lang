@@ -843,3 +843,85 @@ function computeTendency(memory: any[], currentValue: any): string {
   if (contractCount > expandCount) return 'contract';
   return 'rest';
 }
+
+
+// ============================================================
+// マージ関数 — relation/will 注入との統合
+// ============================================================
+
+/**
+ * 深化relationにBindingRegistryの結合情報をマージ
+ * 
+ * 上書きではなく、sigma-deepの依存グラフ情報を保持しつつ
+ * 結合レジストリからの具体的なbinding情報を追加する
+ */
+export function mergeRelationBindings(
+  deepRelation: DeepSigmaResult['relation'],
+  bindings: Array<{ target: string; mode: string; strength: number; active: boolean; propagations: number }>,
+): DeepSigmaResult['relation'] {
+  if (bindings.length === 0) return deepRelation;
+
+  // bindingのtargetをrefsにマージ（重複排除）
+  const mergedRefs = new Set(deepRelation.refs);
+  for (const b of bindings) {
+    mergedRefs.add(b.target);
+  }
+
+  // bindingを依存関係としてマージ
+  const mergedDeps = [...deepRelation.dependencies];
+  for (const b of bindings) {
+    const existing = mergedDeps.find(d => d.ref === b.target);
+    if (existing) {
+      // 既存依存関係がある場合: 強度を最大値に更新
+      existing.strength = Math.max(existing.strength, b.strength);
+    } else {
+      // 新規依存関係を追加
+      mergedDeps.push({
+        ref: b.target,
+        role: b.mode === 'resonance' ? 'context'
+            : b.mode === 'causation' ? 'source'
+            : 'modifier',
+        strength: b.strength,
+      });
+    }
+  }
+
+  const activeBindings = bindings.filter(b => b.active);
+  return {
+    refs: [...mergedRefs],
+    dependencies: mergedDeps,
+    entanglements: mergedDeps.filter(d => d.strength > 0.5).length,
+    isolated: mergedRefs.size === 0 && activeBindings.length === 0,
+  };
+}
+
+/**
+ * 深化willにIntention情報をマージ
+ * 
+ * sigma-deepの数学的傾向分析を保持しつつ
+ * will.tsからの意志情報（type, target, satisfaction等）を統合する
+ */
+export function mergeWillIntention(
+  deepWill: DeepSigmaResult['will'],
+  willSigma: { type: string; target: any; satisfaction: number; active: boolean; step: number; totalChoices: number; dominantMode: string | null; history: any[] },
+): DeepSigmaResult['will'] {
+  return {
+    // sigma-deepの数学的分析を維持
+    tendency: deepWill.tendency,
+    strength: Math.max(deepWill.strength, willSigma.active ? willSigma.satisfaction : 0),
+    intrinsic: deepWill.intrinsic,
+    confidence: deepWill.confidence,
+    prediction: deepWill.prediction,
+    history: deepWill.history,
+    // 意志情報を追加フィールドとして注入
+    intention: {
+      type: willSigma.type,
+      target: willSigma.target,
+      satisfaction: willSigma.satisfaction,
+      active: willSigma.active,
+      step: willSigma.step,
+      totalChoices: willSigma.totalChoices,
+      dominantMode: willSigma.dominantMode,
+    },
+  } as any;
+}
