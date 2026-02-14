@@ -63,6 +63,13 @@ import {
   type ConflictStrategy, type MediatorSigma,
   type RoundResult, type RunResult,
 } from './mediator';
+import {
+  createPuzzleAgentSpace, createGameAgentSpace,
+  agentSpaceRunRound, agentSpaceRun,
+  getAgentSpaceSigma, getAgentSpaceGrid, getAgentSpaceGameState,
+  formatAgentSpacePuzzle, formatAgentSpaceGame,
+  type AgentSpace, type AgentSpaceResult, type AgentSpaceSigma,
+} from './agent-space';
 // RCT方向3: API版はtheory/semantic-compressor.tsを直接使用
 // evaluator内はローカル同期版（下部のreiLocalSemantic*関数）を使用
 
@@ -453,6 +460,9 @@ export class Evaluator {
           "turn", "手番", "history", "棋譜",
           "game_format", "盤面表示", "sigma",
           "as_mdim",
+          // Phase 4: Agent基盤
+          "agent_play", "自律対戦", "agent_turn", "自律手番",
+          "agent_match", "自律対局", "as_agent_space", "空間Agent化",
         ];
         if (gameAccessors.includes(cmd.cmd)) {
           return this.execPipeCmd(rawInput, cmd);
@@ -482,10 +492,19 @@ export class Evaluator {
           "puzzle_format", "数独表示", "difficulty", "難易度",
           "sigma", "status", "状態", "history", "履歴",
           "as_mdim",
+          // Phase 4: Agent基盤
+          "agent_solve", "自律解法", "as_agent_space", "空間Agent化",
+          "agent_propagate", "自律伝播",
         ];
         if (puzzleAccessors.includes(cmd.cmd)) {
           return this.execPipeCmd(rawInput, cmd);
         }
+      }
+      // ── 柱②: StringMDimアクセサはラップしない（参照操作） ──
+      // ── Phase 4: AgentSpace/AgentSpaceResult は直値返却 ──
+      const unwrappedForAgent = rawInput?.reiType === 'ReiVal' ? rawInput.value : rawInput;
+      if (unwrappedForAgent?.reiType === 'AgentSpace' || unwrappedForAgent?.reiType === 'AgentSpaceResult') {
+        return this.execPipeCmd(rawInput, cmd);
       }
       // ── 柱②: StringMDimアクセサはラップしない（参照操作） ──
       const stringMDimAccessors = [
@@ -581,9 +600,13 @@ export class Evaluator {
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'GameSpace') {
         return getGameSigma(rawInput as GameSpace);
       }
-      // ── 柱③: PuzzleSpace ? パズルのσ ──
+      // ── 柱③: PuzzleSpace → パズルのσ ──
       if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'PuzzleSpace') {
         return getPuzzleSigma(rawInput as PuzzleSpace);
+      }
+      // ── Phase 4: AgentSpace → エージェント空間のσ ──
+      if (rawInput !== null && typeof rawInput === 'object' && rawInput.reiType === 'AgentSpace') {
+        return getAgentSpaceSigma(rawInput as AgentSpace);
       }
       // 全値型 ? C1公理のσ関数
       const sigmaResult = buildSigmaResult(rawInput, sigmaMetadata);
@@ -2109,6 +2132,41 @@ export class Evaluator {
         case "sigma": case "game_sigma":
           return getGameSigma(gs);
 
+        // ── Phase 4: Agent基盤対局 ──
+
+        // agent_play / 自律対戦: Agent化して対局（決着まで）
+        case "agent_play": case "自律対戦": {
+          const s1 = args.length >= 1 ? String(args[0]) : gs.strategy;
+          const s2 = args.length >= 2 ? String(args[1]) : gs.strategy;
+          const maxRounds = args.length >= 3 ? Number(args[2]) : 20;
+          const space = createGameAgentSpace(gs, s1, s2);
+          return agentSpaceRun(space, maxRounds);
+        }
+
+        // agent_turn / 自律手番: Agent化して1手だけ打つ
+        case "agent_turn": case "自律手番": {
+          const s1 = args.length >= 1 ? String(args[0]) : gs.strategy;
+          const s2 = args.length >= 2 ? String(args[1]) : gs.strategy;
+          const space = createGameAgentSpace(gs, s1, s2);
+          agentSpaceRunRound(space);
+          return agentSpaceRun(space, 0);
+        }
+
+        // agent_match / 自律対局: = agent_play のエイリアス
+        case "agent_match": case "自律対局": {
+          const s1 = args.length >= 1 ? String(args[0]) : gs.strategy;
+          const s2 = args.length >= 2 ? String(args[1]) : gs.strategy;
+          const space = createGameAgentSpace(gs, s1, s2);
+          return agentSpaceRun(space, 50);
+        }
+
+        // as_agent_space / 空間Agent化: AgentSpaceに変換（実行前）
+        case "as_agent_space": case "空間Agent化": {
+          const s1 = args.length >= 1 ? String(args[0]) : gs.strategy;
+          const s2 = args.length >= 2 ? String(args[1]) : gs.strategy;
+          return createGameAgentSpace(gs, s1, s2);
+        }
+
         // ???????????????????????????????????????????
         // Phase 3統合: Game × Will ? 意志駆動の戦略選択
         // ???????????????????????????????????????????
@@ -2381,6 +2439,30 @@ export class Evaluator {
         case "sigma":
           return getPuzzleSigma(ps);
 
+        // ── Phase 4: Agent基盤解法 ──
+
+        // agent_solve / 自律解法: パズルをAgent化して解く
+        case "agent_solve": case "自律解法": {
+          const maxRounds = args.length > 0 ? Number(args[0]) : 100;
+          const space = createPuzzleAgentSpace(ps);
+          return agentSpaceRun(space, maxRounds);
+        }
+
+        // as_agent_space / 空間Agent化: AgentSpaceに変換（実行前）
+        case "as_agent_space": case "空間Agent化":
+          return createPuzzleAgentSpace(ps);
+
+        // agent_propagate / 自律伝播: Nラウンドだけ実行
+        case "agent_propagate": case "自律伝播": {
+          const rounds = args.length > 0 ? Number(args[0]) : 1;
+          const space = createPuzzleAgentSpace(ps);
+          for (let i = 0; i < rounds; i++) {
+            agentSpaceRunRound(space);
+            if (space.solved) break;
+          }
+          return agentSpaceRun(space, 0);  // build result without additional rounds
+        }
+
         // 状態
         case "status": case "状態":
           return {
@@ -2512,6 +2594,54 @@ export class Evaluator {
             log: solveLog,
           };
         }
+      }
+    }
+
+    // ── AgentSpace handlers ──
+    if (rawInput?.reiType === 'AgentSpace') {
+      const as = rawInput as AgentSpace;
+      switch (cmdName) {
+        // 実行（収束/決着まで）
+        case "run": case "run_agents": case "実行": case "自律実行": {
+          const maxRounds = args.length > 0 ? Number(args[0]) : 100;
+          const threshold = args.length > 1 ? Number(args[1]) : 1.0;
+          return agentSpaceRun(as, maxRounds, threshold);
+        }
+        // 1ラウンド
+        case "step": case "round": case "ステップ": case "ラウンド":
+          agentSpaceRunRound(as);
+          return as;
+        // σ
+        case "sigma": case "自律σ":
+          return getAgentSpaceSigma(as);
+        // 盤面
+        case "grid": case "盤面":
+          return as.kind === 'puzzle' ? getAgentSpaceGrid(as) : getAgentSpaceGameState(as);
+        // 表示
+        case "format": case "表示":
+          return as.kind === 'puzzle' ? formatAgentSpacePuzzle(as) : formatAgentSpaceGame(as);
+        // 調停σ
+        case "mediator_sigma": case "調停σ":
+          return as.mediator.sigma();
+      }
+    }
+
+    // ── AgentSpaceResult handlers ──
+    if (rawInput?.reiType === 'AgentSpaceResult') {
+      const ar = rawInput as AgentSpaceResult;
+      switch (cmdName) {
+        case "grid": case "盤面":
+          return ar.grid ?? ar.finalBoard ?? null;
+        case "winner": case "勝者":
+          return ar.winner ?? null;
+        case "rounds": case "ラウンド数":
+          return ar.totalRounds;
+        case "solved": case "解決":
+          return ar.solved;
+        case "history": case "履歴":
+          return ar.rounds;
+        case "moves": case "棋譜":
+          return ar.moveHistory ?? [];
       }
     }
 

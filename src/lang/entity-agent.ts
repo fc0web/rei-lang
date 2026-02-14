@@ -213,6 +213,7 @@ export class ReiAgent {
   // ─── プロパティ ─────────────────────────
 
   get value(): any { return this._value; }
+  set value(v: any) { this._value = v; }
   get state(): AgentState { return this._state; }
   get behavior(): AgentBehavior { return this._behavior; }
   get step(): number { return this._step; }
@@ -895,7 +896,8 @@ export class ReiAgent {
 
   // ─── 記憶管理 ─────────────────────────
 
-  private addMemory(type: AgentMemoryEntry['type'], summary: string, data?: any): void {
+  /** メモリに記録を追加（AgentSpace等の外部モジュールからも利用） */
+  addMemory(type: AgentMemoryEntry['type'], summary: string, data?: any): void {
     this._memory.push({
       step: this._step,
       timestamp: Date.now(),

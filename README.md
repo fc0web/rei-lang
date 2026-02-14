@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/rei-lang)](https://www.npmjs.com/package/rei-lang)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-gold.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-721%2F721-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-762%2F762-brightgreen)]()
 
 **Rei** (0₀式 / れいしき) is a mathematical computation language based on **D-FUMT** (Dimensional Fujimoto Universal Mathematical Theory). Its center-periphery patterns as language primitives achieve an **average 74% code reduction** over equivalent implementations in general-purpose languages.
 
@@ -10,9 +10,32 @@
 
 ---
 
-## What's New in v0.5
+## What's New in v0.5.1 — AgentSpace (Phase 4a)
 
-v0.5 introduces a **self-organizing agent runtime** — entities perceive, decide, and act autonomously, coordinated by a conflict-resolving mediator.
+**Puzzles and games are the same abstraction.** AgentSpace unifies puzzle-solving and game-playing on the v0.5 agent runtime:
+
+- **Puzzles** = cooperative multi-agent systems (all cells work toward a common goal)
+- **Games** = competitive multi-agent systems (players have opposing objectives)
+
+The only difference is agent `behavior` and mediator `strategy`.
+
+```rei
+// Puzzle: Agent-based solving
+30 |> generate_sudoku(42) |> agent_solve     // 81 cooperative agents solve sudoku
+30 |> 数独生成(42) |> 自律解法               // Japanese syntax
+
+// Game: Agent-based play
+game("tictactoe") |> agent_play("competitive", "cooperative")
+game("tictactoe") |> agent_match             // Full match to completion
+
+// Unified observation
+sudoku(grid) |> as_agent_space |> 調停σ      // Same σ for both
+game("tictactoe") |> as_agent_space |> 調停σ
+```
+
+### v0.5 Agent Runtime
+
+v0.5 introduced a **self-organizing agent runtime** — entities perceive, decide, and act autonomously, coordinated by a conflict-resolving mediator.
 
 - **EventBus** — Type-safe event-driven architecture with flow momentum tracking
 - **Entity Agent** — Six-attribute autonomous agents (perceive → decide → act cycle)

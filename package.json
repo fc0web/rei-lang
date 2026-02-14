@@ -1,7 +1,7 @@
 {
   "name": "rei-lang",
-  "version": "0.5.0",
-  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. v0.5: Self-organizing agent runtime with EventBus, Entity Agent, and Mediator.",
+  "version": "0.5.1",
+  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. v0.5.1: AgentSpace unifies puzzles and games on the agent runtime.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -49,6 +49,8 @@
     "autonomous-agent",
     "mediator",
     "multi-agent",
+    "agent-space",
+    "puzzle-game-unification",
     "six-attributes",
     "peace-use",
     "ethical-source",

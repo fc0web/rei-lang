@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.5.1] — 2026-02-14
+
+### 🧩 AgentSpace — パズル統一理論 × ゲーム統一理論 (Phase 4a)
+パズルとゲームを同一の抽象として Agent 基盤上に統一。
+
+#### 核心的洞察
+- パズル = 協調的マルチエージェントシステム（全セルが共通目標に向かう）
+- ゲーム = 競争的マルチエージェントシステム（プレイヤーが対立目標を持つ）
+- 違いは Agent の behavior と Mediator の strategy だけ
+
+#### 新規ファイル
+- `src/lang/agent-space.ts` (1,011行) — AgentSpace 統一基盤
+  - `createPuzzleAgentSpace()`: パズル → 協調Agentシステム変換
+  - `createGameAgentSpace()`: ゲーム → 競争Agentシステム変換
+  - `agentSpaceRun()`: 統一実行（収束/決着まで）
+  - `agentSpaceRunRound()`: 1ラウンド単位実行
+  - D-FUMT 六属性マッピング: 場=盤面, 流れ=ラウンド進行, 記憶=履歴, 層=推論深度, 関係=制約/対立, 意志=戦略
+
+#### パイプコマンド（evaluator統合）
+- パズル: `agent_solve`/`自律解法`, `agent_propagate`/`自律伝播`, `as_agent_space`/`空間Agent化`
+- ゲーム: `agent_play`/`自律対戦`, `agent_turn`/`自律手番`, `agent_match`/`自律対局`
+- 共通: AgentSpaceResult の `grid`, `rounds`, σ アクセス
+
+#### テスト
+- **762テスト通過**（23テストファイル）
+  - 721: v0.5.0以前（リグレッションゼロ）
+  - 30: AgentSpace単体テスト
+  - 11: AgentSpace×Evaluator統合テスト
+
+---
+
 ## [0.5.0] — 2026-02-14
 
 ### 🤖 自律Agent実行エンジン（v0.5ロードマップ全完了）

@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-const VERSION = '0.5.0';
+const VERSION = '0.5.1';
 
 // --- Result formatting ---
 function formatResult(val) {

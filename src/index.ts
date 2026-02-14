@@ -8,6 +8,12 @@ export { Evaluator } from './lang/evaluator';
 export { ReiEventBus } from './lang/event-bus';
 export { ReiAgent, AgentRegistry } from './lang/entity-agent';
 export { ReiMediator } from './lang/mediator';
+export {
+  createPuzzleAgentSpace, createGameAgentSpace,
+  agentSpaceRunRound, agentSpaceRun,
+  getAgentSpaceSigma, getAgentSpaceGrid, getAgentSpaceGameState,
+  formatAgentSpacePuzzle, formatAgentSpaceGame,
+} from './lang/agent-space';
 
 function unwrapReiVal(v: any): any {
   if (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') {
