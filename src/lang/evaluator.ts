@@ -282,6 +282,21 @@ import {
   type SyntaxTree, type SemanticFrame, type WordRelation, type TranslationResult,
 } from './domains/linguistics';
 
+// ── Phase 6.5: EFGH ドメイン横断統合 ──
+import {
+  artToMusic, musicToArt,
+  artToMarket, marketToArt,
+  artToText, textToArt,
+  musicToMarket, marketToMusic,
+  musicToText, textToMusic,
+  marketToText, textToMarket,
+  artToSim, musicToSim, marketToSim,
+  marketEthics, linguisticsToHumanities, linguisticsToPipeline,
+  composeAll,
+  getEFGHCrossSigma, getUniversalSigma,
+  type EFGHCrossDomainResult, type UniversalComposition,
+} from './domains/cross-domain-efgh';
+
 // ── 型システム強化 ──
 import {
   inferType, typeCheck, typeDomain, checkPipeCompatibility,
@@ -3428,7 +3443,98 @@ export class Evaluator {
     if (cmdName === "cross_sigma" || cmdName === "横断σ") {
       if (rawInput?.reiType === 'CrossDomainResult') return getCrossDomainSigma(rawInput);
       if (rawInput?.reiType === 'DomainComposition') return getDomainCompositionSigma(rawInput);
-      throw new Error('cross_sigma: CrossDomainResult or DomainCompositionが必要です');
+      if (rawInput?.reiType === 'EFGHCrossDomainResult') return getEFGHCrossSigma(rawInput);
+      if (rawInput?.reiType === 'UniversalComposition') return getUniversalSigma(rawInput);
+      throw new Error('cross_sigma: CrossDomainResult, DomainComposition, EFGHCrossDomainResult, or UniversalCompositionが必要です');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 6.5: EFGH ドメイン横断統合
+    // ═══════════════════════════════════════════════════════════
+
+    // E↔F: 芸術 ↔ 音楽 (共感覚)
+    if (cmdName === "art_to_music" || cmdName === "芸術→音楽") {
+      return artToMusic(rawInput);
+    }
+    if (cmdName === "music_to_art" || cmdName === "音楽→芸術") {
+      return musicToArt(rawInput);
+    }
+
+    // E↔G: 芸術 ↔ 経済学
+    if (cmdName === "art_to_market" || cmdName === "芸術→市場") {
+      return artToMarket(rawInput);
+    }
+    if (cmdName === "market_to_art" || cmdName === "市場→芸術") {
+      return marketToArt(rawInput);
+    }
+
+    // E↔H: 芸術 ↔ 言語学
+    if (cmdName === "art_to_text" || cmdName === "芸術→言語") {
+      return artToText(rawInput);
+    }
+    if (cmdName === "text_to_art" || cmdName === "言語→芸術") {
+      return textToArt(rawInput);
+    }
+
+    // F↔G: 音楽 ↔ 経済学
+    if (cmdName === "music_to_market" || cmdName === "音楽→市場") {
+      return musicToMarket(rawInput);
+    }
+    if (cmdName === "market_to_music" || cmdName === "市場→音楽") {
+      return marketToMusic(rawInput);
+    }
+
+    // F↔H: 音楽 ↔ 言語学
+    if (cmdName === "music_to_text" || cmdName === "音楽→言語") {
+      return musicToText(rawInput);
+    }
+    if (cmdName === "text_to_music" || cmdName === "言語→音楽") {
+      return textToMusic(rawInput);
+    }
+
+    // G↔H: 経済学 ↔ 言語学
+    if (cmdName === "market_to_text" || cmdName === "市場→言語") {
+      return marketToText(rawInput);
+    }
+    if (cmdName === "text_to_market" || cmdName === "言語→市場") {
+      return textToMarket(rawInput);
+    }
+
+    // EFGH → BCD ブリッジ
+    if (cmdName === "art_to_sim" || cmdName === "芸術→シミュ") {
+      return artToSim(rawInput);
+    }
+    if (cmdName === "music_to_sim" || cmdName === "音楽→シミュ") {
+      return musicToSim(rawInput);
+    }
+    if (cmdName === "market_to_sim" || cmdName === "市場→シミュ") {
+      return marketToSim(rawInput);
+    }
+    if (cmdName === "market_ethics" || cmdName === "市場倫理") {
+      return marketEthics(rawInput);
+    }
+    if (cmdName === "linguistics_to_humanities" || cmdName === "言語→人文") {
+      return linguisticsToHumanities(rawInput);
+    }
+    if (cmdName === "linguistics_to_pipeline" || cmdName === "言語→パイプ") {
+      return linguisticsToPipeline(rawInput);
+    }
+
+    // 7ドメイン全体統合
+    if (cmdName === "compose_all" || cmdName === "全領域統合") {
+      if (rawInput && typeof rawInput === 'object' && !Array.isArray(rawInput)) {
+        return composeAll(rawInput as Record<string, any>);
+      }
+      // argsから構築
+      const inputs: Record<string, any> = {};
+      if (rawInput) inputs.B = rawInput;
+      if (args.length >= 1) inputs.C = args[0];
+      if (args.length >= 2) inputs.D = args[1];
+      if (args.length >= 3) inputs.E = args[2];
+      if (args.length >= 4) inputs.F = args[3];
+      if (args.length >= 5) inputs.G = args[4];
+      if (args.length >= 6) inputs.H = args[5];
+      return composeAll(inputs);
     }
 
     // ═══════════════════════════════════════════════════════════
