@@ -238,6 +238,37 @@ import {
   type EthicsResult,
 } from './domains/humanities';
 
+// ── Phase 5.5: 6属性深化 ──
+import {
+  extractFieldInfo,
+  setField,
+  mergeFields,
+  analyzeFieldTopology,
+  extractFlowInfo,
+  setFlowDirection,
+  reverseFlow,
+  accelerateFlow,
+  extractMemoryInfo,
+  searchMemory,
+  memorySnapshot,
+  forgetMemory,
+  extractLayerInfo,
+  deepenLayer,
+  flattenLayer,
+  analyzeRelationTopology,
+  analyzeRelationSymmetry,
+  computeCollectiveWill,
+  emergeWill,
+  computeConstellation,
+  composeAttributes,
+  getConstellationSigma,
+  type FieldInfo,
+  type FlowInfo,
+  type MemoryInfo,
+  type LayerInfo,
+  type AttributeConstellation,
+} from './sigma-attributes';
+
 export class Evaluator {
   env: Environment;
   // ── v0.4: 関係エンジン ──
@@ -2908,6 +2939,130 @@ export class Evaluator {
         case "will_history": case "意志履歴":
           return ar.willSummary?.willHistory ?? [];
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Phase 5.5: 6属性ファーストクラス化
+    // ═══════════════════════════════════════════════════════════
+
+    // ── 場 (field) ──
+    if (cmdName === "field_of" || cmdName === "場") {
+      return extractFieldInfo(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "field_set" || cmdName === "場設定") {
+      const key = args.length >= 1 ? String(args[0]) : '0';
+      const val = args.length >= 2 ? args[1] : null;
+      return setField(rawInput, key, val);
+    }
+    if (cmdName === "field_merge" || cmdName === "場融合") {
+      const other = args.length >= 1 ? args[0] : [];
+      return mergeFields(rawInput, other);
+    }
+    if (cmdName === "field_topology" || cmdName === "場位相") {
+      return analyzeFieldTopology(rawInput);
+    }
+
+    // ── 流れ (flow) ──
+    if (cmdName === "flow_of" || cmdName === "流れ") {
+      return extractFlowInfo(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "flow_set" || cmdName === "流れ設定") {
+      const direction = args.length >= 1 ? String(args[0]) : 'expand';
+      const newMeta = setFlowDirection(sigmaMetadata, direction);
+      Object.assign(sigmaMetadata, newMeta);
+      return rawInput;
+    }
+    if (cmdName === "flow_reverse" || cmdName === "流れ反転") {
+      const newMeta = reverseFlow(sigmaMetadata);
+      Object.assign(sigmaMetadata, newMeta);
+      return rawInput;
+    }
+    if (cmdName === "flow_accelerate" || cmdName === "流れ加速") {
+      const factor = args.length >= 1 ? this.toNumber(args[0]) : 1.5;
+      const newMeta = accelerateFlow(sigmaMetadata, factor);
+      Object.assign(sigmaMetadata, newMeta);
+      return rawInput;
+    }
+
+    // ── 記憶 (memory) ──
+    if (cmdName === "memory_of" || cmdName === "記憶") {
+      return extractMemoryInfo(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "memory_search" || cmdName === "記憶検索") {
+      const query = args.length >= 1 ? String(args[0]) : '';
+      return searchMemory(sigmaMetadata, query);
+    }
+    if (cmdName === "memory_snapshot" || cmdName === "記憶断面") {
+      const index = args.length >= 1 ? this.toNumber(args[0]) : -1;
+      return memorySnapshot(sigmaMetadata, index);
+    }
+    if (cmdName === "memory_forget" || cmdName === "記憶忘却") {
+      const keep = args.length >= 1 ? this.toNumber(args[0]) : 5;
+      const newMeta = forgetMemory(sigmaMetadata, keep);
+      Object.assign(sigmaMetadata, newMeta);
+      return rawInput;
+    }
+
+    // ── 層 (layer) ──
+    if (cmdName === "layer_of" || cmdName === "層") {
+      return extractLayerInfo(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "layer_deepen" || cmdName === "層深化") {
+      return deepenLayer(rawInput);
+    }
+    if (cmdName === "layer_flatten" || cmdName === "層平坦") {
+      return flattenLayer(rawInput);
+    }
+
+    // ── 関係 拡張 (relation extended) ──
+    if (cmdName === "relation_topology" || cmdName === "関係位相") {
+      const ref = this.findRefByValue(input);
+      const bindings = ref ? this.bindingRegistry.buildRelationSigma(ref) : [];
+      return analyzeRelationTopology(bindings);
+    }
+    if (cmdName === "relation_symmetry" || cmdName === "関係対称") {
+      const ref = this.findRefByValue(input);
+      const bindings = ref ? this.bindingRegistry.buildRelationSigma(ref) : [];
+      return analyzeRelationSymmetry(bindings);
+    }
+
+    // ── 意志 拡張 (will extended) ──
+    if (cmdName === "will_emerge" || cmdName === "意志創発") {
+      return emergeWill(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "will_collective" || cmdName === "集合意志") {
+      if (Array.isArray(rawInput)) {
+        const wills = rawInput.map((item: any) => ({
+          tendency: typeof item === 'object' ? (item.tendency ?? 'rest') : 'rest',
+          strength: typeof item === 'object' ? (item.strength ?? 0.5) : 0.5,
+        }));
+        return computeCollectiveWill(wills);
+      }
+      throw new Error('will_collective: 配列が必要です');
+    }
+
+    // ── 星座分析 (constellation) ──
+    if (cmdName === "constellation" || cmdName === "星座") {
+      return computeConstellation(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "attr_balance" || cmdName === "属性均衡") {
+      const c = computeConstellation(rawInput, sigmaMetadata);
+      return { balance: c.balance, dominant: c.dominantAttribute, weakest: c.weakestAttribute, pattern: c.pattern };
+    }
+    if (cmdName === "attr_resonance" || cmdName === "属性共鳴") {
+      const c = computeConstellation(rawInput, sigmaMetadata);
+      return { resonances: c.resonances, harmony: c.harmony };
+    }
+    if (cmdName === "attr_compose" || cmdName === "属性合成") {
+      if (rawInput?.reiType === 'AttributeConstellation' && args.length >= 1 && args[0]?.reiType === 'AttributeConstellation') {
+        const mode = args.length >= 2 ? String(args[1]) as any : 'blend';
+        return composeAttributes(rawInput, args[0], mode);
+      }
+      throw new Error('attr_compose: 2つのAttributeConstellationが必要です');
+    }
+    if (cmdName === "constellation_sigma" || cmdName === "星座σ") {
+      if (rawInput?.reiType === 'AttributeConstellation') return getConstellationSigma(rawInput);
+      throw new Error('constellation_sigma: AttributeConstellationが必要です');
     }
 
     // ═══════════════════════════════════════════════════════════
