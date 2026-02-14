@@ -267,7 +267,9 @@ See [full command reference](./docs/KANJI-README.md) for the complete bilingual 
 | Document | Content |
 |----------|---------|
 | [TUTORIAL.md](./docs/TUTORIAL.md) | Getting started in 15 minutes |
+| [API-STABILITY.md](./docs/API-STABILITY.md) | API stability levels (Stable/Provisional/Experimental) |
 | [KANJI-README.md](./docs/KANJI-README.md) | Full bilingual command reference |
+| [ROADMAP-v1.md](./docs/ROADMAP-v1.md) | Path to v1.0 |
 | [PHASE4D-DESIGN.md](./PHASE4D-DESIGN.md) | Current development phase |
 | [ARCH.md](./ARCH.md) | Architecture overview |
 | [spec/](./spec/) | BNF specification (v0.3) |

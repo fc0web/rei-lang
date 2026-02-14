@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.5.3] — 2026-02-14
+
+### 📐 Phase 4d: 安定化＋外部証明
+新機能ではなく、既存の強みを「追試可能・説明可能・使用可能」にするリリース。
+
+#### README全面刷新
+- "Values That Know Themselves" — 機能リスト羅列から価値提案に転換
+- sigma, trace, influence, will_evolveの実動コード例
+- テストバッジ更新: 799 → 877 → 891
+
+#### 実行可能なベンチマークスイート (`benchmarks/`)
+- 7つのRei vs TypeScript比較（14テスト全パス）
+- 最大20×コード削減（6属性メタデータ）
+- `npx vitest run benchmarks/` で誰でも検証可能
+
+#### ドキュメント
+- `docs/TUTORIAL.md` — 15分でReiの価値を体感するガイド
+- `docs/ROADMAP-v1.md` — v0.5.x → v1.0.0 への段階的計画
+- `docs/API-STABILITY.md` — Stable/Provisional/Experimental 分類
+- `docs/note-phase4d-article.md` — note.com公開用記事
+- `docs/rei-killer-examples.md` — 補足セクション更新（v0.5.3で動く機能の明記）
+
+#### テスト
+- 891 tests passing (877 existing + 14 benchmark tests)
+- Zero regressions
+
 ## [0.5.2] — 2026-02-14
 
 ### 🧠 Phase 4b: パズル推論深化
