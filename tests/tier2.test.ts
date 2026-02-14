@@ -258,7 +258,7 @@ describe("Tier 2: σとの統合", () => {
     const r = run('[1, 5, 3] |> project("max") |> sigma');
     expect(r.reiType).toBe("SigmaResult");
     expect(r.field.center).toBe(5);
-    expect(r.memory.length).toBeGreaterThanOrEqual(1);
+    expect(r.memory.raw.length).toBeGreaterThanOrEqual(1);
   });
 
   it("reproject → sigma で再射影を追跡", () => {
@@ -270,7 +270,7 @@ describe("Tier 2: σとの統合", () => {
   it("新モードcompute → sigma で計算来歴を追跡", () => {
     const r = run('𝕄{5; 1, 2, 3} |> compute :geometric |> sigma');
     expect(r.reiType).toBe("SigmaResult");
-    expect(r.memory.length).toBeGreaterThanOrEqual(1);
+    expect(r.memory.raw.length).toBeGreaterThanOrEqual(1);
   });
 });
 

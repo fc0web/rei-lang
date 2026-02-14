@@ -170,6 +170,6 @@ describe("S8: フルパイプライン", () => {
     rei.evaluator().env.define("saved", json, false);
     const r = rei('saved |> deserialize |> negate |> abs |> sigma') as any;
     expect(r.reiType).toBe("SigmaResult");
-    expect(r.memory.length).toBeGreaterThanOrEqual(1);
+    expect(r.memory.raw.length).toBeGreaterThanOrEqual(1);
   });
 });

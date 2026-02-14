@@ -264,7 +264,7 @@ describe("後方互換性テスト（Tier 3）", () => {
 
   it("Tier 1: パイプ来歴追跡", () => {
     const r = run('10 |> abs |> sigma');
-    expect(r.memory.length).toBeGreaterThanOrEqual(1);
+    expect(r.memory.raw.length).toBeGreaterThanOrEqual(1);
   });
 
   it("Tier 2: project", () => {

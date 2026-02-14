@@ -38,8 +38,8 @@ describe("Tier 1: 公理C1 — 全値型のσ（自己参照）", () => {
     it("数値σのwill/flow/memory（パイプ無し）", () => {
       const r = run("42 |> sigma");
       expect(r.will.tendency).toBe("rest");
-      expect(r.memory.length).toBe(0);
-      expect(r.layer).toBe(0);
+      expect(r.memory.raw.length).toBe(0);
+      expect(r.layer.depth).toBe(0);
     });
 
     it("σ.fieldアクセス", () => {
@@ -73,7 +73,7 @@ describe("Tier 1: 公理C1 — 全値型のσ（自己参照）", () => {
       expect(r.reiType).toBe("SigmaResult");
       expect(r.field.base).toBe(0);
       expect(r.field.order).toBe(2);
-      expect(r.layer).toBe(2);
+      expect(r.layer.depth).toBe(2);
     });
   });
 
@@ -90,7 +90,7 @@ describe("Tier 1: 公理C1 — 全値型のσ（自己参照）", () => {
       const r = run("genesis() |> forward |> forward |> sigma");
       expect(r.reiType).toBe("SigmaResult");
       expect(r.field.state).toBe("line");
-      expect(r.memory.length).toBeGreaterThan(0);
+      expect(r.memory.raw.length).toBeGreaterThan(0);
     });
   });
 
@@ -128,20 +128,22 @@ describe("Tier 1: 公理C2 — τ（傾向性）とメモリ追跡", () => {
   describe("パイプ通過時のメモリ記録", () => {
     it("数値パイプのメモリ追跡", () => {
       const r = run("42 |> abs |> sqrt |> sigma");
-      expect(r.memory.length).toBeGreaterThanOrEqual(1);
-      expect(r.memory[0]).toBe(42);
+      expect(r.memory.raw.length).toBeGreaterThanOrEqual(1);
+      expect(r.memory.raw[0]).toBe(42);
     });
 
     it("文字列パイプのメモリ追跡", () => {
       const r = run('"hello" |> upper |> sigma');
-      expect(r.memory.length).toBeGreaterThanOrEqual(1);
-      expect(r.memory[0]).toBe("hello");
+      expect(r.memory.raw.length).toBeGreaterThanOrEqual(1);
+      expect(r.memory.raw[0]).toBe("hello");
     });
 
     it("σ.memoryアクセス", () => {
       const r = run("42 |> abs |> sqrt |> sigma |> memory");
-      expect(Array.isArray(r)).toBe(true);
-      expect(r.length).toBeGreaterThanOrEqual(1);
+      // 深化版: memory はオブジェクト { raw, entries, ... }
+      expect(r).toHaveProperty('raw');
+      expect(Array.isArray(r.raw)).toBe(true);
+      expect(r.raw.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -239,7 +241,7 @@ describe("後方互換性テスト", () => {
   describe("複合パイプチェーン", () => {
     it("長いパイプチェーンのメモリ蓄積", () => {
       const r = run("100 |> abs |> sqrt |> floor |> abs |> sigma");
-      expect(r.memory.length).toBeGreaterThanOrEqual(3);
+      expect(r.memory.raw.length).toBeGreaterThanOrEqual(3);
     });
 
     it("Genesis複数段階のσ", () => {

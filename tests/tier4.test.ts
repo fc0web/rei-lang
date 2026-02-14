@@ -83,7 +83,7 @@ describe("Tier 4: 公理C3 — respond（応答）", () => {
     it("応答後にσで追跡可能", () => {
       const r = run('𝕄{5; 1, 2, 3} |> respond(10) |> sigma');
       expect(r.reiType).toBe("SigmaResult");
-      expect(r.memory.length).toBeGreaterThanOrEqual(1);
+      expect(r.memory.raw.length).toBeGreaterThanOrEqual(1);
     });
   });
 });
