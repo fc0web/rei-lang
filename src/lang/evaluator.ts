@@ -269,6 +269,19 @@ import {
   type AttributeConstellation,
 } from './sigma-attributes';
 
+// ── Phase 5.5b: 6属性動的相互作用 ──
+import {
+  dynamicCascade,
+  evolveConstellation,
+  classifyLifecycle,
+  detectResonanceAmplification,
+  getDynamicCascadeSigma,
+  getConstellationHistorySigma,
+  type AttrName,
+  type DynamicCascadeResult,
+  type ConstellationHistory,
+} from './sigma-dynamics';
+
 export class Evaluator {
   env: Environment;
   // ── v0.4: 関係エンジン ──
@@ -3063,6 +3076,36 @@ export class Evaluator {
     if (cmdName === "constellation_sigma" || cmdName === "星座σ") {
       if (rawInput?.reiType === 'AttributeConstellation') return getConstellationSigma(rawInput);
       throw new Error('constellation_sigma: AttributeConstellationが必要です');
+    }
+
+    // ── 動的カスケード (dynamic cascade) ──
+    if (cmdName === "dynamic_cascade" || cmdName === "動的連鎖") {
+      const attr = args.length >= 1 ? String(args[0]) as AttrName : 'field';
+      const event = args.length >= 2 ? String(args[1]) : 'restructure';
+      const maxDepth = args.length >= 3 ? this.toNumber(args[2]) : 8;
+      return dynamicCascade(rawInput, sigmaMetadata, attr, event, maxDepth);
+    }
+    if (cmdName === "cascade_sigma" || cmdName === "連鎖σ") {
+      if (rawInput?.reiType === 'DynamicCascadeResult') return getDynamicCascadeSigma(rawInput);
+      throw new Error('cascade_sigma: DynamicCascadeResultが必要です');
+    }
+    if (cmdName === "evolve_constellation" || cmdName === "星座発展") {
+      const steps = args.length >= 1 ? this.toNumber(args[0]) : 10;
+      return evolveConstellation(rawInput, sigmaMetadata, steps);
+    }
+    if (cmdName === "constellation_history_sigma" || cmdName === "星座履歴σ") {
+      if (rawInput?.reiType === 'ConstellationHistory') return getConstellationHistorySigma(rawInput);
+      throw new Error('constellation_history_sigma: ConstellationHistoryが必要です');
+    }
+    if (cmdName === "lifecycle" || cmdName === "生命段階") {
+      const constellation = rawInput?.reiType === 'AttributeConstellation'
+        ? rawInput : computeConstellation(rawInput, sigmaMetadata);
+      return classifyLifecycle(constellation);
+    }
+    if (cmdName === "resonance_detect" || cmdName === "共鳴検出") {
+      const constellation = rawInput?.reiType === 'AttributeConstellation'
+        ? rawInput : computeConstellation(rawInput, sigmaMetadata);
+      return detectResonanceAmplification(constellation);
     }
 
     // ═══════════════════════════════════════════════════════════
