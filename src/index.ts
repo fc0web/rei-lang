@@ -43,6 +43,18 @@ export {
   alignWills,
   detectWillConflict,
 } from './lang/sigma-deep';
+export {
+  type CascadeResult,
+  type AttributeReaction,
+  cascadeFromRelation,
+  cascadeFromWill,
+  pulse as sigmaReactivePulse,
+  reactRelationToWill,
+  reactWillToFlow,
+  reactFlowToMemory,
+  reactMemoryToLayer,
+  reactLayerToRelation,
+} from './lang/sigma-reactive';
 
 function unwrapReiVal(v: any): any {
   if (v !== null && typeof v === 'object' && v.reiType === 'ReiVal') {

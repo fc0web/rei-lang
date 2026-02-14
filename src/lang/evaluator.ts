@@ -86,6 +86,10 @@ import {
   traceRelationChain, computeInfluence, createEntanglement,
   evolveWill, alignWills, detectWillConflict,
 } from './sigma-deep';
+import {
+  cascadeFromRelation, cascadeFromWill, pulse as sigmaReactivePulse,
+  type CascadeResult, type AttributeReaction,
+} from './sigma-reactive';
 export type { SigmaMetadata, ReiVal };
 
 // --- Environment (Scope) ---
@@ -554,6 +558,8 @@ export class Evaluator {
         // v0.5+: relation/will 深化コマンド
         "trace", "追跡", "influence", "影響", "entangle", "縁起",
         "will_evolve", "意志進化", "will_align", "意志調律", "will_conflict", "意志衝突",
+        // v0.5.3+: 6属性相互反応
+        "pulse", "脈動", "cascade", "連鎖",
       ];
       if (relationWillCommands.includes(cmd.cmd)) {
         return this.execPipeCmd(rawInput, cmd);
@@ -1106,11 +1112,18 @@ export class Evaluator {
       }
 
       const binding = this.bindingRegistry.bind(sourceRef, targetRef, bindMode, strength, bidir);
+      
+      // ── 6属性カスケード: relation → will → flow → memory → layer ──
+      const sourceMeta = getSigmaOf(rawInput);
+      const targetMeta = getSigmaOf(this.env.get(targetRef));
+      const cascade = cascadeFromRelation(sourceMeta, 'bind', targetMeta?.tendency);
+
       return {
         reiType: 'BindResult' as const,
         binding,
         source: rawInput,
         target: this.env.get(targetRef),
+        cascade,
       };
     }
 
@@ -1279,12 +1292,25 @@ export class Evaluator {
       const resonance = args.length >= 2 ? this.toNumber(args[1]) : 1.0;
       const sourceRef = this.findRefByValue(input) ?? `__anon_${Date.now()}`;
       if (!this.env.has(targetRef)) throw new Error(`entangle: 変数 '${targetRef}' が見つかりません`);
-      return createEntanglement(this.bindingRegistry, sourceRef, targetRef, resonance);
+      const result = createEntanglement(this.bindingRegistry, sourceRef, targetRef, resonance);
+
+      // ── 6属性カスケード: entangle → will → flow → memory → layer ──
+      const sourceMeta = getSigmaOf(rawInput);
+      const targetVal = unwrapReiVal(this.env.get(targetRef));
+      const targetMeta = getSigmaOf(targetVal);
+      const cascade = cascadeFromRelation(sourceMeta, 'entangle', targetMeta?.tendency);
+      (result as any).cascade = cascade;
+
+      return result;
     }
 
     if (cmdName === "will_evolve" || cmdName === "意志進化") {
       const sigmaM = getSigmaOf(rawInput);
-      return evolveWill(rawInput, sigmaM);
+      const result = evolveWill(rawInput, sigmaM);
+      // ── 6属性カスケード: will → flow → memory → layer ──
+      const cascade = cascadeFromWill(sigmaM, 'evolve', result.evolved.strength);
+      (result as any).cascade = cascade;
+      return result;
     }
 
     if (cmdName === "will_align" || cmdName === "意志調律") {
@@ -1295,7 +1321,11 @@ export class Evaluator {
       const sourceRef = this.findRefByValue(input) ?? '__anon';
       const metaA = getSigmaOf(rawInput);
       const metaB = getSigmaOf(targetVal);
-      return alignWills(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
+      const result = alignWills(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
+      // ── 6属性カスケード: will(align) → flow → memory → layer ──
+      const cascade = cascadeFromWill(metaA, 'align', result.harmony);
+      (result as any).cascade = cascade;
+      return result;
     }
 
     if (cmdName === "will_conflict" || cmdName === "意志衝突") {
@@ -1306,7 +1336,31 @@ export class Evaluator {
       const sourceRef = this.findRefByValue(input) ?? '__anon';
       const metaA = getSigmaOf(rawInput);
       const metaB = getSigmaOf(targetVal);
-      return detectWillConflict(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
+      const result = detectWillConflict(rawInput, targetVal, metaA, metaB, sourceRef, targetRef);
+      // ── 6属性カスケード: will(conflict) → flow → memory → layer ──
+      const cascade = cascadeFromWill(metaA, 'conflict', result.tension);
+      (result as any).cascade = cascade;
+      return result;
+    }
+
+    // ── pulse（脈動）: 6属性の相互反応を明示的に実行 ──
+    if (cmdName === "pulse" || cmdName === "脈動") {
+      const maxPulses = args.length >= 1 ? this.toNumber(args[0]) : 5;
+      const sigmaM = getSigmaOf(rawInput);
+      return sigmaReactivePulse(sigmaM, maxPulses);
+    }
+
+    // ── cascade（連鎖）: 特定イベントからのカスケードを確認 ──
+    if (cmdName === "cascade" || cmdName === "連鎖") {
+      const sigmaM = getSigmaOf(rawInput);
+      const eventType = args.length >= 1 ? String(args[0]) : 'bind';
+      if (eventType === 'bind' || eventType === 'entangle' || eventType === 'unbind') {
+        return cascadeFromRelation(sigmaM, eventType as any);
+      } else if (eventType === 'evolve' || eventType === 'align' || eventType === 'conflict') {
+        const intensity = args.length >= 2 ? this.toNumber(args[1]) : 0.5;
+        return cascadeFromWill(sigmaM, eventType as any, intensity);
+      }
+      throw new Error(`cascade: 未知のイベント '${eventType}'`);
     }
 
     // ???????????????????????????????????????????
