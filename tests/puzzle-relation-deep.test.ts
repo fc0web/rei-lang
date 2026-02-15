@@ -1,6 +1,6 @@
 /**
  * puzzle-relation-deep.test.ts
- * Phase 4d P1: パズル × relation deep（縁起的追跡）統合テスト
+ * Phase 4d P1: パズル × relation deep（相互依存追跡）統合テスト
  *
  * 数独の制約グループが entanglement として表現され、
  * trace / influence でセル間の因果関係を追跡できることを検証

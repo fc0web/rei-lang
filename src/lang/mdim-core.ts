@@ -263,7 +263,7 @@ export function computeNestedMDim(md: any): number {
 
 /**
  * Tier 4 C3: 応答 ? 値が外部刺激に反応して変化する
- * 仏教対応: 触（phassa）? 感覚器官と対象の接触による反応
+ * 構造対応: 接触反応 — 感覚器官と対象の接触による反応
  */
 export function respondToStimulus(input: any, stimulus: number, method: string = 'absorb'): any {
   if (input !== null && typeof input === 'object' && input.reiType === 'MDim') {
@@ -322,7 +322,7 @@ export function computeSensitivity(input: any): number {
 
 /**
  * Tier 4 C4: 覚醒度 ? σの豊かさに基づく自己認識スコア
- * 仏教対応: 菩提（bodhi）? 悟りへの段階
+ * 構造対応: 収束段階 — 段階的な最適化への到達
  *
  * スコア要素:
  *   - memory の深さ（パイプ通過履歴）
@@ -449,7 +449,7 @@ export function checkModeEquivalence(md: any, mode1: string, mode2: string): any
 
 /**
  * Tier 5 C5: 共鳴計算 ? 2つの??の構造的共鳴度を算出
- * 覚醒した値同士が非局所的に影響し合う（仏教: 因陀羅網 Indra's Net）
+ * 覚醒した値同士が非局所的に影響し合う（全反射ネットワーク）
  */
 export function computeResonance(a: any, b: any): any {
   const aRaw = unwrapReiVal(a);

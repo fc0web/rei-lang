@@ -20,7 +20,7 @@
  *   流れ(flow)  = 「どう動くか」   — 変化の方向
  *   記憶(memory) = 「何を覚えているか」 — 時間の痕跡
  *   層(layer)   = 「どの深さか」   — 構造の階層
- *   関係(relation) = 「何と繋がるか」 — 縁起の網
+ *   関係(relation) = 「何と繋がるか」 — 相互依存の網
  *   意志(will)  = 「何を目指すか」  — 傾向性の芽
  * 
  * @author Nobuki Fujimoto (D-FUMT)
@@ -776,7 +776,7 @@ function classifyPattern(
   if (balance > 0.8 && avg > 0.5) return '調和（和）';       // 全属性が均等に高い
   if (balance > 0.8 && avg <= 0.5) return '静寂（寂）';      // 全属性が均等に低い
   if (attrs.will > 0.7 && attrs.flow > 0.5) return '奔流（勢）';  // 意志と流れが強い
-  if (attrs.relation > 0.7 && attrs.memory > 0.5) return '縁起（縁）'; // 関係と記憶が強い
+  if (attrs.relation > 0.7 && attrs.memory > 0.5) return '相互依存（縁）'; // 関係と記憶が強い
   if (attrs.field > 0.7 && attrs.layer > 0.5) return '深淵（淵）'; // 場と層が強い
   if (resonanceCount >= 5) return '共鳴（響）';              // 多くの属性ペアが共鳴
   if (attrs.memory > 0.7) return '回想（憶）';              // 記憶が支配的

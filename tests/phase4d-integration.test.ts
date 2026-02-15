@@ -104,7 +104,7 @@ describe('P4: Agent deepMeta 動的更新', () => {
 // P5: 横断テスト — 6属性の一貫性
 // ═══════════════════════════════════════════
 
-describe('P5: 横断テスト — パズルの縁起的解法', () => {
+describe('P5: 横断テスト — パズルの相互依存的解法', () => {
   it('数独の全プロセス: 解法 → 関係サマリー → 特定セルの追跡 → 影響度', () => {
     const puzzle = createSudokuSpace(easy4x4());
     const space = createPuzzleAgentSpace(puzzle);

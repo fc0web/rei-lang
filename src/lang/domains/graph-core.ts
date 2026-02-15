@@ -3,7 +3,7 @@
  * 
  * B/C/D全ドメインで共有されるグラフ演算基盤。
  * Reiの「関係（relation）」属性を空間構造として具現化し、
- * 縁起（pratītyasamutpāda）の数理的表現を提供する。
+ * 相互依存構造（interdependence）の数理的表現を提供する。
  * 
  * 6属性マッピング:
  *   field    = グラフのトポロジー
@@ -212,7 +212,7 @@ export function degreeCentrality(space: GraphSpace): Map<string, number> {
   return degrees;
 }
 
-/** 影響伝播シミュレーション（縁起の数理化） */
+/** 影響伝播シミュレーション（相互依存構造の数理化） */
 export function propagateInfluence(
   space: GraphSpace,
   sourceId: string,

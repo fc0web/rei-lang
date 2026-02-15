@@ -95,7 +95,7 @@ export interface AgentSpaceResult {
   difficulty?: DifficultyAnalysis;
   reasoningTrace?: ReasoningTrace[];
   matchAnalysis?: MatchAnalysis;
-  // Phase 4d: relation deep（縁起的追跡）
+  // Phase 4d: relation deep（相互依存追跡）
   relationSummary?: RelationSummary;
   _bindingRegistry?: BindingRegistry;  // 動的クエリ用（trace/influence）
   // Phase 4d: will deep（意志駆動）
@@ -116,7 +116,7 @@ export interface WillSummary {
   conflictAnalysis: WillConflict | null;
 }
 
-/** 関係サマリー（縁起的追跡の要約） */
+/** 関係サマリー（相互依存追跡の要約） */
 export interface RelationSummary {
   totalBindings: number;
   constraintBindings: { row: number; column: number; block: number; other: number };
@@ -152,7 +152,7 @@ export interface AgentSpace {
   // Agent ID マッピング
   agentIds: string[];
 
-  // 関係レジストリ（縁起的追跡用）
+  // 関係レジストリ（相互依存追跡用）
   bindingRegistry?: BindingRegistry;
 
   // パズル固有データ
@@ -317,7 +317,7 @@ export function createPuzzleAgentSpace(puzzle: PuzzleSpace): AgentSpace {
     }
   }
 
-  // 関係レジストリ: 制約グループに基づく縁起的結合
+  // 関係レジストリ: 制約グループに基づく相互依存結合
   const bindingRegistry = new BindingRegistry();
   const entanglementPairs = new Set<string>();  // 重複防止
 
@@ -1804,7 +1804,7 @@ export function getMatchAnalysis(space: AgentSpace): MatchAnalysis {
 }
 
 // ═══════════════════════════════════════════
-// Part 10: 関係深化（Phase 4d — 縁起的追跡）
+// Part 10: 関係深化（Phase 4d — 相互依存追跡）
 // ═══════════════════════════════════════════
 
 /**

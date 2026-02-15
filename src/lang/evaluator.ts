@@ -724,7 +724,7 @@ export class Evaluator {
         "mediate_strategy", "調停戦略",
         "mediate_message", "調停通信", "mediate_broadcast", "調停放送",
         // v0.5+: relation/will 深化コマンド
-        "trace", "追跡", "influence", "影響", "entangle", "縁起",
+        "trace", "追跡", "influence", "影響", "entangle", "縁起", "相互結合",
         "will_evolve", "意志進化", "will_align", "意志調律", "will_conflict", "意志衝突",
         // v0.5.3+: 6属性相互反応
         "pulse", "脈動", "cascade", "連鎖",
@@ -1459,7 +1459,7 @@ export class Evaluator {
       }
     }
 
-    if (cmdName === "entangle" || cmdName === "縁起") {
+    if (cmdName === "entangle" || cmdName === "縁起" || cmdName === "相互結合") {
       if (args.length < 1) throw new Error("entangle: ターゲット変数名が必要です");
       const targetRef = String(args[0]);
       const resonance = args.length >= 2 ? this.toNumber(args[1]) : 1.0;
@@ -2993,7 +2993,7 @@ export class Evaluator {
         case "analyze": case "分析":
           return ar.matchAnalysis ?? null;
 
-        // Phase 4d: relation deep（縁起的追跡）
+        // Phase 4d: relation deep（相互依存追跡）
         case "relations": case "関係":
           return ar.relationSummary ?? null;
         case "relation_trace": case "関係追跡": {

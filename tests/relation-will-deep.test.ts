@@ -1,6 +1,6 @@
 /**
  * relation-will-deep.test.ts
- * relation/will 深化テスト — 縁起的追跡 + 意志の自律性
+ * relation/will 深化テスト — 相互依存追跡 + 意志の自律性
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { rei } from '../src/index';
@@ -156,13 +156,13 @@ describe('influence / 影響 — 影響度計算', () => {
 });
 
 // ═══════════════════════════════════════════
-// Part 3: entangle（縁起）
+// Part 3: entangle（相互結合）
 // ═══════════════════════════════════════════
 
-describe('entangle / 縁起 — 深い結合', () => {
+describe('entangle / 相互結合 — 深い結合', () => {
   beforeEach(() => rei.reset());
 
-  it('縁起的結合を作成できる', () => {
+  it('相互結合を作成できる', () => {
     const { results } = reiMulti(
       'let mut a = 𝕄{5; 1, 2, 3}',
       'let mut b = 𝕄{10; 4, 5, 6}',
@@ -188,7 +188,7 @@ describe('entangle / 縁起 — 深い結合', () => {
     expect(results[4].depth).toBe('surface');
   });
 
-  it('縁起後にtraceで追跡できる', () => {
+  it('相互結合後にtraceで追跡できる', () => {
     const { results } = reiMulti(
       'let mut a = 𝕄{5; 1, 2}',
       'let mut b = 𝕄{10; 3, 4}',
@@ -198,7 +198,7 @@ describe('entangle / 縁起 — 深い結合', () => {
     expect(results[3].totalRefs).toBeGreaterThanOrEqual(2);
   });
 
-  it('日本語: 縁起', () => {
+  it('日本語: 相互結合', () => {
     const { results } = reiMulti(
       'let mut x = 𝕄{5; 1, 2}',
       'let mut y = 𝕄{10; 3, 4}',
@@ -363,7 +363,7 @@ describe('will_conflict / 意志衝突 — 対立検出', () => {
 describe('統合: relation×will 深化パイプライン', () => {
   beforeEach(() => rei.reset());
 
-  it('縁起→追跡→影響の連携', () => {
+  it('相互結合→追跡→影響の連携', () => {
     const { results } = reiMulti(
       'let mut a = 𝕄{5; 1, 2, 3}',
       'let mut b = 𝕄{10; 4, 5, 6}',
@@ -395,7 +395,7 @@ describe('統合: relation×will 深化パイプライン', () => {
     expect(sigma.will).toBeDefined();
   });
 
-  it('衝突検出→縁起→調律の解消パイプライン', () => {
+  it('衝突検出→相互結合→調律の解消パイプライン', () => {
     const { results } = reiMulti(
       'let mut a = 𝕄{0.001; 2, 3}',
       'let mut b = 𝕄{999; 4, 5}',

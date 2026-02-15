@@ -74,13 +74,13 @@ export function reactRelationToWill(
       reason = '新たな関係が意志を強化';
       break;
     case 'entangle':
-      // 縁起は相手の傾向に引き寄せる
+      // 相互依存は相手の傾向に引き寄せる
       newStrength = Math.min(1, beforeStrength + 0.25);
       if (partnerTendency && partnerTendency !== meta.tendency) {
         newTendency = 'harmonize';
-        reason = `縁起による共鳴 → 調和への移行 (相手: ${partnerTendency})`;
+        reason = `相互依存による共鳴 → 調和への移行 (相手: ${partnerTendency})`;
       } else {
-        reason = '縁起による意志の共鳴強化';
+        reason = '相互依存による意志の共鳴強化';
       }
       break;
     case 'unbind':
@@ -282,7 +282,7 @@ export function reactLayerToRelation(
 
   let reason: string;
   if (depthAfter >= 3) {
-    reason = `層の深化(${depthBefore}→${depthAfter}) → 縁起的影響範囲の拡大＋共鳴強化`;
+    reason = `層の深化(${depthBefore}→${depthAfter}) → 相互依存的影響範囲の拡大＋共鳴強化`;
   } else {
     reason = `層の深化(${depthBefore}→${depthAfter}) → 影響範囲の拡大`;
   }

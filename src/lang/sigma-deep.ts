@@ -928,7 +928,7 @@ export function mergeWillIntention(
 
 
 // ============================================================
-// 関係 (relation) — 深化: 縁起的追跡
+// 関係 (relation) — 深化: 相互依存追跡
 // ============================================================
 
 export interface TraceNode {
@@ -1282,7 +1282,7 @@ export function detectWillConflict(
   if (!isOpposing) {
     resolution = '微小な差異 — will_align で調律可能';
   } else if (tension > 0.7) {
-    resolution = '強い対立 — entangle で縁起的統合を推奨';
+    resolution = '強い対立 — entangle で相互依存的統合を推奨';
   } else {
     resolution = '対立あり — will_align で調律可能';
   }

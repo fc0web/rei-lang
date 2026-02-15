@@ -205,8 +205,8 @@ describe('§5 Compress Definitions', () => {
   });
 
   it('multi-parameter function', () => {
-    rei('compress karma(i, e, r) = i * e * r');
-    const r = rei('karma(0.8, 0.9, 0.7)') as number;
+    rei('compress calc(i, e, r) = i * e * r');
+    const r = rei('calc(0.8, 0.9, 0.7)') as number;
     expect(approx(r, 0.504)).toBe(true);
   });
 
