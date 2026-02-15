@@ -2,10 +2,11 @@
 
 [![npm version](https://img.shields.io/npm/v/rei-lang)](https://www.npmjs.com/package/rei-lang)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-gold.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-877%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1533%20passed-brightgreen)]()
+[![Domains](https://img.shields.io/badge/domains-7%20connected-blueviolet)]()
 [![Peace Use](https://img.shields.io/badge/☮️-Peace_Use-blue)](./PEACE_USE_CLAUSE.md)
 
-**Rei** is a computation language where every value carries six attributes — field, flow, memory, layer, relation, and will — as language primitives. Where other languages lose context at every step, Rei values know where they are, where they came from, and what they're connected to.
+**Rei** is a computation language where every value carries six attributes — field, flow, memory, layer, relation, and will — as language primitives. Seven knowledge domains are connected through 36-direction cross-domain bridges, enabling computation that flows between natural science, art, music, economics, and beyond.
 
 **Author:** Nobuki Fujimoto (藤本 伸樹)
 
@@ -30,38 +31,6 @@ x |> sigma
 ```
 
 This isn't a library feature. It's **what values are** in Rei.
-
-### What this enables
-
-**Dependency tracing without instrumentation:**
-```rei
-let mut a = 𝕄{5; 1, 2, 3}
-let mut b = 𝕄{10; 4, 5, 6}
-let mut c = 𝕄{7; 8, 9}
-a |> bind("b", "mirror")
-b |> bind("c", "mirror")
-
-a |> trace
-// → { root: "a", chains: [["a","b","c"]], maxDepth: 2 }
-// a knows its entire dependency graph — automatically
-```
-
-**Influence scoring between connected values:**
-```rei
-a |> influence("c")
-// → { from: "a", to: "c", score: 1, path: ["a","b","c"], hops: 2 }
-```
-
-**Values that evolve their own intentions:**
-```rei
-let mut w = 𝕄{5; 1, 2, 3}
-w |> intend("maximize")
-w |> will_evolve
-// → { previous: {tendency:"rest"}, evolved: {tendency:"rest", strength:0.3},
-//     reason: "弱い意志 → 内在傾向に回帰", autonomous: true }
-```
-
-In Python, every one of these features requires a framework, manual state tracking, and hundreds of lines of boilerplate. In Rei, they're one pipe away.
 
 ---
 
@@ -102,7 +71,7 @@ npx rei
 
 ```
  ╔══════════════════════════════════════════╗
- ║  Rei (0₀式) REPL v0.5.2                ║
+ ║  Rei (0₀式) REPL v0.5.5                ║
  ║  D-FUMT Computational Language          ║
  ╚══════════════════════════════════════════╝
 
@@ -112,6 +81,74 @@ npx rei
 零 > 𝕄{5; 1, 2, 3} |> sigma
 { field: { center: 5, ... }, flow: { ... }, memory: { ... }, ... }
 ```
+
+---
+
+## What Rei Enables
+
+### Dependency tracing without instrumentation
+
+```rei
+let mut a = 𝕄{5; 1, 2, 3}
+let mut b = 𝕄{10; 4, 5, 6}
+let mut c = 𝕄{7; 8, 9}
+a |> bind("b", "mirror")
+b |> bind("c", "mirror")
+
+a |> trace
+// → { root: "a", chains: [["a","b","c"]], maxDepth: 2 }
+// a knows its entire dependency graph — automatically
+```
+
+### Influence scoring between connected values
+
+```rei
+a |> influence("c")
+// → { from: "a", to: "c", score: 1, path: ["a","b","c"], hops: 2 }
+```
+
+### Values that evolve their own intentions
+
+```rei
+let mut w = 𝕄{5; 1, 2, 3}
+w |> intend("maximize")
+w |> will_evolve
+// → { previous: {tendency:"rest"}, evolved: {tendency:"rest", strength:0.3},
+//     reason: "弱い意志 → 内在傾向に回帰", autonomous: true }
+```
+
+### Cross-domain transformation
+
+```rei
+// A particle simulation becomes visual art
+simulateParticles(10, 100) |> simToArt
+// → PatternResult: generated pixel data from physics
+
+// An ETL pipeline becomes music
+createPipeline(stages) |> pipelineToMusic
+// → Melody: stage structure mapped to notes and rhythm
+
+// Text analysis becomes economic indicators
+analyzeText("market report") |> humanToEconomics
+// → EconomicIndicators: sentiment → market signals
+```
+
+In Python, every one of these features requires a framework, manual state tracking, and hundreds of lines of boilerplate. In Rei, they're one pipe away.
+
+---
+
+## Benchmarks
+
+| Task | Conventional | Rei | Reduction |
+|------|-------------|-----|-----------|
+| Image kernel computation | 32 lines | 8 lines | **4×** |
+| Multi-dimensional aggregation | 45 lines | 12 lines | **3.7×** |
+| Graph structure transformation | 52 lines | 14 lines | **3.7×** |
+| **Average** | | | **74%** |
+
+See [`benchmarks/`](./benchmarks/) for runnable comparisons with equivalent code.
+
+The deeper advantage isn't line count — it's **what you don't have to build**. In Rei, dependency tracking, metadata propagation, and structural awareness are free. In other languages, they're projects.
 
 ---
 
@@ -145,37 +182,7 @@ Every value in Rei carries six attributes, accessible via `|> sigma`:
 | **relation** | 関係 | Connections: bindings, dependencies, entanglements |
 | **will** | 意志 | Intention: tendency, strength, prediction |
 
-### Relation Deep — 縁起的追跡
-
-Track how values depend on each other:
-
-```rei
-let mut a = 𝕄{5; 1, 2}
-let mut b = 𝕄{10; 3, 4}
-a |> bind("b", "mirror")        // create a relation
-
-a |> trace                       // dependency chain (BFS, cycle-safe)
-a |> influence("b")              // influence score between values
-a |> entangle("b")               // deep bidirectional entanglement
-// also: 追跡, 影響("b"), 縁起("b") — full Japanese support
-```
-
-### Will Deep — 意志の自律性
-
-Values can carry and evolve intentions:
-
-```rei
-let mut x = 𝕄{5; 1, 2, 3}
-x |> intend("maximize")         // set intention
-x |> will_evolve                 // autonomous evolution based on history
-
-let mut y = 𝕄{10; 4, 5}
-y |> intend("minimize")
-x |> bind("y")
-x |> will_align("y")             // harmonize intentions
-x |> will_conflict("y")          // detect and resolve tension
-// also: 意志進化, 意志調律("y"), 意志衝突("y")
-```
+All six attributes support cascading interactions — will can drive flow, flow can reshape field, field can trigger memory, and memory can influence relation. This is the **six-attribute full-coupling system**.
 
 ### Genesis Axiom System — 生成公理系
 
@@ -204,26 +211,64 @@ karma(0.8, 0.9, 0.7)        // → 0.504
 
 ---
 
-## Benchmarks
+## 7-Domain Network (v0.5.5)
 
-### Code Reduction
+Rei unifies seven knowledge domains into a fully connected network with 36-direction cross-domain bridges:
 
-| Task | Conventional | Rei | Reduction |
-|------|-------------|-----|-----------|
-| Image kernel computation | 32 lines | 8 lines | **4×** |
-| Multi-dimensional aggregation | 45 lines | 12 lines | **3.7×** |
-| Graph structure transformation | 52 lines | 14 lines | **3.7×** |
-| **Average** | | | **74%** |
+```
+               B: Natural Science
+              ╱ |  ╲
+            ╱   |    ╲
+  E: Art ─────── A: Math ─────── F: Music
+            ╲   |    ╱     ╲
+              ╲ |  ╱         ╲
+     G: Economics ────── C: Info Engineering
+              ╲ |    ╱
+                ╲|  ╱
+        H: Linguistics ─── D: Humanities
+```
 
-See [`benchmarks/`](./benchmarks/) for runnable comparisons with equivalent Python code.
+**Every pair of domains can transform data bidirectionally.** A physics simulation can become a musical composition. An economic model can become visual art. A linguistic analysis can inform scientific modeling.
 
-### What Benchmarks Don't Capture
+### Domains
 
-The deeper advantage isn't line count — it's **what you don't have to build**. In Rei, dependency tracking, metadata propagation, and structural awareness are free. In other languages, they're projects.
+| Code | Domain | Examples |
+|------|--------|----------|
+| **A** | Mathematics | Core 𝕄 computation, sigma, genesis |
+| **B** | Natural Science | Particle simulation, wave functions, thermodynamics |
+| **C** | Info Engineering | ETL pipelines, graph algorithms, data flow |
+| **D** | Humanities | Text analysis, ethics scoring, cultural metrics |
+| **E** | Art | Pattern generation, color mapping, pixel composition |
+| **F** | Music | Melody generation, scale theory, rhythm patterns |
+| **G** | Economics | Market indicators, supply-demand modeling, trade analysis |
+| **H** | Linguistics | Morphological analysis, syntax trees, translation metrics |
+
+### Cross-Domain Bridges
+
+36-direction bridges connect all domain pairs. Three layers of integration:
+
+| Layer | Connections | Description |
+|-------|-------------|-------------|
+| **BCD** (Phase 5.5c) | B↔C, B↔D, C↔D (6 directions) | Science–Engineering–Humanities |
+| **EFGH** (Phase 6.5) | E↔F, E↔G, E↔H, F↔G, F↔H, G↔H (24 directions) | Art–Music–Economics–Linguistics |
+| **BCD↔EFGH** (Phase 6.6) | All reverse bridges (6 directions) | Full cross-layer connectivity |
+
+```typescript
+import { simToArt, pipelineToMusic, humanToEconomics } from 'rei-lang';
+
+// B → E: Physics simulation → Visual art
+const art = simToArt(simulation);
+
+// C → F: Data pipeline → Musical composition
+const melody = pipelineToMusic(pipeline);
+
+// D → G: Humanities analysis → Economic indicators
+const indicators = humanToEconomics(textAnalysis);
+```
 
 ---
 
-## Agent Runtime (v0.5)
+## Agent Runtime
 
 Rei includes a self-organizing agent system where entities perceive, decide, and act autonomously:
 
@@ -258,6 +303,14 @@ All commands have Japanese aliases:
 // will_evolve → 意志進化, will_align → 意志調律
 ```
 
+### 漢字 (Kanji) Decomposition
+
+```rei
+"休" |> kanji       // → { components: ["人", "木"], category: "会意" }
+"晴" |> kanji       // → { components: ["日", "青"], category: "形声" }
+"猫が魚を食べた" |> sentence  // → predicate-centered 𝕄 structure
+```
+
 See [full command reference](./docs/KANJI-README.md) for the complete bilingual table.
 
 ---
@@ -270,10 +323,10 @@ See [full command reference](./docs/KANJI-README.md) for the complete bilingual 
 | [API-STABILITY.md](./docs/API-STABILITY.md) | API stability levels (Stable/Provisional/Experimental) |
 | [KANJI-README.md](./docs/KANJI-README.md) | Full bilingual command reference |
 | [ROADMAP-v1.md](./docs/ROADMAP-v1.md) | Path to v1.0 |
-| [PHASE4D-DESIGN.md](./PHASE4D-DESIGN.md) | Current development phase |
 | [ARCH.md](./ARCH.md) | Architecture overview |
 | [spec/](./spec/) | BNF specification (v0.3) |
 | [theory/](./theory/) | D-FUMT theoretical foundation (66 theories) |
+| [CHANGELOG.md](./CHANGELOG.md) | Version history |
 
 ---
 
@@ -286,8 +339,24 @@ Key theoretical concepts:
 - **Four-Valued Logic** (⊤, ⊥, ⊤π, ⊥π) — beyond true/false
 - **Genesis Axioms** — computational emergence from void
 - **RCT** (Rei Compression Theory) — generative compression
+- **Structural Philosophy** — center-periphery as universal pattern across all domains
 
 See [`theory/`](./theory/) for complete documentation.
+
+---
+
+## Version History
+
+| Version | Tests | Highlights |
+|---------|-------|------------|
+| v0.5.5 | 1,533 | 7-domain network, 36-direction bridges, structural philosophy |
+| v0.5.4 | 1,459 | EFGH cross-domain integration |
+| v0.5.3 | 1,158 | 3 new domains (Natural Science, Info Engineering, Humanities) |
+| v0.5.2 | 799 | Agent runtime, puzzle reasoning, game AI |
+| v0.4.0 | 543 | 6-attribute sigma system |
+| v0.3.0 | 305 | Genesis axiom system |
+
+See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
 ---
 
