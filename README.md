@@ -3,16 +3,24 @@
 **A mathematical computation system and programming language based on D-FUMT.**
 
 [![npm version](https://img.shields.io/npm/v/rei-lang.svg)](https://www.npmjs.com/package/rei-lang)
-[![tests](https://img.shields.io/badge/tests-1569%20passing-brightgreen.svg)](https://github.com/fc0web/rei-lang)
-[![domains](https://img.shields.io/badge/domains-7%20connected-blueviolet.svg)](https://github.com/fc0web/rei-lang)
-[![axioms](https://img.shields.io/badge/axioms-4%20irreducible-orange.svg)](theory/REI-MINIMAL-AXIOMS.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18651614.svg)](https://doi.org/10.5281/zenodo.18651614)
+[![SSRN](https://img.shields.io/badge/SSRN-6243598-blue)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6243598)
+[![ORCID](https://img.shields.io/badge/ORCID-0009--0004--6019--9258-green)](https://orcid.org/0009-0004-6019-9258)
 
 > 表記の別名宣言: 正式記号は `0₀` (Unicode) / `0_{0}` (LaTeX) / `0_0` (code)。すべて同一概念。
 
-### 🔴 [Live Demo — Cross-Domain Computation](https://fc0web.github.io/rei-lang/)
+---
 
-> Particle physics → Art → Music in real-time. See 36-direction domain bridges in action.
+## 📄 Publications
+
+| Resource | Link |
+|----------|------|
+| **Preprint (Zenodo)** | [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18651614.svg)](https://doi.org/10.5281/zenodo.18651614) |
+| **Preprint (SSRN)** | [SSRN Abstract #6243598](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6243598) |
+| **ORCID** | [0009-0004-6019-9258](https://orcid.org/0009-0004-6019-9258) |
+| **GitHub** | [fc0web/rei-lang](https://github.com/fc0web/rei-lang) |
+| **npm** | [rei-lang](https://www.npmjs.com/package/rei-lang) |
 
 ---
 
@@ -25,67 +33,6 @@ Rei is a computation system that extends the concept of "number" from a point to
 * **Genesis Axiom System** — Axiomatization of "what comes before zero"
 * **GFT (Graphic Formula Theory)** — Visual graph representation of mathematical formulas
 * **Rei Language** — Programming language with `compress`, pipe operators, extension/reduction primitives
-* **7-Domain Network** — Cross-domain computation across Natural Science, Information Engineering, Humanities, Art, Music, Economics, and Linguistics with 36-direction bridges
-
-## Minimal Axiom System — 4 Irreducible Axioms
-
-The entire Rei system is built on exactly **4 irreducible axioms**. Everything else — 1,533 tests, 7 domains, 36 bridges, agents, evolve, and all other features — is derived from these four:
-
-| Axiom | Name | Axis | Core Idea |
-| --- | --- | --- | --- |
-| **A1** | Center-Periphery | Space | Values are fields, not points. Every value has a center and neighbors |
-| **A2** | Extension-Reduction | Depth | Values can be extended (⊕) and reduced (⊖) one step at a time |
-| **A3** | Sigma Accumulation | Time | Every transformation leaves a trace. Values are self-referential |
-| **A4** | Genesis Phase Transition | Existence | Existence arises from nothing in irreversible stages: void → ・ → 0₀ → 0 → ℕ |
-
-Four orthogonal axes — space, depth, time, existence — form the complete foundation.
-
-For comparison: λ-calculus has 3 rules (computation only), Peano has 5 axioms (natural numbers only), ZFC has 9 axioms (sets only). Rei covers both computation and ontology in 4.
-
-📄 **[Full formal specification → theory/REI-MINIMAL-AXIOMS.md](theory/REI-MINIMAL-AXIOMS.md)**
-
-## 7-Domain Cross-Domain Network
-
-Rei v0.5.5 achieves full interconnection across 7 knowledge domains:
-
-```
-        B: Natural Science
-       / | \
-      /  |  \
-  C: Info    E: Art
-  Eng. |  ×  | \
-      \| / \ |  F: Music
-   D: Human  | /
-    ities \  |/
-        G: Economics
-          |
-      H: Linguistics
-
-  ← 36-direction bridges →
-  All domains fully connected
-```
-
-| Domain | Code | Focus | Example |
-| --- | --- | --- | --- |
-| Natural Science | B | Physics, N-body simulation | Particle systems, energy fields |
-| Information Engineering | C | ETL, data pipelines | Stream processing, agents |
-| Humanities | D | Text analysis, ethics | Genealogy modeling, logic |
-| Art | E | Visual patterns, generative art | Color fields, complexity metrics |
-| Music | F | Melodic computation, scales | Tempo, harmony, note generation |
-| Economics | G | Market models, game theory | Supply-demand, equilibrium |
-| Linguistics | H | Syntax trees, morphology | Parse structures, semantics |
-
-Every domain pair is connected by bidirectional bridges (7 × 6 / 2 × ... = 36 directed bridges), enabling seamless transformation:
-
-```javascript
-// Rei: One pipe transforms between any two domains
-import { simulateParticles, simToArt, artToMusic } from 'rei-lang';
-
-const sim = simulateParticles(30, 200);   // B: Physics simulation
-const art = sim |> simToArt;              // B → E: Simulation becomes art
-const melody = art |> artToMusic;         // E → F: Art becomes music
-// Every transformation preserves σ — field, flow, memory, layer, relation, will
-```
 
 ## Install
 
@@ -95,7 +42,7 @@ npm install rei-lang
 
 ## Quick Start
 
-```javascript
+```typescript
 import { mdnum, compute, ComputationMode } from 'rei-lang';
 
 // Multi-dimensional number: center=5, neighbors=[1,2,3,4]
@@ -112,7 +59,7 @@ console.log(compute(harmonic).value); // harmonic mean
 
 ### Core — Multi-Dimensional Numbers
 
-```javascript
+```typescript
 import { mdnum, compute, computeGrid, detectSymmetry } from 'rei-lang';
 
 // Basic multi-dimensional number
@@ -132,7 +79,7 @@ computeGrid(grid, 1, 1); // computes center cell with 8 neighbors
 
 ### Core — Extended Numbers (Zero/π Extension)
 
-```javascript
+```typescript
 import { subscript, extnum, extend, reduce, toNotation, parseSubscript } from 'rei-lang';
 
 // Create 0ooo (3rd degree extension of zero)
@@ -158,7 +105,7 @@ const reduced = reduce(extended);  // 0ooox → 0ooo (⊖)
 
 ### Genesis Axiom System
 
-```javascript
+```typescript
 import { genesis } from 'rei-lang';
 const { createGenesis, evolve, runFullGenesis, verifyTheoremS0, verifyTheoremS1 } = genesis;
 
@@ -176,7 +123,7 @@ console.log(s1.valid); // true
 
 ### GFT — Graphic Formula Theory
 
-```javascript
+```typescript
 import { gft } from 'rei-lang';
 import { mdnum } from 'rei-lang';
 
@@ -207,7 +154,7 @@ const stats = gft.graphStats(graph);
 #### Layout Algorithms
 
 | Algorithm | Best For | Description |
-| --- | --- | --- |
+|-----------|----------|-------------|
 | `radial` | Multi-dimensional numbers | Center-outward radiation |
 | `hierarchical` | Genesis axiom system | Top-down phase progression |
 | `tree` | Expression trees | Parent-child formula structure |
@@ -216,7 +163,7 @@ const stats = gft.graphStats(graph);
 
 ### Rei Language
 
-```javascript
+```typescript
 import { lang } from 'rei-lang';
 
 // Arithmetic
@@ -244,27 +191,12 @@ lang.run('0oox ⊖');   // reduce: 0oox → 0oo
 #### Language Design Philosophy
 
 | Feature | Rei Concept | Rationale |
-| --- | --- | --- |
+|---------|-------------|-----------|
 | `compress` | 圧縮 (compression) | Functions compress computation into reusable form |
 | `bind` | 値固定公理 | Immutable by default — once bound, cannot rebind |
 | `\|>` | 中心→外放射 | Data flows outward from center, like multi-dim numbers |
 | `⊕` / `⊖` | 拡張・縮約 | First-class extension/reduction operators |
 | `[c; n₁, n₂]` | 多次元数リテラル | Direct multi-dimensional number construction |
-
-## 6-Attribute System (σ-deep)
-
-Every Rei value carries six metadata attributes that persist across transformations:
-
-| Attribute | Japanese | Role |
-| --- | --- | --- |
-| **field** (場) | ば | Spatial context and domain membership |
-| **flow** (流れ) | ながれ | Temporal direction and data movement |
-| **memory** (記憶) | きおく | Transformation history and lineage |
-| **layer** (層) | そう | Abstraction depth and nesting level |
-| **relation** (関係) | かんけい | Connections to other values |
-| **will** (意志) | いし | Autonomous behavior and agent intent |
-
-These 6 attributes are the observable manifestation of **Axiom A3 (Sigma Accumulation)**. They are not independent axioms — they are derived from the single principle that "every transformation leaves a trace."
 
 ## Theory Background
 
@@ -283,8 +215,7 @@ void → ・(dot) → 0₀ → 0 → ℕ → ...
        G-E₁       G-S₀   G-S₁  G-N₁
 ```
 
-The Genesis Axiom System (**Axiom A4**) formalizes the emergence of number from pre-mathematical existence. No other computation system axiomatizes the origin of existence itself.
-
+The Genesis Axiom System formalizes the emergence of number from pre-mathematical existence.
 Theorem S₀ and S₁ prove uniqueness of transitions under the general position assumption (CS).
 
 ### GFT (Graphic Formula Theory)
@@ -300,78 +231,18 @@ GFT represents mathematical formulas as directed graphs:
 Rei demonstrates **average 74% code reduction** vs conventional approaches:
 
 | Task | Conventional | Rei | Reduction | Key Advantage |
-| --- | --- | --- | --- | --- |
+|------|-------------|-----|-----------|---------------|
 | Image Kernel | 32 lines (JS) | 8 lines | **4× shorter** | 4-level nested loops → 0 nesting |
 | Data Aggregation | 45 lines (Python) | 12 lines | **3.7× shorter** | Mode switch: +15 lines → +1 keyword |
 | Graph Transform | 52+ lines (D3.js) | 14 lines | **3.7× shorter** | Manual graph ops → ⊕/⊖ operators |
 
-The fundamental advantage: **center-neighbor pattern as a language primitive** (Axiom A1).
-
-## Theoretical Documents
-
-| Document | Description |
-| --- | --- |
-| [REI-MINIMAL-AXIOMS.md](theory/REI-MINIMAL-AXIOMS.md) | Formal specification of the 4 irreducible axioms |
-| [AXIOM-INDEPENDENCE.md](theory/AXIOM-INDEPENDENCE.md) | Independence proof sketch: counter-models M₁–M₄ |
-| [AXIOM-DERIVATIONS.md](theory/AXIOM-DERIVATIONS.md) | Derivation proof sketch: 15 theorems from 4 axioms |
-| [TEST-AXIOM-MAP.md](theory/TEST-AXIOM-MAP.md) | Test-axiom dependency map: all tests classified by axiom |
-| [SELF-AWARE-REDEFINITION.md](theory/SELF-AWARE-REDEFINITION.md) | Mathematical redefinition of Self-Aware Value as σ-annotated value |
-| [PHASE7-DESIGN.md](theory/PHASE7-DESIGN.md) | Phase 7 design: Autonomous computation layer + Alternative systems |
-| [genesis-axiom-system.md](theory/genesis-axiom-system.md) | Genesis Axiom System — "What comes before zero?" |
-| [d-fumt-overview.md](theory/d-fumt-overview.md) | D-FUMT theoretical framework overview |
-| [AXIOM-INVENTORY.md](AXIOM-INVENTORY.md) | Full axiom inventory: classification of all concepts as axiom, theorem, or decoration |
-
-## Version History
-
-| Version | Tests | Key Milestones |
-| --- | --- | --- |
-| v0.2.0 | 91 | Initial release — Lexer, Parser, Evaluator, Genesis Axiom, GFT |
-| v0.2.1 | 91 | npm publish, license alignment (Apache 2.0) |
-| v0.5.2 | 799 | Phase 4a–4c: AgentSpace, puzzle reasoning, game behavior, tactical perception |
-| v0.5.3 | 975 | Phase 4d: P1–P5 stabilization, relation/will × AgentSpace, education demo |
-| v0.5.4 | 1360 | Phase 5.5–6: 6-attribute full cascade, 4 new domains (E/F/G/H), type system |
-| v0.5.4+ | 1459 | Phase 6.5: EFGH cross-integration, 24-direction bridges |
-| **v0.5.5** | **1533** | **Phase 6.7: 7-domain full connection, 36-direction bridges, structural philosophy unification** |
-| v0.5.5+ | 1569 | Axiom reduction: 4 minimal axioms, independence proofs, A4 test suite |
-
-## Roadmap
-
-### Phase 7: Autonomous Computation Layer (Next)
-
-Phase 7 extends Rei in two directions simultaneously:
-
-**Direction A — Deepening: σ-interaction (Phase 7a–7d)**
-
-The 6 attributes evolve from static metadata to a dynamic interaction system:
-
-```
-Layer 4: Autopoiesis     ← Phase 7d   Values generate new values
-Layer 3: Interaction      ← Phase 7b-c  Attributes influence each other
-Layer 2: Tracking         ← Current     6 attributes as metadata
-Layer 1: Deterministic    ← Current     Pure computation (mdnum, compute, pipe)
-```
-
-Phase 7a defines 12 interaction rules between attributes (e.g., "will changes flow", "memory accumulation alters layer"). Target: +120 tests.
-
-**Direction B — Inclusion: Alternative Systems (Phase 7e)**
-
-Parallel computation systems connected to Rei's core via the same bridge mechanism used for 7-domain integration:
-
-* **Quantum Genesis** — Superposition-based phase transitions
-* **Categorical Genesis** — Category-theoretic formalization with functors
-* **Cellular Genesis** — Cellular automaton approach to emergence
-
-All alternatives are derivable from the 4 axioms (proven in [AXIOM-DERIVATIONS.md](theory/AXIOM-DERIVATIONS.md)).
-
-**Test target:** 1,569 → 2,063 (+494 tests across Phase 7a–7e)
-
-📄 **[Full Phase 7 design → theory/PHASE7-DESIGN.md](theory/PHASE7-DESIGN.md)**
+The fundamental advantage: **center-neighbor pattern as a language primitive**.
 
 ## Author
 
 **Nobuki Fujimoto** (藤本伸樹)
 
-* ORCID: [Nobuki Fujimoto](https://orcid.org/)
+* ORCID: [0009-0004-6019-9258](https://orcid.org/0009-0004-6019-9258)
 * Wikidata: D-FUMT, Rei Computation System
 
 ## License
@@ -379,7 +250,7 @@ All alternatives are derivable from the 4 axioms (proven in [AXIOM-DERIVATIONS.m
 This repository uses a **dual licensing** structure:
 
 | Content | License | Location |
-| --- | --- | --- |
+|---------|---------|----------|
 | Source code (`/src`, `/tests`, `/examples`) | **Apache License 2.0** | [LICENSE](LICENSE) |
 | Theoretical documents (`/theory`) | **CC BY-NC-SA 4.0** | [LICENSE-THEORY.md](theory/LICENSE-THEORY.md) |
 
@@ -398,14 +269,20 @@ Copyright 2024-2026 Nobuki Fujimoto (藤本伸樹)
 If you use Rei in academic work, please cite:
 
 ```bibtex
-@software{fujimoto2026rei,
+@misc{fujimoto2026rei,
   author       = {Fujimoto, Nobuki},
-  title        = {Rei (0₀式): Mathematical Computation System based on D-FUMT},
+  title        = {Rei: A Four-Axiom Foundation for Computational Existence Theory},
   year         = {2026},
-  license      = {Apache-2.0},
-  url          = {https://github.com/fc0web/rei-lang}
+  doi          = {10.5281/zenodo.18651614},
+  url          = {https://doi.org/10.5281/zenodo.18651614},
+  publisher    = {Zenodo}
 }
 ```
+
+**Other resources:**
+- Zenodo: [10.5281/zenodo.18651614](https://doi.org/10.5281/zenodo.18651614)
+- SSRN: [Abstract #6243598](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6243598)
+- GitHub: [fc0web/rei-lang](https://github.com/fc0web/rei-lang)
 
 ---
 
