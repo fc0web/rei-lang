@@ -3,7 +3,7 @@
 **A mathematical computation system and programming language based on D-FUMT.**
 
 [![npm version](https://img.shields.io/npm/v/rei-lang.svg)](https://www.npmjs.com/package/rei-lang)
-[![tests](https://img.shields.io/badge/tests-1533%20passing-brightgreen.svg)](https://github.com/fc0web/rei-lang)
+[![tests](https://img.shields.io/badge/tests-1569%20passing-brightgreen.svg)](https://github.com/fc0web/rei-lang)
 [![domains](https://img.shields.io/badge/domains-7%20connected-blueviolet.svg)](https://github.com/fc0web/rei-lang)
 [![axioms](https://img.shields.io/badge/axioms-4%20irreducible-orange.svg)](theory/REI-MINIMAL-AXIOMS.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
@@ -312,6 +312,10 @@ The fundamental advantage: **center-neighbor pattern as a language primitive** (
 | Document | Description |
 | --- | --- |
 | [REI-MINIMAL-AXIOMS.md](theory/REI-MINIMAL-AXIOMS.md) | Formal specification of the 4 irreducible axioms |
+| [AXIOM-INDEPENDENCE.md](theory/AXIOM-INDEPENDENCE.md) | Independence proof sketch: counter-models M₁–M₄ |
+| [AXIOM-DERIVATIONS.md](theory/AXIOM-DERIVATIONS.md) | Derivation proof sketch: 15 theorems from 4 axioms |
+| [TEST-AXIOM-MAP.md](theory/TEST-AXIOM-MAP.md) | Test-axiom dependency map: all tests classified by axiom |
+| [SELF-AWARE-REDEFINITION.md](theory/SELF-AWARE-REDEFINITION.md) | Mathematical redefinition of Self-Aware Value as σ-annotated value |
 | [PHASE7-DESIGN.md](theory/PHASE7-DESIGN.md) | Phase 7 design: Autonomous computation layer + Alternative systems |
 | [genesis-axiom-system.md](theory/genesis-axiom-system.md) | Genesis Axiom System — "What comes before zero?" |
 | [d-fumt-overview.md](theory/d-fumt-overview.md) | D-FUMT theoretical framework overview |
@@ -328,6 +332,40 @@ The fundamental advantage: **center-neighbor pattern as a language primitive** (
 | v0.5.4 | 1360 | Phase 5.5–6: 6-attribute full cascade, 4 new domains (E/F/G/H), type system |
 | v0.5.4+ | 1459 | Phase 6.5: EFGH cross-integration, 24-direction bridges |
 | **v0.5.5** | **1533** | **Phase 6.7: 7-domain full connection, 36-direction bridges, structural philosophy unification** |
+| v0.5.5+ | 1569 | Axiom reduction: 4 minimal axioms, independence proofs, A4 test suite |
+
+## Roadmap
+
+### Phase 7: Autonomous Computation Layer (Next)
+
+Phase 7 extends Rei in two directions simultaneously:
+
+**Direction A — Deepening: σ-interaction (Phase 7a–7d)**
+
+The 6 attributes evolve from static metadata to a dynamic interaction system:
+
+```
+Layer 4: Autopoiesis     ← Phase 7d   Values generate new values
+Layer 3: Interaction      ← Phase 7b-c  Attributes influence each other
+Layer 2: Tracking         ← Current     6 attributes as metadata
+Layer 1: Deterministic    ← Current     Pure computation (mdnum, compute, pipe)
+```
+
+Phase 7a defines 12 interaction rules between attributes (e.g., "will changes flow", "memory accumulation alters layer"). Target: +120 tests.
+
+**Direction B — Inclusion: Alternative Systems (Phase 7e)**
+
+Parallel computation systems connected to Rei's core via the same bridge mechanism used for 7-domain integration:
+
+* **Quantum Genesis** — Superposition-based phase transitions
+* **Categorical Genesis** — Category-theoretic formalization with functors
+* **Cellular Genesis** — Cellular automaton approach to emergence
+
+All alternatives are derivable from the 4 axioms (proven in [AXIOM-DERIVATIONS.md](theory/AXIOM-DERIVATIONS.md)).
+
+**Test target:** 1,569 → 2,063 (+494 tests across Phase 7a–7e)
+
+📄 **[Full Phase 7 design → theory/PHASE7-DESIGN.md](theory/PHASE7-DESIGN.md)**
 
 ## Author
 
