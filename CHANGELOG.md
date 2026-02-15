@@ -1,5 +1,112 @@
 # Changelog
 
+## [0.5.5] — 2026-02-15
+
+### 🌐 Phase 6: 4新ドメイン拡張 (E/F/G/H)
+数学(A)・自然科学(B)・情報工学(C)・人文科学(D)に加え、4つの新ドメインを追加。
+Reiの中心-周囲パターンが7つの知の領域を統一的に扱えることを実証。
+
+#### E. 芸術 (`domains/art.ts`)
+- パターン生成（フラクタル、セルオートマトン、反応拡散系）
+- 色彩理論（RGB/HSL変換、補色・類似色・三色配色の調和計算）
+- 美学分析（構図・バランス・リズムの定量評価）
+
+#### F. 音楽 (`domains/music.ts`)
+- 音階生成（メジャー/マイナー/モード、微分音対応）
+- 和声分析（協和度計算、コード進行評価）
+- メロディ生成（音程パターン、リズム構造）
+
+#### G. 経済学 (`domains/economics.ts`)
+- 市場シミュレーション（需要供給、価格均衡）
+- ゲーム理論（ナッシュ均衡、囚人のジレンマ）
+- エージェントベース市場モデル
+
+#### H. 言語学 (`domains/linguistics.ts`)
+- 構文解析（再帰下降パーサー、構文木生成）
+- 意味論（類似度計算、語義ネットワーク）
+- 翻訳フレームワーク（言語間マッピング）
+
+#### 型システム強化 (`type-system.ts`)
+- ランタイム型チェック・型推論統合
+- 全ドメイン空間型のファーストクラスサポート
+- 哲学型 0₀（すべての型の根源）
+
+### 🔗 Phase 6.5: EFGH横断統合 (`cross-domain-efgh.ts`)
+- EFGH内部12方向ブリッジ（E↔F共感覚, E↔G美的価値, F↔H韻律言語 等）
+- EFGH→BCD 12方向ブリッジ（E→B フラクタル→N体, G→D 市場→倫理 等）
+- `compose_all` — 7ドメイン(B-H)統合分析
+
+### 🔄 Phase 6.6: BCD→EFGH逆方向ブリッジ (`cross-domain-bcd-efgh.ts`)
+- B→E/F/G/H: 自然科学データの芸術・音楽・経済・言語表現変換
+- C→E/F/G/H: 情報工学データの多領域変換
+- D→E/F/G/H: 人文科学知見の創造的表現変換
+- **全36方向接続達成** — 7ドメイン完全相互接続ネットワーク
+
+### 🏛️ Phase 6.7: 用語の構造哲学統一
+- 宗教固有の用語を構造哲学の言葉に置換
+- 「縁起」→「相互依存」、「空」→「動的ゼロ」等
+- 普遍的な数理構造として、文化的背景に依存しない記述に統一
+
+### テスト
+- **1533テスト通過**（42テストファイル）
+- Phase 6 新規: 65テスト (`phase6-domains.test.ts`)
+- EFGH横断: 99テスト (`cross-domain-efgh.test.ts`)
+- BCD→EFGH: 74テスト (`cross-domain-bcd-efgh.test.ts`)
+- Zero regressions
+
+---
+
+## [0.5.4] — 2026-02-15
+
+### ⭐ Phase 5.5: 6属性全結合カスケード (`sigma-dynamics.ts`, `sigma-attributes.ts`)
+6属性（場・流れ・記憶・層・関係・意志）を一方向線形チェーンから全結合ネットワークに拡張。
+
+#### 6属性ファーストクラス化
+- 直接クエリ: `field_of` / `flow_of` / `memory_of` / `layer_of`
+- 場操作: `field_set` / `field_merge` / `field_topology`
+- 流れ制御: `flow_set` / `flow_reverse` / `flow_accelerate`
+- 記憶操作: `memory_search` / `memory_snapshot` / `memory_forget`
+- 層操作: `layer_deepen` / `layer_flatten`
+- 星座分析: `attr_resonance` / `attr_balance` / `attr_compose`
+
+#### 全結合カスケード
+- 場(field)がカスケードに参加（field→flow, field→relation, layer→field）
+- 逆方向・交差カスケード（memory→will, flow→field, will→relation）
+- 共鳴増幅（属性間の共鳴検出による自動増幅）
+
+#### 星座ライフサイクル
+- 5段階: 萌芽 → 成長 → 成熟 → 変容 → 再生
+- 星座の時間発展追跡
+
+### 🧬 Phase 5.5b: 自律認識エンジン (`autonomy.ts`)
+- `recognize` / `認識` — 周囲エンティティの検知・評価
+- `fuse` / `融合` — 最適な結合形態の自律選択
+- `separate` / `分離` — 融合済みエンティティの分離
+- `transform` / `変容` — 文脈に応じた表現形態の変容
+- `entity_sigma` / `存在σ` — 自律的自己記述
+- `auto_recognize` / `自動認識` — 空間内全ノードの相互認識
+
+### 🌉 Phase 5.5c: BCDドメイン横断統合 (`cross-domain.ts`)
+- 6方向ブリッジ: B↔C, B↔D, C↔D（各双方向）
+- `domain_compose` — 3ドメイン統合分析
+- `cross_sigma` — 横断σメタデータ
+- D-FUMT「相互依存」原理の実装
+
+### 📐 Phase 5: 3ドメイン拡張 (B/C/D)
+- B. 自然科学 (`natural-science.ts`): N体シミュレーション、波動方程式
+- C. 情報工学 (`info-engineering.ts`): ETLパイプライン、LLMチェーン
+- D. 人文科学 (`humanities.ts`): テキスト分析、因果ネットワーク、倫理推論
+
+### テスト
+- **1158テスト通過**（36テストファイル）
+- Phase 5 新規: 61テスト (`phase5-domains.test.ts`)
+- 6属性深化: 180テスト (`sigma-attributes/deep/dynamics/reactive`)
+- 自律認識: 42テスト (`autonomy.test.ts`)
+- 横断統合: 38テスト (`cross-domain.test.ts`)
+- Zero regressions
+
+---
+
 ## [0.5.3] — 2026-02-14
 
 ### 📐 Phase 4d: 安定化＋外部証明
