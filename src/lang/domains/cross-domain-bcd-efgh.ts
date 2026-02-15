@@ -99,9 +99,10 @@ export function simToArt(sim: SimulationSpace): PatternResult | ColorHarmony {
 
   return {
     reiType: 'PatternResult' as const,
+    type: 'simulation_projection',
     width: gridSize, height: gridSize, data,
     iterations: sim.history?.length ?? 1,
-    metadata: { type: 'simulation_projection', particleCount: particles.length, totalEnergy: particleEnergy(particles).total, avgEnergy: avg },
+    params: { particleCount: particles.length, totalEnergy: particleEnergy(particles).total, avgEnergy: avg },
   };
 }
 
@@ -199,7 +200,7 @@ export function pipelineToArt(pipeline: PipelineSpace): PatternResult | ColorHar
         const dx = x - scx, dy = y - gridSize / 2;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const sigma = gridSize / stages.length;
-        const wave = stage.transform
+        const wave = stage.type === 'transform'
           ? Math.cos(dist / sigma * Math.PI) * 0.5 + 0.5
           : Math.exp(-dist * dist / (2 * sigma * sigma));
         value += wave / stages.length;
@@ -211,9 +212,10 @@ export function pipelineToArt(pipeline: PipelineSpace): PatternResult | ColorHar
 
   return {
     reiType: 'PatternResult' as const,
+    type: 'pipeline_flow_pattern',
     width: gridSize, height: gridSize, data,
     iterations: stages.length,
-    metadata: { type: 'pipeline_flow_pattern', stageCount: stages.length },
+    params: { stageCount: stages.length },
   };
 }
 
@@ -229,7 +231,7 @@ export function pipelineToMusic(pipeline: PipelineSpace): MelodyResult | ScaleRe
   const scale = createScale(root, 'major', 4);
   if (stages.length <= 3) return scale;
 
-  return createMelody(scale, Math.min(16, stages.length * 2), stages.some(s => s.transform) ? 'leaping' : 'stepwise');
+  return createMelody(scale, Math.min(16, stages.length * 2), stages.some(s => s.type === 'transform') ? 'leaping' : 'stepwise');
 }
 
 // ============================================================
@@ -251,8 +253,8 @@ export function pipelineToLinguistics(pipeline: PipelineSpace): SyntaxTree {
   const stages = pipeline.stages ?? [];
   if (stages.length === 0) return parseSyntax('The empty pipeline awaits input');
 
-  const transformCount = stages.filter(s => !!s.transform).length;
-  const filterCount = stages.filter(s => !!s.filter).length;
+  const transformCount = stages.filter(s => s.type === 'transform').length;
+  const filterCount = stages.filter(s => s.type === 'filter').length;
 
   let desc: string;
   if (transformCount > filterCount) desc = `The transforming pipeline processes through ${stages.length} stages`;
@@ -287,13 +289,16 @@ export function humanToArt(input: TextAnalysisResult | EthicsResult): PatternRes
     }
     return {
       reiType: 'PatternResult' as const,
+      type: 'ethics_visualization',
       width: gridSize, height: gridSize, data, iterations: 1,
-      metadata: { type: 'ethics_visualization', ethicsScore: score },
+      params: { ethicsScore: score },
     };
   }
 
   const text = input as TextAnalysisResult;
-  const sentiment = text.sentiment ?? { positive: 0.5, negative: 0.3, neutral: 0.2 };
+  const _diversity = text.stats?.diversity ?? 0.5;
+  const _entropy = text.stats?.entropy ?? 3.0;
+  const sentiment = { positive: _diversity, negative: 1 - _diversity, neutral: Math.min(_entropy / 6, 1) };
   let hue: number;
   if (sentiment.positive > sentiment.negative && sentiment.positive > (sentiment.neutral ?? 0)) hue = 30 + sentiment.positive * 30;
   else if (sentiment.negative > sentiment.positive) hue = 220 + sentiment.negative * 40;
@@ -319,8 +324,9 @@ export function humanToMusic(input: TextAnalysisResult | EthicsResult): MelodyRe
   }
 
   const text = input as TextAnalysisResult;
-  const sentiment = text.sentiment ?? { positive: 0.5, negative: 0.3, neutral: 0.2 };
-  const wordCount = text.wordCount ?? text.words?.length ?? 5;
+  const _div = text.stats?.diversity ?? 0.5;
+  const sentiment = { positive: _div, negative: 1 - _div, neutral: 0.3 };
+  const wordCount = text.structure?.words ?? 5;
   const isPositive = sentiment.positive > sentiment.negative;
   const root = isPositive ? 'G' : 'E';
   const mode = isPositive ? 'major' : 'minor';

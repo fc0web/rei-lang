@@ -126,8 +126,8 @@ describe('B→E: simToArt — シミュレーション → 芸術', () => {
     const sim = createTestSim(10);
     const art = simToArt(sim);
     if (art.reiType === 'PatternResult') {
-      expect((art as any).metadata.particleCount).toBe(10);
-      expect((art as any).metadata.type).toBe('simulation_projection');
+      expect((art as any).params.particleCount).toBe(10);
+      expect(art.type).toBe('simulation_projection');
     }
   });
 
@@ -306,7 +306,7 @@ describe('C→E: pipelineToArt — パイプライン → 芸術', () => {
     const pipe = createTestPipeline(7);
     const art = pipelineToArt(pipe);
     if (art.reiType === 'PatternResult') {
-      expect((art as any).metadata.stageCount).toBe(7);
+      expect((art as any).params.stageCount).toBe(7);
     }
   });
 });
