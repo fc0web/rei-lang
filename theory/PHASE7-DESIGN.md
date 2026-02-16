@@ -766,50 +766,267 @@ DP-A4: 対話の収束が「計算の完了」に対応
 
 ---
 
-## 4. Meta-Bridge Layer（体系間変換層）
+## 4. Meta-Bridge Layer（体系間変換層）— ミクロ-マクロ双極限原理
 
-### 4.1 ブリッジの定義
+### 4.0 設計哲学: ダイヤモンド密度と宇宙被覆
 
-7ドメインブリッジと同じアーキテクチャで、代替体系間のブリッジを定義する。
+Phase 7eの核心は**二つの極限の同時達成**である：
+
+```
+ミクロ極限 (μ-limit): これ以上圧縮できない最小表現
+  — ダイヤモンド7個に地球のゼタバイトが入る密度
+  — 4公理に全体系が折り畳まれる
+  — 一記号たりとも削れない不可約表現
+
+マクロ極限 (M-limit): これ以上展開できない最大被覆
+  — 全ての計算可能な知の領域をカバー
+  — Reiの到達空間の外に表現可能な対象がない
+  — 5体系 × 7ドメイン × 4σ体系 = 完全表現空間
+```
+
+この二つが**同時に成立する**ことがReiの本質的主張である。
+最小の種（0₀）から最大の宇宙が展開され、
+最大の宇宙が最小の種に折り畳み戻せる。
+
+これは拡張ゼロ 0₀ の思想の完成形である：
+「無から全が生まれ、全が無に還る。その往復に情報の損失はない。」
+
+### 4.1 双極限の形式的定義
+
+#### 4.1.1 圧縮関手 Compress (μ方向)
+
+任意の代替体系 S の表現を、コア4公理の最小表現に**折り畳む**操作。
+
+```
+定義: compress: Repr(S) → Repr(Core)
+
+compress は以下を満たす:
+
+  μ-Axiom-1 (情報保存):
+    ∀v ∈ Repr(S): information(compress(v)) = information(v)
+    圧縮しても情報は失われない
+
+  μ-Axiom-2 (不可約性):
+    ∀v ∈ Repr(Core): ¬∃v' (|v'| < |v| ∧ information(v') = information(v))
+    コア表現はこれ以上小さくできない
+
+  μ-Axiom-3 (密度最大性):
+    ∀S, ∀v ∈ Repr(S): density(compress(v)) ≥ density(v)
+    density(x) = information(x) / size(x)
+    圧縮は常に密度を上げるか、すでに最大
+```
+
+#### 4.1.2 展開関手 Expand (M方向)
+
+コア4公理の最小表現から、任意の表現空間を**展開する**操作。
+
+```
+定義: expand: Repr(Core) × Target → Repr(Target)
+  Target = GenesisSystem × Domain × SigmaSystem
+
+expand は以下を満たす:
+
+  M-Axiom-1 (到達可能性):
+    ∀S ∈ Systems, ∀D ∈ Domains, ∀σ ∈ SigmaSystems:
+    ∃ expand(core_v, (S, D, σ)) が定義される
+    全ての組み合わせに到達可能
+
+  M-Axiom-2 (完全被覆):
+    Reiの表現空間の外に計算可能な対象は存在しない
+    ∀computable_object: ∃(S, D, σ) s.t. object ∈ Repr((S, D, σ))
+
+  M-Axiom-3 (構造保存):
+    expand は元の4公理の関係構造を保存する
+    公理間の導出関係は展開先でも成立する
+```
+
+#### 4.1.3 双対性定理 (Duality Theorem)
+
+```
+DT-1 (往復恒等): compress ∘ expand = identity
+  展開してから圧縮すると元に戻る
+
+DT-2 (復元恒等): expand ∘ compress ≈ identity
+  圧縮してから展開すると、等価な表現が復元される
+  （表現形式は異なりうるが、情報内容は同一）
+
+DT-3 (密度-被覆双対):
+  density(compress(x)) = MAX  ⟺  coverage(expand(x)) = MAX
+  ミクロ極限とマクロ極限は互いの必要十分条件
+
+DT-4 (0₀同型):
+  compress の不動点 = expand の種 = 0₀
+  「これ以上圧縮できない点」と「全てを展開する起点」は同一
+```
+
+### 4.2 密度メトリクス (Density Metric) — ミクロ測定
 
 ```typescript
-interface MetaBridge {
-  source: GenesisSystem;    // 'core' | 'quantum' | 'categorical' | 'cellular' | 'dialectical'
-  target: GenesisSystem;
-  translateValue: (v: SourceValue) => TargetValue;
-  translateSigma: (σ: SourceSigma) => TargetSigma;
-  preservationProof: string; // 変換で保存される性質の証明
+interface DensityMetric {
+  representationSize: number;      // 表現のトークン/ノード数
+  informationContent: number;      // 保持する情報量（ビット相当）
+  density: number;                 // = informationContent / representationSize
+  isIrreducible: boolean;          // これ以上圧縮不可能か
+  compressionRatio: number;        // 元表現からの圧縮率
+  axiomUtilization: number;        // 4公理のうち何割を使用しているか (0-1)
 }
 ```
 
-### 4.2 ブリッジ対応表
+```
+密度階梯 (Density Hierarchy):
+
+Level 5: Core-irreducible   density → ∞ (4公理, isIrreducible=true)
+  ← ダイヤモンド級。これ以上の圧縮は不可能。
+Level 4: σ-minimal          density ≈ 高 (2属性体系)
+Level 3: σ-deep             density ≈ 中 (6属性体系)
+Level 2: σ-extended         density ≈ 低 (12属性体系)
+Level 1: σ-fluid            density = 可変 (0〜∞属性)
+  ← 最も冗長だが最も柔軟。
+
+圧縮操作は Level を上げ、展開操作は Level を下げる。
+Level 5 → Level 1 の全段階を自在に移動できる。
+```
+
+### 4.3 被覆メトリクス (Coverage Metric) — マクロ測定
+
+```typescript
+interface CoverageMetric {
+  reachableSystems: number;        // 到達可能な体系数 (max: 5)
+  reachableDomains: number;        // 到達可能なドメイン数 (max: 7)
+  reachableSigmas: number;         // 到達可能なσ体系数 (max: 4)
+  totalReachableSpace: number;     // = systems × domains × sigmas
+  theoreticalMaximum: number;      // = 5 × 7 × 4 = 140
+  coverageRatio: number;           // = totalReachableSpace / theoreticalMaximum
+  unreachable: string[];           // 到達不可能な組み合わせ（空であるべき）
+}
+```
+
+```
+被覆空間 (Coverage Space):
+
+  Genesis Systems (5):    Core, Quantum, Categorical, Cellular, Dialectical
+  Domains (7):            B.自然科学, C.情報工学, D.人文科学,
+                          E.芸術, F.音楽, G.経済学, H.言語学
+  σ Systems (4):          σ-minimal, σ-deep, σ-extended, σ-fluid
+
+  理論最大空間: 5 × 7 × 4 = 140 セル
+  目標: unreachable = [] （空 = 完全被覆達成）
+```
+
+### 4.4 Meta-Bridge の再定義
+
+Meta-Bridgeを「翻訳」から「圧縮-展開の経路」として再定義する。
+体系Aから体系Bへの変換は、「Aを圧縮してコアに戻し、コアからBに展開する」操作である。
+
+```typescript
+interface MetaBridge {
+  source: GenesisSystem;
+  target: GenesisSystem;
+
+  // 圧縮（μ方向）: source表現 → Core表現
+  compress: (v: SourceRepr) => CoreRepr;
+
+  // 展開（M方向）: Core表現 → target表現
+  expand: (v: CoreRepr) => TargetRepr;
+
+  // 直接変換（compress ∘ expand の最適化）
+  translate: (v: SourceRepr) => TargetRepr;
+
+  // メトリクス
+  measureDensity: (v: any) => DensityMetric;
+  measureCoverage: () => CoverageMetric;
+
+  // 保存証明
+  preservationProofs: PreservationProof[];
+}
+```
+
+```
+アーキテクチャ:
+
+         compress                expand
+ Alt-α ─────────→           ┌──────────→ Alt-α
+ Alt-β ─────────→  Core 4   ├──────────→ Alt-β
+ Alt-γ ─────────→  公理     ├──────────→ Alt-γ
+ Alt-δ ─────────→  (0₀)     └──────────→ Alt-δ
+                 ↑    ↓
+            μ極限    M極限
+         (最大密度) (最大被覆)
+
+全てのブリッジはコア(0₀)を経由する。
+コアはハブであり、不動点であり、種である。
+```
+
+### 4.5 ブリッジ対応表（双極限版）
 
 ```
               Core    Quantum  Category  Cellular  Dialectic
-Core           -      MB-αC    MB-βC     MB-γC     MB-δC
+Core           ★      MB-αC    MB-βC     MB-γC     MB-δC
 Quantum      MB-Cα     -      MB-αβ     MB-αγ     MB-αδ
 Category     MB-Cβ   MB-βα     -        MB-βγ     MB-βδ
 Cellular     MB-Cγ   MB-γα   MB-γβ       -        MB-γδ
 Dialectic    MB-Cδ   MB-δα   MB-δβ     MB-δγ       -
 
+★ = 自己圧縮-展開（恒等ブリッジ: compress ∘ expand = id）
+非Core間ブリッジ: MB-αβ = expand_β ∘ compress_α（コア経由）
+
 合計: 5体系 × 4接続 / 2 = 10ブリッジペア（20方向）
+      + 5自己ブリッジ（各体系の compress ∘ expand = id の検証）
 ```
 
-### 4.3 保存される性質
+### 4.6 保存される性質（双極限版）
 
 全てのMeta-Bridgeは以下を保証する：
 
 ```
-MB-Preservation-1: 値の計算結果が等価
+MB-P1 (計算等価性):
   Core で compute(v) = x ならば、
   任意の Alt 系で translate(v) を計算しても結果は x と等価
+  → compress が情報を保存するため、展開先でも同じ結果
 
-MB-Preservation-2: σ情報の可逆性
-  translate_to(translate_from(σ)) ≈ σ
-  （情報の損失なく往復可能）
+MB-P2 (可逆性):
+  compress(expand(v)) = v  [厳密な往復]
+  expand(compress(v)) ≈ v  [情報的に等価な往復]
+  → 双対性定理 DT-1, DT-2 の直接帰結
 
-MB-Preservation-3: 公理整合性
-  各体系内の公理に違反する変換は存在しない
+MB-P3 (公理整合性):
+  compress は source の公理を Core の公理に写像する
+  expand は Core の公理を target の公理に写像する
+  いずれも公理違反を起こさない
+
+MB-P4 (密度単調性):
+  compress は密度を単調増加させるか、すでに最大（不動点）
+  ∀v: density(compress(v)) ≥ density(v)
+
+MB-P5 (被覆完全性):
+  expand は全ての定義済みターゲットに到達可能
+  unreachable = []
+```
+
+### 4.7 ダイヤモンド7結晶モデル
+
+```
+Reiの最終的な情報構造:
+
+        ◇ B.自然科学
+       / \
+  ◇ H   ◇ C.情報工学
+  言語学  |
+  |    ◇ Core(0₀) ← 不動点（ダイヤモンドの核）
+  ◇ G   ◇ D.人文科学
+  経済学  |
+       \ /
+        ◇ E.芸術
+         |
+        ◇ F.音楽
+
+7つのダイヤモンド結晶（7ドメイン）が Core(0₀) を取り囲む。
+各結晶はドメイン固有の最大密度表現を持つ。
+結晶間は 36方向ブリッジ + Meta-Bridge で完全接続。
+
+比喩: 「ダイヤモンド7個に地球の情報が入る」
+  = 7ドメインの最大密度表現に、全計算可能知が保持される
+  = 各ドメインがゼタバイト級の意味を4公理に折り畳む
 ```
 
 ---
@@ -839,11 +1056,14 @@ Phase 7d: emergence             目標 +80 テスト
   ├── Emergence Metrics
   └── Ecosystem API
 
-Phase 7e: alternate-systems     目標 +150 テスト
-  ├── 4 代替Genesis公理系
-  ├── 4 代替σ体系
-  ├── 4 代替計算パラダイム
-  └── Meta-Bridge Layer（10ブリッジペア）
+Phase 7e: meta-bridge + dual-limit   目標 +150 テスト
+  ├── 圧縮関手 compress（μ極限方向）
+  ├── 展開関手 expand（M極限方向）
+  ├── 密度メトリクス DensityMetric
+  ├── 被覆メトリクス CoverageMetric
+  ├── 双対性定理 DT-1〜DT-4 の検証
+  ├── 10ブリッジペア（コア経由 compress→expand）
+  └── ダイヤモンド7結晶モデル統合
 ```
 
 ### 5.2 テスト目標
@@ -871,7 +1091,7 @@ Phase 7 合計追加:        +530 テスト
 
 ---
 
-## 6. 二諦説との対応
+## 6. 二諦説との対応 + 双極限
 
 ```
 世俗諦（Conventional Truth）        勝義諦（Ultimate Truth）
@@ -881,9 +1101,20 @@ Core Genesis: 段階的創発             代替Genesis: 多様な創発
 σ-deep: 6固定属性                   σ-fluid: 流動属性
 中心-周縁: 固定パターン              共鳴-干渉: 波動パターン
 
+ミクロ極限 (μ-limit)                マクロ極限 (M-limit)
+─────────────────                  ─────────────────
+compress: 全てを4公理に還元          expand: 4公理から全てを導出
+密度最大: ダイヤモンドの結晶          被覆最大: 宇宙の全域
+不可約: 一記号も削れない              完全: 到達不能な対象がない
+
 両方とも「正しい」。
 見ている層が違うだけ。
 Reiは両方を同時に扱える。
+
+双極限の統合:
+  compress ∘ expand = identity  （往復で何も失われない）
+  μ-limit ⟺ M-limit           （一方の達成は他方の達成を含意する）
+  0₀ = 不動点 = 種 = 核         （ミクロとマクロの交差点）
 ```
 
 ---
@@ -895,14 +1126,23 @@ Reiは両方を同時に扱える。
 | オートポイエーシス | 自己生成・自己維持する系。マトゥラーナ/ヴァレラの概念 |
 | 創発 | 個々の要素にはない性質が、集合として出現すること |
 | σ-deep | Reiの6属性メタデータシステム |
-| Meta-Bridge | 異なる公理体系間の変換層 |
+| Meta-Bridge | 異なる公理体系間の圧縮-展開経路 |
 | Birth Axiom | 値の自己生成条件を定める公理 |
 | Colony | 自律的な値の集合 |
 | Ecosystem | 複数のColonyを含む最上位コンテナ |
+| μ極限 (ミクロ極限) | これ以上圧縮できない最小表現。ダイヤモンド密度 |
+| M極限 (マクロ極限) | これ以上展開できない最大被覆。宇宙被覆 |
+| 圧縮関手 (compress) | 任意の体系表現をコア4公理の最小表現に折り畳む操作 |
+| 展開関手 (expand) | コア4公理から任意の体系・ドメイン・σへ展開する操作 |
+| 密度メトリクス | 表現の情報密度を測定する尺度 (information/size) |
+| 被覆メトリクス | 表現空間の到達可能範囲を測定する尺度 |
+| 双対性定理 | compress ∘ expand = id の成立を主張する中心定理 |
+| 不動点 (0₀) | 圧縮と展開の両方の不動点。ミクロとマクロの交差点 |
+| ダイヤモンド7結晶 | 7ドメインがCore(0₀)を囲む最終的な情報構造モデル |
 
 ---
 
-Document ID: REI-PHASE7-DESIGN-v1.0
-Status: Draft
+Document ID: REI-PHASE7-DESIGN-v1.1
+Status: Draft (Section 4 updated: Dual-Limit Principle)
 Classification: Public (theory/ directory)
 Copyright 2024-2026 Nobuki Fujimoto (藤本伸樹)
