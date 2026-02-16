@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei 0₀式 — 因陀羅網・時の無限関係性デモ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;400;600&family=JetBrains+Mono:wght@300;400&display=swap');
+
+:root {
+  --void: #05050f;
+  --deep: #0a0a1a;
+  --jewel-gold: #c9a84c;
+  --jewel-glow: #f4d03f;
+  --thread-silver: rgba(184, 178, 168, 0.15);
+  --thread-active: rgba(201, 168, 76, 0.6);
+  --resonance: #e056a0;
+  --hologram-cyan: #56c8d8;
+  --zero-orange: #e8724a;
+  --text-primary: #d8d4ce;
+  --text-dim: #6a665e;
+  --ibushi: #a09888;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--void);
+  color: var(--text-primary);
+  font-family: 'Noto Serif JP', serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.header {
+  text-align: center;
+  padding: 1.8rem 2rem 0.8rem;
+  position: relative;
+  z-index: 10;
+}
+
+.header h1 {
+  font-weight: 200;
+  font-size: 1.3rem;
+  letter-spacing: 0.4em;
+  color: var(--ibushi);
+}
+
+.header h1 .zero { color: var(--zero-orange); font-weight: 600; }
+.header h1 .jewel { color: var(--jewel-gold); }
+
+.header .subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  margin-top: 0.3rem;
+}
+
+.header .verse {
+  font-size: 0.75rem;
+  color: var(--ibushi);
+  font-style: italic;
+  margin-top: 0.6rem;
+  opacity: 0.7;
+}
+
+/* === Canvas === */
+.cosmos {
+  position: relative;
+  width: 100%;
+  height: 480px;
+}
+
+canvas#net {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* === Controls === */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  padding: 1rem 2rem;
+  position: relative;
+  z-index: 10;
+}
+
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  background: rgba(10, 10, 26, 0.7);
+  color: var(--ibushi);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.3s;
+  backdrop-filter: blur(4px);
+}
+
+.btn:hover {
+  border-color: var(--jewel-gold);
+  color: var(--jewel-gold);
+  box-shadow: 0 0 15px rgba(201, 168, 76, 0.1);
+}
+
+.input-group {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.input-group input {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  background: rgba(10, 10, 26, 0.8);
+  color: var(--text-primary);
+  width: 180px;
+  outline: none;
+}
+
+.input-group input:focus {
+  border-color: var(--jewel-gold);
+}
+
+/* === Dashboard === */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1px;
+  margin: 0 2rem 1rem;
+  background: rgba(201, 168, 76, 0.08);
+  border: 1px solid rgba(201, 168, 76, 0.08);
+}
+
+.panel {
+  background: rgba(10, 10, 26, 0.85);
+  padding: 1rem;
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.3rem;
+}
+
+.metric-label { font-size: 0.68rem; color: var(--text-dim); }
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--jewel-gold);
+}
+.metric-value.cyan { color: var(--hologram-cyan); }
+.metric-value.rose { color: var(--resonance); }
+
+/* === Hologram Display === */
+.hologram-display {
+  margin: 0 2rem 1rem;
+  border: 1px solid rgba(86, 200, 216, 0.1);
+  background: rgba(10, 10, 26, 0.7);
+  padding: 1rem;
+  display: none;
+}
+
+.hologram-display.visible { display: block; }
+
+.hologram-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--hologram-cyan);
+  letter-spacing: 0.15em;
+  margin-bottom: 0.6rem;
+}
+
+.hologram-bar {
+  height: 6px;
+  background: rgba(86, 200, 216, 0.1);
+  margin-bottom: 0.8rem;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hologram-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--hologram-cyan), var(--jewel-gold));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.hologram-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* === Log === */
+.log-container {
+  margin: 0 2rem 2rem;
+  border: 1px solid rgba(201, 168, 76, 0.08);
+  background: rgba(10, 10, 26, 0.6);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.log-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  padding: 0.7rem 1rem 0.3rem;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  background: rgba(10, 10, 26, 0.95);
+}
+
+.log-entry {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.2rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.02);
+  color: var(--text-dim);
+}
+
+.log-entry.jewel { color: var(--jewel-gold); }
+.log-entry.resonance { color: var(--resonance); }
+.log-entry.hologram { color: var(--hologram-cyan); }
+.log-entry.zero { color: var(--zero-orange); }
+
+.footer {
+  text-align: center;
+  padding: 0.8rem 2rem 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.3); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Rei <span class="zero">0₀式</span> — <span class="jewel">因陀羅網</span></h1>
+  <div class="subtitle">Indra's Net · Temporal Infinity · 一即一切</div>
+  <div class="verse">各瞬間が無限の関係性を内包している</div>
+</div>
+
+<div class="cosmos">
+  <canvas id="net"></canvas>
+</div>
+
+<div class="controls">
+  <div class="input-group">
+    <input type="text" id="contentInput" placeholder="瞬間の内容を入力..." />
+    <button class="btn" onclick="addMoment()">刹那を紡ぐ</button>
+  </div>
+  <button class="btn" onclick="addRandomMoments(5)">五刹那を織る</button>
+  <button class="btn" onclick="weaveNidanas()">十二因縁</button>
+  <button class="btn" onclick="showEkaSarva()">一即一切</button>
+  <button class="btn" onclick="showHologram()">ホログラム</button>
+  <button class="btn" onclick="showZeroProjection()">0₀ 射影</button>
+  <button class="btn" onclick="detectResonances()">共鳴検出</button>
+  <button class="btn" onclick="resetNet()">リセット</button>
+</div>
+
+<div class="dashboard">
+  <div class="panel">
+    <div class="panel-title">因陀羅網 / Indra's Net</div>
+    <div class="metric"><span class="metric-label">刹那数</span><span class="metric-value" id="ksanaCount">0</span></div>
+    <div class="metric"><span class="metric-label">関係数</span><span class="metric-value" id="relationCount">0</span></div>
+    <div class="metric"><span class="metric-label">深度</span><span class="metric-value" id="depth">0</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">情報量 / Information</div>
+    <div class="metric"><span class="metric-label">エントロピー</span><span class="metric-value cyan" id="entropy">0</span></div>
+    <div class="metric"><span class="metric-label">共鳴数</span><span class="metric-value rose" id="resonanceCount">0</span></div>
+    <div class="metric"><span class="metric-label">忠実度</span><span class="metric-value cyan" id="fidelity">—</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">思想的対応 / Philosophical Map</div>
+    <div class="metric"><span class="metric-label">因陀羅網</span><span class="metric-value">相互射影</span></div>
+    <div class="metric"><span class="metric-label">刹那滅</span><span class="metric-value">生滅の連鎖</span></div>
+    <div class="metric"><span class="metric-label">一即一切</span><span class="metric-value">一点→全体</span></div>
+    <div class="metric"><span class="metric-label">0₀</span><span class="metric-value">自己参照的無限</span></div>
+  </div>
+</div>
+
+<div class="hologram-display" id="hologramDisplay">
+  <div class="hologram-title">HOLOGRAPHIC IMAGE</div>
+  <div class="hologram-bar"><div class="hologram-bar-fill" id="holoBar" style="width:0%"></div></div>
+  <div class="hologram-text" id="holoText"></div>
+</div>
+
+<div class="log-container">
+  <div class="log-header">事象記録 / Event Log</div>
+  <div id="log"></div>
+</div>
+
+<div class="footer">
+  Rei 0₀式 · D-FUMT · 華厳経 因陀羅網 · ホログラフィック原理 · 刹那滅<br>
+  一即一切、一切即一 — 各瞬間に無限が宿る
+</div>
+
+<script>
+// ================================================================
+// Indra's Net — Computational Model
+// ================================================================
+
+class IndraNet {
+  constructor() {
+    this.nodes = new Map();
+    this.relationCount = 0;
+  }
+
+  addJewel(content) {
+    const id = `k-${this.nodes.size}`;
+    const existingIds = Array.from(this.nodes.keys());
+    const timestamp = Date.now() + this.nodes.size; // ensure unique
+
+    const ksana = {
+      id, content, timestamp,
+      depth: existingIds.length
+    };
+
+    const reflections = new Map();
+    for (const eid of existingIds) {
+      reflections.set(eid, () => this.nodes.get(eid));
+      this.relationCount++;
+      this.nodes.get(eid).reflections.set(id, () => this.nodes.get(id));
+      this.relationCount++;
+    }
+
+    this.nodes.set(id, { ksana, reflections });
+    return ksana;
+  }
+
+  getProjections(id) {
+    const node = this.nodes.get(id);
+    if (!node) return [];
+    const projections = [];
+    for (const [tid, getTarget] of node.reflections) {
+      const target = getTarget();
+      const dist = Math.abs(node.ksana.timestamp - target.ksana.timestamp) / 1000 + 1;
+      const intensity = 1.0 / (1.0 + dist * 0.1);
+      projections.push({ sourceId: id, targetId: tid, intensity, targetContent: target.ksana.content });
+    }
+    return projections;
+  }
+
+  getHologram(id) {
+    const node = this.nodes.get(id);
+    if (!node) return null;
+    const connected = node.reflections.size;
+    const total = this.nodes.size - 1;
+    const fidelity = total > 0 ? connected / total : 1;
+
+    const types = new Set();
+    for (const [, getN] of node.reflections) {
+      types.add(typeof getN().ksana.content);
+    }
+
+    return {
+      fidelity,
+      connected,
+      total: this.nodes.size,
+      entropy: Math.log2(types.size + 1) * connected,
+      types: Array.from(types)
+    };
+  }
+
+  ekaSarva(startId, maxDepth = Infinity) {
+    const visited = new Set();
+    const explore = (id, d) => {
+      if (visited.has(id) || d > maxDepth) return;
+      visited.add(id);
+      const node = this.nodes.get(id);
+      if (!node) return;
+      for (const [tid] of node.reflections) explore(tid, d + 1);
+    };
+    explore(startId, 0);
+    return { recovered: visited.size, total: this.nodes.size, coverage: this.nodes.size > 0 ? visited.size / this.nodes.size : 0 };
+  }
+
+  findResonances(threshold = 0.4) {
+    const results = [];
+    const ids = Array.from(this.nodes.keys());
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = this.nodes.get(ids[i]).ksana.content;
+        const b = this.nodes.get(ids[j]).ksana.content;
+        const sa = JSON.stringify(a), sb = JSON.stringify(b);
+        let score = typeof a === typeof b ? 0.3 : 0;
+        const setA = new Set(sa), setB = new Set(sb);
+        const inter = [...setA].filter(x => setB.has(x)).length;
+        const union = new Set([...setA, ...setB]).size;
+        score += 0.7 * (inter / union);
+        if (score >= threshold) results.push({ a: ids[i], b: ids[j], strength: score });
+      }
+    }
+    return results;
+  }
+
+  zeroProjection() {
+    const all = [];
+    for (const [, node] of this.nodes) {
+      all.push({ id: node.ksana.id, content: node.ksana.content, depth: node.ksana.depth });
+    }
+    return { type: '0₀', contains: all.length, data: all };
+  }
+}
+
+// ================================================================
+// Visualization State
+// ================================================================
+let net = new IndraNet();
+let jewels = [];          // { id, x, y, vx, vy, content, radius, hue, pulse }
+let threads = [];         // { from, to, alpha }
+let resonanceLines = [];  // { from, to, strength, life }
+let selectedId = null;
+let ekaSarvaActive = false;
+let ekaSarvaSet = new Set();
+let animFrame = 0;
+
+const canvas = document.getElementById('net');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const W = () => canvas.offsetWidth;
+const H = () => canvas.offsetHeight;
+
+// ================================================================
+// Add Moments
+// ================================================================
+function addMoment(content) {
+  if (!content) {
+    content = document.getElementById('contentInput').value || `刹那-${jewels.length}`;
+    document.getElementById('contentInput').value = '';
+  }
+
+  const ksana = net.addJewel(content);
+
+  // Position: spiral layout
+  const angle = jewels.length * 0.8 + Math.random() * 0.5;
+  const radius = 60 + jewels.length * 12 + Math.random() * 30;
+  const x = W() / 2 + Math.cos(angle) * Math.min(radius, W() * 0.38);
+  const y = H() / 2 + Math.sin(angle) * Math.min(radius, H() * 0.38);
+  const hue = (jewels.length * 37 + 40) % 360;
+
+  const jewel = { id: ksana.id, x, y, vx: 0, vy: 0, content, radius: 6, hue, pulse: 1.0, targetX: x, targetY: y };
+  jewels.push(jewel);
+
+  // Threads to all existing jewels
+  for (const other of jewels) {
+    if (other.id !== ksana.id) {
+      threads.push({ from: ksana.id, to: other.id, alpha: 0.5 });
+    }
+  }
+
+  addLog('jewel', `宝珠追加: "${content}" [深度${ksana.depth}]`);
+  updateDashboard();
+}
+
+function addRandomMoments(n) {
+  const words = ['光', '影', '水', '風', '火', '地', '空', '時', '夢', '音', '色', '形', '心', '魂', '道', '花', '月', '星', '雲', '波'];
+  for (let i = 0; i < n; i++) {
+    const w = words[Math.floor(Math.random() * words.length)];
+    setTimeout(() => addMoment(w + '-' + Date.now().toString(36).slice(-3)), i * 200);
+  }
+}
+
+function weaveNidanas() {
+  const nidanas = ['無明', '行', '識', '名色', '六処', '触', '受', '愛', '取', '有', '生', '老死'];
+  nidanas.forEach((n, i) => setTimeout(() => addMoment(n), i * 300));
+  addLog('jewel', '十二因縁を織り始める...');
+}
+
+// ================================================================
+// Interactions
+// ================================================================
+function showEkaSarva() {
+  if (jewels.length === 0) return;
+  const id = selectedId || jewels[0].id;
+  const result = net.ekaSarva(id);
+  ekaSarvaActive = true;
+  ekaSarvaSet = new Set();
+  // Animate: reveal nodes one by one
+  const ids = Array.from(net.nodes.keys());
+  ids.forEach((nid, i) => {
+    setTimeout(() => ekaSarvaSet.add(nid), i * 100);
+  });
+  addLog('zero', `一即一切: "${id}" から全体を復元 — 被覆率 ${(result.coverage * 100).toFixed(0)}%`);
+  setTimeout(() => { ekaSarvaActive = false; }, ids.length * 100 + 2000);
+}
+
+function showHologram() {
+  if (jewels.length === 0) return;
+  const id = selectedId || jewels[jewels.length - 1].id;
+  const h = net.getHologram(id);
+  if (!h) return;
+
+  const display = document.getElementById('hologramDisplay');
+  display.classList.add('visible');
+  document.getElementById('holoBar').style.width = (h.fidelity * 100) + '%';
+  document.getElementById('holoText').textContent =
+    `視点: ${id}\n接続: ${h.connected} / ${h.total} 刹那\n忠実度: ${(h.fidelity * 100).toFixed(1)}%\nエントロピー: ${h.entropy.toFixed(2)}\n型分布: ${h.types.join(', ')}\n\nこの一瞬が全体の ${(h.fidelity * 100).toFixed(0)}% を内包している`;
+
+  document.getElementById('fidelity').textContent = (h.fidelity * 100).toFixed(1) + '%';
+  addLog('hologram', `ホログラム: ${id} → 忠実度 ${(h.fidelity * 100).toFixed(1)}%`);
+}
+
+function showZeroProjection() {
+  if (jewels.length === 0) return;
+  const zp = net.zeroProjection();
+
+  // Visual: all jewels collapse to center then expand back
+  const cx = W() / 2, cy = H() / 2;
+  jewels.forEach(j => {
+    j.targetX = cx;
+    j.targetY = cy;
+  });
+
+  setTimeout(() => {
+    jewels.forEach(j => {
+      const angle = Math.random() * Math.PI * 2;
+      const r = 60 + Math.random() * Math.min(W(), H()) * 0.35;
+      j.targetX = cx + Math.cos(angle) * r;
+      j.targetY = cy + Math.sin(angle) * r;
+    });
+  }, 1500);
+
+  addLog('zero', `0₀ 射影: ${zp.contains} 刹那を一点に折り畳み → 展開`);
+}
+
+function detectResonances() {
+  const res = net.findResonances(0.4);
+  resonanceLines = res.map(r => ({ from: r.a, to: r.b, strength: r.strength, life: 1.0 }));
+  document.getElementById('resonanceCount').textContent = res.length;
+  addLog('resonance', `共鳴検出: ${res.length} 対の共鳴を発見`);
+}
+
+function resetNet() {
+  net = new IndraNet();
+  jewels = [];
+  threads = [];
+  resonanceLines = [];
+  selectedId = null;
+  ekaSarvaActive = false;
+  document.getElementById('hologramDisplay').classList.remove('visible');
+  document.getElementById('log').innerHTML = '';
+  addLog('jewel', '因陀羅網を初期化 — 新たな虚空');
+  updateDashboard();
+}
+
+// ================================================================
+// Canvas click → select jewel
+// ================================================================
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  selectedId = null;
+  for (const j of jewels) {
+    const dx = j.x - mx, dy = j.y - my;
+    if (dx * dx + dy * dy < 400) {
+      selectedId = j.id;
+      addLog('jewel', `選択: "${j.content}" [${j.id}]`);
+      break;
+    }
+  }
+});
+
+// ================================================================
+// Rendering
+// ================================================================
+function getJewelPos(id) {
+  const j = jewels.find(j => j.id === id);
+  return j ? { x: j.x, y: j.y } : null;
+}
+
+function render() {
+  animFrame++;
+  ctx.clearRect(0, 0, W(), H());
+
+  // Background: subtle radial gradient
+  const bg = ctx.createRadialGradient(W()/2, H()/2, 0, W()/2, H()/2, W() * 0.6);
+  bg.addColorStop(0, '#0d0b18');
+  bg.addColorStop(1, '#05050f');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W(), H());
+
+  // Physics: gentle drift toward targets
+  for (const j of jewels) {
+    j.x += (j.targetX - j.x) * 0.03;
+    j.y += (j.targetY - j.y) * 0.03;
+    // Gentle orbit
+    const cx = W() / 2, cy = H() / 2;
+    const dx = j.x - cx, dy = j.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const orbitSpeed = 0.0003;
+    j.x += -dy * orbitSpeed;
+    j.y += dx * orbitSpeed;
+    j.targetX += -dy * orbitSpeed;
+    j.targetY += dx * orbitSpeed;
+    // Pulse decay
+    if (j.pulse > 0) j.pulse *= 0.98;
+  }
+
+  // Draw threads (因陀羅網の糸)
+  for (const t of threads) {
+    const a = getJewelPos(t.from);
+    const b = getJewelPos(t.to);
+    if (!a || !b) continue;
+
+    let alpha = 0.04;
+    // Highlight if eka-sarva active
+    if (ekaSarvaActive && ekaSarvaSet.has(t.from) && ekaSarvaSet.has(t.to)) {
+      alpha = 0.3;
+    }
+    // Highlight selected
+    if (selectedId && (t.from === selectedId || t.to === selectedId)) {
+      alpha = 0.25;
+    }
+
+    ctx.strokeStyle = `rgba(201, 168, 76, ${alpha})`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // Draw resonance lines
+  for (let i = resonanceLines.length - 1; i >= 0; i--) {
+    const r = resonanceLines[i];
+    r.life -= 0.003;
+    if (r.life <= 0) { resonanceLines.splice(i, 1); continue; }
+
+    const a = getJewelPos(r.from);
+    const b = getJewelPos(r.to);
+    if (!a || !b) continue;
+
+    ctx.strokeStyle = `rgba(224, 86, 160, ${r.life * r.strength})`;
+    ctx.lineWidth = 1.5 * r.strength;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Draw jewels (宝珠)
+  for (const j of jewels) {
+    const isSelected = j.id === selectedId;
+    const isRevealed = ekaSarvaActive && ekaSarvaSet.has(j.id);
+
+    // Glow
+    const glowR = j.radius * (isSelected ? 6 : isRevealed ? 5 : 3);
+    const glow = ctx.createRadialGradient(j.x, j.y, 0, j.x, j.y, glowR);
+    const glowAlpha = isSelected ? 0.3 : isRevealed ? 0.25 : 0.08;
+    glow.addColorStop(0, `hsla(${j.hue}, 70%, 65%, ${glowAlpha})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(j.x, j.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jewel body
+    const r = j.radius + (isSelected ? 3 : 0) + j.pulse * 4;
+    const grad = ctx.createRadialGradient(j.x - r * 0.3, j.y - r * 0.3, 0, j.x, j.y, r);
+    grad.addColorStop(0, `hsla(${j.hue}, 60%, 75%, 0.95)`);
+    grad.addColorStop(1, `hsla(${j.hue}, 50%, 40%, 0.9)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(j.x, j.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Reflection shimmer (宝珠の中の映り)
+    if (isSelected || isRevealed) {
+      const shimmer = 0.5 + 0.3 * Math.sin(animFrame * 0.05 + j.hue);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${shimmer * 0.4})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(j.x, j.y, r * 1.3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Label
+    if (isSelected || jewels.length <= 20) {
+      ctx.fillStyle = isSelected ? '#fff' : `rgba(200, 196, 188, 0.7)`;
+      ctx.font = `${isSelected ? 11 : 9}px 'Noto Serif JP'`;
+      ctx.textAlign = 'center';
+      ctx.fillText(String(j.content).slice(0, 8), j.x, j.y + r + 14);
+    }
+  }
+
+  // Center: 0₀ symbol
+  const centerAlpha = 0.15 + 0.08 * Math.sin(animFrame * 0.02);
+  ctx.fillStyle = `rgba(232, 114, 74, ${centerAlpha})`;
+  ctx.font = "22px 'Noto Serif JP'";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('0₀', W() / 2, H() / 2);
+
+  requestAnimationFrame(render);
+}
+
+render();
+
+// ================================================================
+// Dashboard
+// ================================================================
+function updateDashboard() {
+  document.getElementById('ksanaCount').textContent = net.nodes.size;
+  document.getElementById('relationCount').textContent = net.relationCount;
+  document.getElementById('depth').textContent = net.nodes.size;
+
+  let totalEntropy = 0;
+  for (const [id] of net.nodes) {
+    const h = net.getHologram(id);
+    if (h) totalEntropy += h.entropy;
+  }
+  document.getElementById('entropy').textContent = totalEntropy.toFixed(1);
+}
+
+// ================================================================
+// Log
+// ================================================================
+function addLog(type, message) {
+  const log = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  const time = new Date().toLocaleTimeString('ja-JP');
+  entry.textContent = `[${time}] ${message}`;
+  log.insertBefore(entry, log.firstChild);
+  while (log.children.length > 80) log.removeChild(log.lastChild);
+}
+
+// Enter key
+document.getElementById('contentInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addMoment();
+});
+
+addLog('jewel', '因陀羅網 — 虚空に最初の宝珠を待つ');
+</script>
+
+</body>
+</html>
