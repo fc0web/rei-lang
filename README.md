@@ -238,6 +238,18 @@ Rei demonstrates **average 74% code reduction** vs conventional approaches:
 
 The fundamental advantage: **center-neighbor pattern as a language primitive**.
 
+## Theory Documents
+
+| Document | Description |
+|----------|-------------|
+| [REI-MINIMAL-AXIOMS.md](theory/REI-MINIMAL-AXIOMS.md) | 4 irreducible axioms: A1–A4 |
+| [AXIOM-INDEPENDENCE.md](theory/AXIOM-INDEPENDENCE.md) | Independence proof sketch |
+| [AXIOM-DERIVATIONS.md](theory/AXIOM-DERIVATIONS.md) | 15 theorems derived from A1–A4 |
+| [ALTERNATE-GENESIS-DERIVATIONS.md](theory/ALTERNATE-GENESIS-DERIVATIONS.md) | 4 alternate genesis systems derived from A1–A4 |
+| [SELF-AWARE-REDEFINITION.md](theory/SELF-AWARE-REDEFINITION.md) | Self-Aware Value as σ-annotated pair (V, Σ) |
+| [TEST-AXIOM-MAP.md](theory/TEST-AXIOM-MAP.md) | 1,689 tests classified by axiom dependency |
+| [PHASE7-DESIGN.md](theory/PHASE7-DESIGN.md) | Phase 7 design: autopoiesis + alternate systems |
+
 ## Author
 
 **Nobuki Fujimoto** (藤本伸樹)
