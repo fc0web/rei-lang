@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei 0₀式 — ブラックホール情報重力場デモ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #000000;
+  --singularity: #1a0a2e;
+  --horizon: #0d0d2b;
+  --hawking-glow: #ff6b35;
+  --hawking-cool: #4ecdc4;
+  --accretion-hot: #ff006e;
+  --accretion-warm: #fb5607;
+  --text-primary: #e8e6e3;
+  --text-dim: #8a8680;
+  --ibushi-silver: #b8b2a8;
+  --grid: rgba(78, 205, 196, 0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--void);
+  color: var(--text-primary);
+  font-family: 'Noto Serif JP', serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* === Header === */
+.header {
+  padding: 2rem 2rem 1rem;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
+.header h1 {
+  font-size: 1.4rem;
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  color: var(--ibushi-silver);
+  margin-bottom: 0.3rem;
+}
+
+.header h1 span {
+  color: var(--hawking-glow);
+  font-weight: 500;
+}
+
+.header .subtitle {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* === Main Canvas Area === */
+.cosmos {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+canvas#blackhole {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* === Controls === */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  justify-content: center;
+  padding: 0 2rem 1.5rem;
+  position: relative;
+  z-index: 10;
+}
+
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  background: rgba(26, 10, 46, 0.6);
+  color: var(--ibushi-silver);
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.btn:hover {
+  border-color: var(--hawking-glow);
+  color: var(--hawking-glow);
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.15);
+}
+
+.btn.active {
+  background: rgba(255, 107, 53, 0.15);
+  border-color: var(--hawking-glow);
+  color: var(--hawking-glow);
+}
+
+/* === Dashboard === */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1px;
+  margin: 0 2rem 1.5rem;
+  background: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.1);
+}
+
+.panel {
+  background: rgba(13, 13, 43, 0.8);
+  padding: 1.2rem;
+}
+
+.panel-title {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 0.8rem;
+  text-transform: uppercase;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.4rem;
+}
+
+.metric-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--hawking-cool);
+}
+
+.metric-value.hot {
+  color: var(--hawking-glow);
+}
+
+.metric-value.critical {
+  color: var(--accretion-hot);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* === Log === */
+.log-container {
+  margin: 0 2rem 2rem;
+  border: 1px solid rgba(78, 205, 196, 0.1);
+  background: rgba(13, 13, 43, 0.6);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.log-header {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0.8rem 1rem 0.4rem;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  background: rgba(13, 13, 43, 0.95);
+}
+
+.log-entry {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.25rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.03);
+  color: var(--text-dim);
+}
+
+.log-entry.absorb { color: var(--accretion-warm); }
+.log-entry.radiate { color: var(--hawking-cool); }
+.log-entry.event { color: var(--accretion-hot); }
+.log-entry.reborn { color: #a8e6cf; }
+
+/* === Nidana Mapping === */
+.nidana-strip {
+  margin: 0 2rem 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.nidana-node {
+  flex: 1;
+  min-width: 70px;
+  padding: 0.5rem 0.3rem;
+  text-align: center;
+  background: rgba(26, 10, 46, 0.5);
+  border: 1px solid rgba(78, 205, 196, 0.08);
+  transition: all 0.5s ease;
+}
+
+.nidana-node.active {
+  background: rgba(255, 107, 53, 0.12);
+  border-color: rgba(255, 107, 53, 0.4);
+}
+
+.nidana-node .pali {
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.nidana-node .kanji {
+  font-size: 0.85rem;
+  color: var(--ibushi-silver);
+  margin: 0.2rem 0;
+}
+
+.nidana-node .impl {
+  font-size: 0.5rem;
+  color: var(--hawking-cool);
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.7;
+}
+
+/* === Footer === */
+.footer {
+  text-align: center;
+  padding: 1rem 2rem 2rem;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: rgba(78, 205, 196, 0.3); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Rei <span>0₀式</span> — ブラックホール情報重力場</h1>
+  <div class="subtitle">Black Hole Information Gravity Field · Phase 8 Extension</div>
+</div>
+
+<div class="cosmos">
+  <canvas id="blackhole"></canvas>
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="feedQuanta()">情報量子を投入</button>
+  <button class="btn" onclick="feedBurst()">バースト投入 ×5</button>
+  <button class="btn" onclick="toggleRadiation()" id="btnRadiation">放射: ON</button>
+  <button class="btn" onclick="triggerLens()">重力レンズ</button>
+  <button class="btn" onclick="triggerMerger()">連星合体</button>
+  <button class="btn" onclick="resetBlackHole()">リセット</button>
+</div>
+
+<div class="dashboard">
+  <div class="panel">
+    <div class="panel-title">特異点状態 / Singularity</div>
+    <div class="metric"><span class="metric-label">質量 M</span><span class="metric-value" id="mass">10.000</span></div>
+    <div class="metric"><span class="metric-label">半径 r_s</span><span class="metric-value" id="radius">0.100</span></div>
+    <div class="metric"><span class="metric-label">温度 T_H</span><span class="metric-value hot" id="temp">0.100</span></div>
+    <div class="metric"><span class="metric-label">エントロピー S</span><span class="metric-value" id="entropy">0.126</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">情報収支 / Information Balance</div>
+    <div class="metric"><span class="metric-label">吸収量子</span><span class="metric-value" id="absorbed">0</span></div>
+    <div class="metric"><span class="metric-label">放射量子</span><span class="metric-value hot" id="radiated">0</span></div>
+    <div class="metric"><span class="metric-label">経過ステップ</span><span class="metric-value" id="age">0</span></div>
+    <div class="metric"><span class="metric-label">生存</span><span class="metric-value" id="alive">存在</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">0₀ 対応 / Extended Zero Mapping</div>
+    <div class="metric"><span class="metric-label">特異点 → 0₀</span><span class="metric-value">自己参照的原点</span></div>
+    <div class="metric"><span class="metric-label">地平面 → 境界</span><span class="metric-value">中心-周縁</span></div>
+    <div class="metric"><span class="metric-label">放射 → 変換</span><span class="metric-value">情報漏出</span></div>
+    <div class="metric"><span class="metric-label">蒸発 → 円環</span><span class="metric-value">老死→無明</span></div>
+  </div>
+</div>
+
+<!-- 十二因縁ストリップ -->
+<div class="nidana-strip" id="nidanaStrip"></div>
+
+<div class="log-container">
+  <div class="log-header">イベントログ / Event Log</div>
+  <div id="log"></div>
+</div>
+
+<div class="footer">
+  Rei 0₀式 · D-FUMT · Black Hole Information Gravity Field<br>
+  十二因縁の円環: simulateDeath → genesis void → 再生
+</div>
+
+<script>
+// ================================================================
+// Rei BlackHole — Computational Implementation
+// ================================================================
+
+const SCHWARZ_K = 0.01;
+const HAWKING_K = 1.0;
+const ENTROPY_K = Math.PI * 4;
+const RADIATION_BASE_PROB = 0.1;
+const MIN_MASS = 0.001;
+
+class BlackHole {
+  constructor(initialMass = 10) {
+    this.mass = initialMass;
+    this.absorbed = [];
+    this.radiationLog = [];
+    this.radiatedCount = 0;
+    this.age = 0;
+    this.alive = true;
+    this.singularity = { ref: 'self' };  // 0₀
+  }
+
+  absorb(quanta) {
+    if (!this.alive) return false;
+    this.absorbed.push(quanta);
+    this.mass += quanta.mass;
+    return true;
+  }
+
+  radiate() {
+    if (!this.alive || this.mass <= MIN_MASS) {
+      this.alive = false;
+      return null;
+    }
+    const temp = HAWKING_K / this.mass;
+    const prob = RADIATION_BASE_PROB * temp;
+    if (Math.random() < prob) {
+      const energy = Math.min(this.mass * 0.01, temp * 0.1);
+      this.mass -= energy;
+      this.radiatedCount++;
+      const r = { energy, wavelength: 1 / temp, id: this.radiatedCount };
+      this.radiationLog.push(r);
+      if (this.mass <= MIN_MASS) this.alive = false;
+      return r;
+    }
+    return null;
+  }
+
+  step() {
+    this.age++;
+    return this.radiate();
+  }
+
+  getState() {
+    const r = SCHWARZ_K * this.mass;
+    return {
+      mass: this.mass,
+      radius: r,
+      temperature: this.mass > 0 ? HAWKING_K / this.mass : Infinity,
+      entropy: ENTROPY_K * r * r,
+      absorbedCount: this.absorbed.length,
+      radiatedCount: this.radiatedCount,
+      age: this.age,
+      alive: this.alive
+    };
+  }
+
+  reincarnate() {
+    if (this.alive) return null;
+    const residual = this.radiationLog.reduce((s, r) => s + r.energy, 0) * 0.1;
+    if (residual > MIN_MASS) return new BlackHole(residual);
+    return null;
+  }
+}
+
+// ================================================================
+// State
+// ================================================================
+let bh = new BlackHole(10);
+let radiationOn = true;
+let particles = [];
+let accretionParticles = [];
+let lensActive = false;
+let lensTimer = 0;
+let mergerFlash = 0;
+let quantaIdCounter = 0;
+let currentNidana = 0;
+
+// ================================================================
+// Nidana Strip
+// ================================================================
+const nidanas = [
+  { pali: 'avijjā', kanji: '無明', impl: 'void' },
+  { pali: 'saṅkhāra', kanji: '行', impl: 'void→・' },
+  { pali: 'viññāṇa', kanji: '識', impl: '・→0₀' },
+  { pali: 'nāmarūpa', kanji: '名色', impl: '0₀→0' },
+  { pali: 'saḷāyatana', kanji: '六処', impl: '0→ℕ' },
+  { pali: 'phassa', kanji: '触', impl: 'periphery' },
+  { pali: 'vedanā', kanji: '受', impl: 'metabolism' },
+  { pali: 'taṇhā', kanji: '愛', impl: 'adapt' },
+  { pali: 'upādāna', kanji: '取', impl: 'starve' },
+  { pali: 'bhava', kanji: '有', impl: 'autopoietic' },
+  { pali: 'jāti', kanji: '生', impl: 'generation' },
+  { pali: 'jarāmaraṇa', kanji: '老死', impl: 'death' }
+];
+
+function buildNidanaStrip() {
+  const strip = document.getElementById('nidanaStrip');
+  strip.innerHTML = nidanas.map((n, i) =>
+    `<div class="nidana-node" id="nidana-${i}">
+      <div class="pali">${n.pali}</div>
+      <div class="kanji">${n.kanji}</div>
+      <div class="impl">${n.impl}</div>
+    </div>`
+  ).join('');
+}
+buildNidanaStrip();
+
+function advanceNidana() {
+  document.querySelectorAll('.nidana-node').forEach(n => n.classList.remove('active'));
+  document.getElementById(`nidana-${currentNidana}`).classList.add('active');
+  currentNidana = (currentNidana + 1) % 12;
+}
+
+// ================================================================
+// Canvas Rendering
+// ================================================================
+const canvas = document.getElementById('blackhole');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const W = () => canvas.offsetWidth;
+const H = () => canvas.offsetHeight;
+const CX = () => W() / 2;
+const CY = () => H() / 2;
+
+// Accretion disk particle
+function spawnAccretion() {
+  const angle = Math.random() * Math.PI * 2;
+  const state = bh.getState();
+  const baseR = Math.max(30, Math.min(120, state.mass * 3));
+  const r = baseR + Math.random() * 80;
+  accretionParticles.push({
+    angle, r,
+    speed: (0.005 + Math.random() * 0.015) * (80 / r),
+    life: 1,
+    decay: 0.001 + Math.random() * 0.002,
+    size: 1 + Math.random() * 2
+  });
+}
+
+// Hawking radiation particle
+function spawnHawking(energy) {
+  const angle = Math.random() * Math.PI * 2;
+  particles.push({
+    x: CX(), y: CY(),
+    vx: Math.cos(angle) * (1 + energy * 5),
+    vy: Math.sin(angle) * (1 + energy * 5),
+    life: 1,
+    decay: 0.008 + Math.random() * 0.01,
+    size: 2 + energy * 10,
+    color: Math.random() > 0.5 ? '#4ecdc4' : '#ff6b35'
+  });
+}
+
+// Gravitational lensing grid
+function drawLensGrid(t) {
+  if (!lensActive) return;
+  const cx = CX(), cy = CY();
+  const intensity = Math.sin(lensTimer * 0.05) * 0.5 + 0.5;
+  ctx.strokeStyle = `rgba(78, 205, 196, ${0.15 * intensity})`;
+  ctx.lineWidth = 0.5;
+
+  const spacing = 30;
+  for (let x = 0; x < W(); x += spacing) {
+    ctx.beginPath();
+    for (let y = 0; y < H(); y += 3) {
+      const dx = x - cx, dy = y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = (bh.getState().mass * 800) / (dist * dist);
+      const offsetX = (dx / dist) * force;
+      const offsetY = (dy / dist) * force;
+      if (y === 0) ctx.moveTo(x - offsetX, y - offsetY);
+      else ctx.lineTo(x - offsetX, y - offsetY);
+    }
+    ctx.stroke();
+  }
+  for (let y = 0; y < H(); y += spacing) {
+    ctx.beginPath();
+    for (let x = 0; x < W(); x += 3) {
+      const dx = x - cx, dy = y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = (bh.getState().mass * 800) / (dist * dist);
+      const offsetX = (dx / dist) * force;
+      const offsetY = (dy / dist) * force;
+      if (x === 0) ctx.moveTo(x - offsetX, y - offsetY);
+      else ctx.lineTo(x - offsetX, y - offsetY);
+    }
+    ctx.stroke();
+  }
+}
+
+// Main black hole rendering
+function drawBlackHole(t) {
+  const cx = CX(), cy = CY();
+  const state = bh.getState();
+  const visualRadius = Math.max(15, Math.min(100, state.mass * 2.5));
+
+  // Photon sphere glow
+  const glowR = visualRadius * 2.5;
+  const glow = ctx.createRadialGradient(cx, cy, visualRadius, cx, cy, glowR);
+  glow.addColorStop(0, 'rgba(255, 107, 53, 0.08)');
+  glow.addColorStop(0.4, 'rgba(255, 0, 110, 0.04)');
+  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Accretion disk
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1, 0.3); // perspective
+  for (const p of accretionParticles) {
+    const x = Math.cos(p.angle) * p.r;
+    const y = Math.sin(p.angle) * p.r;
+    const alpha = p.life * 0.8;
+    const hue = 20 + (p.r - 50) * 0.5;
+    ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Event horizon (pure black)
+  const horizonGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, visualRadius);
+  horizonGrad.addColorStop(0, '#000000');
+  horizonGrad.addColorStop(0.85, '#000000');
+  horizonGrad.addColorStop(1, 'rgba(26, 10, 46, 0.8)');
+  ctx.fillStyle = horizonGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, visualRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Singularity symbol: 0₀
+  if (state.alive) {
+    ctx.fillStyle = `rgba(255, 107, 53, ${0.3 + 0.2 * Math.sin(t * 0.03)})`;
+    ctx.font = `${Math.max(10, visualRadius * 0.35)}px 'Noto Serif JP'`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('0₀', cx, cy);
+  }
+
+  // Photon ring
+  ctx.strokeStyle = `rgba(255, 107, 53, ${0.2 + 0.1 * Math.sin(t * 0.05)})`;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, visualRadius * 1.5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Merger flash
+  if (mergerFlash > 0) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${mergerFlash})`;
+    ctx.fillRect(0, 0, W(), H());
+    mergerFlash -= 0.02;
+  }
+}
+
+// Hawking radiation particles
+function drawParticles() {
+  for (const p of particles) {
+    ctx.fillStyle = p.color.replace(')', `, ${p.life})`).replace('rgb', 'rgba').replace('#', '');
+    // Simple hex to rgba
+    const alpha = p.life;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ================================================================
+// Simulation Loop
+// ================================================================
+let frame = 0;
+
+function simulate() {
+  frame++;
+
+  // Step BH
+  if (bh.alive && frame % 3 === 0) {
+    if (radiationOn) {
+      const r = bh.step();
+      if (r) {
+        spawnHawking(r.energy);
+        if (frame % 30 === 0) addLog('radiate', `放射 E=${r.energy.toFixed(4)} λ=${r.wavelength.toFixed(3)}`);
+      }
+    } else {
+      bh.age++;
+    }
+
+    // Nidana advance
+    if (frame % 60 === 0) advanceNidana();
+  }
+
+  // Check death & reincarnation
+  if (!bh.alive && frame % 120 === 0) {
+    const reborn = bh.reincarnate();
+    if (reborn) {
+      bh = reborn;
+      addLog('reborn', `円環再生 — 老死→無明 新質量=${bh.mass.toFixed(4)}`);
+      currentNidana = 0;
+      advanceNidana();
+    }
+  }
+
+  // Spawn accretion particles
+  if (bh.alive && frame % 2 === 0) {
+    spawnAccretion();
+  }
+
+  // Update particles
+  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= p.decay; });
+  particles = particles.filter(p => p.life > 0);
+
+  accretionParticles.forEach(p => { p.angle += p.speed; p.life -= p.decay; });
+  accretionParticles = accretionParticles.filter(p => p.life > 0);
+
+  // Lens timer
+  if (lensActive) {
+    lensTimer++;
+    if (lensTimer > 200) { lensActive = false; lensTimer = 0; }
+  }
+
+  // Update UI
+  updateDashboard();
+}
+
+function render() {
+  ctx.clearRect(0, 0, W(), H());
+
+  // Star field background
+  if (frame % 120 === 0 || !window._stars) {
+    window._stars = Array.from({ length: 80 }, () => ({
+      x: Math.random() * W(),
+      y: Math.random() * H(),
+      s: Math.random() * 1.5,
+      b: Math.random()
+    }));
+  }
+  for (const s of window._stars) {
+    const flicker = 0.3 + 0.7 * Math.sin(frame * 0.01 + s.b * 10);
+    ctx.fillStyle = `rgba(200, 200, 220, ${flicker * 0.4})`;
+    ctx.fillRect(s.x, s.y, s.s, s.s);
+  }
+
+  drawLensGrid(frame);
+  drawBlackHole(frame);
+  drawParticles();
+
+  simulate();
+  requestAnimationFrame(render);
+}
+
+render();
+
+// ================================================================
+// Dashboard
+// ================================================================
+function updateDashboard() {
+  const s = bh.getState();
+  document.getElementById('mass').textContent = s.mass.toFixed(3);
+  document.getElementById('radius').textContent = s.radius.toFixed(4);
+  document.getElementById('temp').textContent = s.temperature === Infinity ? '∞' : s.temperature.toFixed(4);
+  document.getElementById('entropy').textContent = s.entropy.toFixed(3);
+  document.getElementById('absorbed').textContent = s.absorbedCount;
+  document.getElementById('radiated').textContent = s.radiatedCount;
+  document.getElementById('age').textContent = s.age;
+
+  const aliveEl = document.getElementById('alive');
+  if (s.alive) {
+    aliveEl.textContent = '存在';
+    aliveEl.className = 'metric-value';
+  } else {
+    aliveEl.textContent = '蒸発';
+    aliveEl.className = 'metric-value critical';
+  }
+
+  // Color temperature by danger
+  const tempEl = document.getElementById('temp');
+  tempEl.className = s.temperature > 5 ? 'metric-value critical' : 'metric-value hot';
+}
+
+// ================================================================
+// Controls
+// ================================================================
+function feedQuanta() {
+  quantaIdCounter++;
+  const q = {
+    id: `q-${quantaIdCounter}`,
+    content: { type: 'information', data: Math.random() },
+    mass: 0.5 + Math.random() * 2,
+    timestamp: Date.now()
+  };
+  if (bh.absorb(q)) {
+    addLog('absorb', `吸収 id=${q.id} mass=${q.mass.toFixed(2)}`);
+    // Visual: spawn infall particles
+    for (let i = 0; i < 5; i++) spawnAccretion();
+    advanceNidana();
+  }
+}
+
+function feedBurst() {
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => feedQuanta(), i * 100);
+  }
+}
+
+function toggleRadiation() {
+  radiationOn = !radiationOn;
+  const btn = document.getElementById('btnRadiation');
+  btn.textContent = `放射: ${radiationOn ? 'ON' : 'OFF'}`;
+  btn.classList.toggle('active', radiationOn);
+}
+
+function triggerLens() {
+  lensActive = true;
+  lensTimer = 0;
+  addLog('event', '重力レンズ効果発動 — 時空格子の歪み可視化');
+}
+
+function triggerMerger() {
+  const bh2mass = 5 + Math.random() * 15;
+  const oldMass = bh.mass;
+  const gwLoss = (bh.mass + bh2mass) * 0.05;
+  bh.mass += bh2mass - gwLoss;
+  mergerFlash = 0.8;
+  addLog('event', `連星合体! +${bh2mass.toFixed(1)} - GW損失${gwLoss.toFixed(2)} → M=${bh.mass.toFixed(2)}`);
+  // Burst of accretion
+  for (let i = 0; i < 30; i++) spawnAccretion();
+  // Burst of radiation (GW)
+  for (let i = 0; i < 10; i++) spawnHawking(gwLoss * 0.05);
+}
+
+function resetBlackHole() {
+  bh = new BlackHole(10);
+  particles = [];
+  accretionParticles = [];
+  lensActive = false;
+  mergerFlash = 0;
+  currentNidana = 0;
+  document.getElementById('log').innerHTML = '';
+  addLog('event', 'リセット — 新たな特異点が形成された (0₀)');
+  advanceNidana();
+}
+
+// ================================================================
+// Log
+// ================================================================
+function addLog(type, message) {
+  const log = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  const time = new Date().toLocaleTimeString('ja-JP');
+  entry.textContent = `[${time}] ${message}`;
+  log.insertBefore(entry, log.firstChild);
+  // Keep max 100 entries
+  while (log.children.length > 100) log.removeChild(log.lastChild);
+}
+
+// Initial log
+addLog('event', '特異点形成 — 0₀ から情報重力場が生成された');
+advanceNidana();
+</script>
+
+</body>
+</html>
