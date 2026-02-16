@@ -182,7 +182,9 @@ import {
 import {
   quadNot, quadAnd, quadOr,
   createGenesis, genesisForward,
-} from './quad-genesis';
+  quadPiNegate, quadIsTruthy, quadIsPiRotated,
+  QuadOps,
+} from './quad-logic';
 
 // ── Phase 5: マルチドメイン拡張 ──
 import {
@@ -545,6 +547,9 @@ export class Evaluator {
       case "\xAC":
         if (this.isQuad(operand)) return { reiType: "Quad", value: quadNot(operand.value) };
         return !operand;
+      case "\xAC\u03C0":
+        if (this.isQuad(operand)) return { reiType: "Quad", value: quadPiNegate(operand.value) };
+        return operand;
       default: throw new Error(`未知の単項演算子: ${ast.op}`);
     }
   }

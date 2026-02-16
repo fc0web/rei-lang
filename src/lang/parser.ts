@@ -240,8 +240,12 @@ export class Parser {
     return left;
   }
 
-  // Level 7: unary ¬ -
+  // Level 7: unary ¬ ¬π -
   private parseUnary(): any {
+    if (this.match(TokenType.NOT_PI)) {
+      const operand = this.parseUnary();
+      return node("UnaryOp", { op: "\xAC\u03C0", operand });
+    }
     if (this.match(TokenType.NOT)) {
       const operand = this.parseUnary();
       return node("UnaryOp", { op: "\xAC", operand });

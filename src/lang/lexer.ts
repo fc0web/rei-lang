@@ -79,6 +79,7 @@ export const TokenType: Record<string, string> = {
   AND: "AND",
   OR: "OR",
   NOT: "NOT",
+  NOT_PI: "NOT_PI",
   GT_K: "GT_K",
   LT_K: "LT_K",
   EQ_K: "EQ_K",
@@ -309,6 +310,10 @@ export class Lexer {
     }
     if (ch === "\u22A5" && this.peek(1) === "\u03C0") {
       this.emit(TokenType.QUAD_BOT_PI, "\u22A5\u03C0");
+      this.advance(); this.advance(); return true;
+    }
+    if (ch === "\xAC" && this.peek(1) === "\u03C0") {
+      this.emit(TokenType.NOT_PI, "\xAC\u03C0");
       this.advance(); this.advance(); return true;
     }
     for (const [sym, type] of map) {

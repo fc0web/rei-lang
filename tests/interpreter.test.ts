@@ -504,6 +504,49 @@ describe('§12 Quad Logic (四価0π)', () => {
     const rhs: any = rei('(¬⊤) ∨ (¬⊥)');
     expect(lhs.value).toBe(rhs.value);
   });
+
+  // ── π回転否定 (¬π) — quad-logic統合 ──
+  it('¬π⊤ = ⊤π (pi-negate: 真偽保存、位相回転)', () => {
+    const r: any = rei('¬π⊤');
+    expect(r.reiType).toBe('Quad');
+    expect(r.value).toBe('topPi');
+  });
+
+  it('¬π⊥ = ⊥π (pi-negate)', () => {
+    const r: any = rei('¬π⊥');
+    expect(r.reiType).toBe('Quad');
+    expect(r.value).toBe('bottomPi');
+  });
+
+  it('¬π⊤π = ⊤ (二重π回転で復帰)', () => {
+    const r: any = rei('¬π⊤π');
+    expect(r.reiType).toBe('Quad');
+    expect(r.value).toBe('top');
+  });
+
+  it('¬π¬π⊤ = ⊤ (周期2)', () => {
+    const r: any = rei('¬π¬π⊤');
+    expect(r.value).toBe('top');
+  });
+
+  it('¬π vs ¬: 異なる結果', () => {
+    const piNeg: any = rei('¬π⊤');
+    const stdNeg: any = rei('¬⊤');
+    expect(piNeg.value).toBe('topPi');
+    expect(stdNeg.value).toBe('bottom');
+    expect(piNeg.value).not.toBe(stdNeg.value);
+  });
+
+  // ── π打ち消し AND ──
+  it('π打ち消しAND: ⊤π ∧ ⊤π = ⊤', () => {
+    const r: any = rei('⊤π ∧ ⊤π');
+    expect(r.value).toBe('top');
+  });
+
+  it('π伝播AND: ⊤ ∧ ⊤π = ⊤π', () => {
+    const r: any = rei('⊤ ∧ ⊤π');
+    expect(r.value).toBe('topPi');
+  });
 });
 
 // ============================================================
