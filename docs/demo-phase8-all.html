@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei (0₀式) — Phase 8: Life Computation Demo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&family=Source+Code+Pro:wght@400;600&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0c;
+  --surface: #111116;
+  --surface2: #1a1a22;
+  --border: #2a2a35;
+  --text: #c8c8d0;
+  --text-dim: #6a6a78;
+  --accent: #7eb8a0;
+  --accent2: #a07eb8;
+  --accent3: #b8a07e;
+  --accent4: #7e9ab8;
+  --accent5: #b87e8a;
+  --glow: rgba(126, 184, 160, 0.15);
+}
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+.header {
+  text-align: center;
+  padding: 60px 20px 40px;
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.header h1 { font-size: 1.6em; font-weight: 300; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 8px; }
+.header .sub { font-size: 0.85em; color: var(--text-dim); letter-spacing: 0.1em; }
+
+.tabs { display: flex; justify-content: center; gap: 4px; padding: 30px 10px 0; flex-wrap: wrap; }
+.tab {
+  padding: 10px 18px; font-size: 0.78em; font-family: 'Source Code Pro', monospace;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+  cursor: pointer; transition: all 0.3s ease; border-radius: 2px; letter-spacing: 0.05em;
+}
+.tab:hover { border-color: var(--accent); color: var(--text); }
+.tab.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 20px var(--glow); }
+
+.panel { display: none; max-width: 800px; margin: 0 auto; padding: 40px 20px; animation: fadeIn 0.5s ease; }
+.panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.panel h2 { font-size: 1.1em; font-weight: 400; color: var(--accent); margin-bottom: 6px; letter-spacing: 0.08em; }
+.panel .phase-tag { font-family: 'Source Code Pro', monospace; font-size: 0.72em; color: var(--text-dim); margin-bottom: 20px; }
+.panel p { font-size: 0.88em; color: var(--text); margin-bottom: 16px; font-weight: 300; }
+
+.controls { display: flex; gap: 10px; margin: 16px 0; flex-wrap: wrap; }
+.btn {
+  padding: 8px 20px; font-family: 'Source Code Pro', monospace; font-size: 0.75em;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  cursor: pointer; transition: all 0.25s ease; border-radius: 2px;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px var(--glow); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0; }
+.stat { background: var(--surface); border: 1px solid var(--border); padding: 14px; border-radius: 3px; text-align: center; transition: all 0.4s ease; }
+.stat.flash { border-color: var(--accent); box-shadow: 0 0 20px var(--glow); }
+.stat-value { font-family: 'Source Code Pro', monospace; font-size: 1.4em; color: var(--accent); font-weight: 600; transition: all 0.3s ease; }
+.stat-label { font-size: 0.7em; color: var(--text-dim); margin-top: 4px; letter-spacing: 0.05em; }
+
+/* ═══ 8a: Enhanced Life Entity ═══ */
+.entity-grid-wrapper {
+  position: relative; margin: 20px 0; padding: 24px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+}
+.entity-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; position: relative; z-index: 1; }
+.entity-cell {
+  aspect-ratio: 1; border-radius: 50%; position: relative;
+  background: var(--surface); border: 1px solid var(--border);
+  transition: background 0.6s ease, border 0.6s ease, box-shadow 0.6s ease;
+}
+
+/* Birth: big expanding pulse with glow */
+.entity-cell.alive {
+  animation: birthBoom 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes birthBoom {
+  0%   { transform: scale(0); opacity: 0; box-shadow: 0 0 0 0 rgba(126,184,160,0); }
+  15%  { transform: scale(1.8); opacity: 1; box-shadow: 0 0 50px 15px rgba(126,184,160,0.7); filter: brightness(2.5); }
+  35%  { transform: scale(0.7); box-shadow: 0 0 25px 8px rgba(126,184,160,0.4); filter: brightness(1.5); }
+  55%  { transform: scale(1.25); box-shadow: 0 0 35px 10px rgba(126,184,160,0.5); filter: brightness(1.8); }
+  75%  { transform: scale(0.95); filter: brightness(1.2); }
+  100% { transform: scale(1); box-shadow: 0 0 10px 3px rgba(126,184,160,0.2); filter: brightness(1); }
+}
+
+/* Stimulation: rapid flash + color shift */
+.entity-cell.stimulated {
+  animation: stimulateShock 1s ease-out;
+}
+@keyframes stimulateShock {
+  0%   { transform: scale(1); filter: brightness(1) hue-rotate(0deg); }
+  10%  { transform: scale(1.5); filter: brightness(3) hue-rotate(40deg); box-shadow: 0 0 40px 12px rgba(160,126,184,0.8); }
+  25%  { transform: scale(0.8); filter: brightness(2) hue-rotate(20deg); }
+  40%  { transform: scale(1.3); filter: brightness(2.5) hue-rotate(60deg); box-shadow: 0 0 30px 8px rgba(160,126,184,0.5); }
+  60%  { transform: scale(0.9); filter: brightness(1.5) hue-rotate(10deg); }
+  80%  { transform: scale(1.1); filter: brightness(1.2) hue-rotate(0deg); }
+  100% { transform: scale(1); filter: brightness(1) hue-rotate(0deg); box-shadow: 0 0 8px 2px rgba(126,184,160,0.2); }
+}
+
+/* Continuous breathing for alive entities */
+.entity-cell.breathing { animation: breathe 2.8s ease-in-out infinite; }
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 6px 1px rgba(126,184,160,0.15); transform: scale(1); }
+  50%      { box-shadow: 0 0 16px 5px rgba(126,184,160,0.4); transform: scale(1.06); }
+}
+
+/* Ripple rings expanding from birth */
+.ripple-ring {
+  position: absolute; border-radius: 50%;
+  border: 2px solid rgba(126,184,160,0.6);
+  pointer-events: none; z-index: 0; opacity: 0;
+  width: 10px; height: 10px;
+}
+.ripple-ring.go {
+  animation: rippleGrow 1.8s ease-out forwards;
+}
+@keyframes rippleGrow {
+  0%   { opacity: 0.8; width: 10px; height: 10px; margin-left: -5px; margin-top: -5px; }
+  100% { opacity: 0; width: 500px; height: 500px; margin-left: -250px; margin-top: -250px; }
+}
+.ripple-ring.purple { border-color: rgba(160,126,184,0.6); }
+
+/* Particles flying outward */
+.particle {
+  position: absolute; width: 5px; height: 5px; border-radius: 50%;
+  pointer-events: none; z-index: 2; opacity: 0;
+}
+.particle.fly { animation: particleFly 1.6s ease-out forwards; }
+@keyframes particleFly {
+  0%   { opacity: 1; transform: translate(0,0) scale(1.5); }
+  50%  { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
+}
+
+/* Grid flash on genesis */
+.entity-grid-wrapper.genesis-flash { animation: bgFlashGreen 1.2s ease-out; }
+@keyframes bgFlashGreen {
+  0%  { background: var(--surface); border-color: var(--border); }
+  15% { background: rgba(126,184,160,0.12); border-color: var(--accent); box-shadow: inset 0 0 60px rgba(126,184,160,0.1); }
+  100%{ background: var(--surface); border-color: var(--border); box-shadow: none; }
+}
+
+/* Grid flash on stimulate */
+.entity-grid-wrapper.stim-flash { animation: bgFlashPurple 1s ease-out; }
+@keyframes bgFlashPurple {
+  0%  { background: var(--surface); }
+  20% { background: rgba(160,126,184,0.12); border-color: var(--accent2); box-shadow: inset 0 0 60px rgba(160,126,184,0.1); }
+  100%{ background: var(--surface); border-color: var(--border); box-shadow: none; }
+}
+
+/* Status line */
+.genesis-status {
+  text-align: center; font-family: 'Source Code Pro', monospace;
+  font-size: 0.82em; color: var(--accent); margin: 12px 0; min-height: 1.5em;
+}
+.genesis-status.pop { animation: statusPop 0.5s ease-out; }
+@keyframes statusPop {
+  0%  { transform: scale(1); color: var(--accent); }
+  25% { transform: scale(1.12); color: #fff; text-shadow: 0 0 20px var(--accent); }
+  100%{ transform: scale(1); color: var(--accent); text-shadow: none; }
+}
+
+/* ═══ 8b: Metabolism ═══ */
+.metabolism-flow {
+  display: flex; align-items: center; gap: 8px; margin: 20px 0; padding: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+}
+.flow-stage {
+  flex: 1; text-align: center; padding: 12px 6px; border-radius: 3px;
+  font-size: 0.72em; font-family: 'Source Code Pro', monospace;
+  transition: all 0.4s ease; border: 1px solid transparent;
+}
+.flow-stage.on { transform: scale(1.08); box-shadow: 0 0 20px rgba(126,184,160,0.3); }
+.flow-arrow { color: var(--text-dim); font-size: 1.2em; flex-shrink: 0; transition: all 0.3s ease; }
+.flow-arrow.lit { color: var(--accent); transform: scale(1.4); }
+
+/* ═══ 8c: Genesis Ladder ═══ */
+.ladder { display: flex; flex-direction: column; gap: 6px; margin: 20px 0; }
+.ladder-step {
+  display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 3px;
+  transition: all 0.5s ease; font-size: 0.82em;
+}
+.ladder-step.done { animation: ladderDone 0.7s ease-out; }
+@keyframes ladderDone {
+  0%  { transform: translateX(0); }
+  25% { transform: translateX(10px); background: rgba(126,184,160,0.15); }
+  100%{ transform: translateX(0); }
+}
+.ladder-step .step-num { font-family: 'Source Code Pro', monospace; font-size: 0.8em; color: var(--text-dim); width: 24px; }
+.ladder-step .step-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.ladder-step .step-fill { height: 100%; border-radius: 2px; transition: width 1s ease; width: 0; }
+
+/* ═══ 8d: Colony ═══ */
+.colony-canvas {
+  position: relative; width: 100%; height: 320px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+}
+.colony-entity {
+  position: absolute; border-radius: 50%;
+  transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1); cursor: pointer;
+}
+.colony-entity:hover { transform: scale(1.4) !important; filter: brightness(1.5); }
+
+/* ═══ 8e: Metrics Ring ═══ */
+.metrics-ring { width: 200px; height: 200px; margin: 20px auto; position: relative; }
+.metrics-ring svg { width: 100%; height: 100%; }
+.metrics-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+.metrics-center .big { font-family: 'Source Code Pro', monospace; font-size: 2em; color: var(--accent); font-weight: 600; }
+.metrics-center .label { font-size: 0.7em; color: var(--text-dim); }
+
+/* Log */
+.log {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 3px;
+  padding: 12px 16px; max-height: 140px; overflow-y: auto;
+  font-family: 'Source Code Pro', monospace; font-size: 0.72em; color: var(--text-dim); margin-top: 16px;
+}
+.log-entry { padding: 2px 0; opacity: 0; animation: logIn 0.4s ease-out forwards; }
+@keyframes logIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+.log-entry .t { color: var(--accent); }
+
+.footer {
+  text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 0.72em;
+  border-top: 1px solid var(--border); margin-top: 40px;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Rei (0₀式) — Phase 8</h1>
+  <div class="sub">Life Computation ── 生命計算</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPanel(0)">8a 生命体</div>
+  <div class="tab" onclick="showPanel(1)">8b 代謝</div>
+  <div class="tab" onclick="showPanel(2)">8c Genesis</div>
+  <div class="tab" onclick="showPanel(3)">8d コロニー</div>
+  <div class="tab" onclick="showPanel(4)">8e メトリクス</div>
+</div>
+
+<!-- ═══ 8a: Life Entity ═══ -->
+<div class="panel active" id="p0">
+  <h2>生命エンティティ</h2>
+  <div class="phase-tag">Phase 8a — life-entity.ts / LAD v1.0 + v2.0</div>
+  <p>Reiの構造に「生きている」という属性を与えます。四公理（A1〜A4）から、生命の6条件を数学的に導出しました。</p>
+  <div class="stats" id="stats-8a">
+    <div class="stat"><div class="stat-value" id="s8a-energy">0</div><div class="stat-label">エネルギー</div></div>
+    <div class="stat"><div class="stat-value" id="s8a-integrity">0</div><div class="stat-label">構造的完全性</div></div>
+    <div class="stat"><div class="stat-value" id="s8a-response">0</div><div class="stat-label">応答性</div></div>
+    <div class="stat"><div class="stat-value" id="s8a-growth">0</div><div class="stat-label">成長度</div></div>
+    <div class="stat"><div class="stat-value" id="s8a-repro">0</div><div class="stat-label">再生産能</div></div>
+    <div class="stat"><div class="stat-value" id="s8a-adapt">0</div><div class="stat-label">適応性</div></div>
+  </div>
+  <div class="genesis-status" id="genesis-status">⬡ ボタンを押して生命を生成してください</div>
+  <div class="entity-grid-wrapper" id="grid-wrapper">
+    <div class="entity-grid" id="entity-grid"></div>
+  </div>
+  <div class="controls">
+    <button class="btn" onclick="spawnEntity()">✦ 生命を生成 (A4: Genesis)</button>
+    <button class="btn" onclick="stimulateEntity()">⚡ 刺激を与える</button>
+    <button class="btn" onclick="spawnBurst()">✦✦✦ 一斉生成 ×6</button>
+    <button class="btn" onclick="resetEntities()">リセット</button>
+  </div>
+  <div class="log" id="log-8a"></div>
+</div>
+
+<!-- ═══ 8b: Metabolism ═══ -->
+<div class="panel" id="p1">
+  <h2>代謝エンジン</h2>
+  <div class="phase-tag">Phase 8b — metabolism engine</div>
+  <p>構造がエネルギーを取り込み、変換し、排出するサイクル。生命の最も基本的な活動の計算モデルです。</p>
+  <div class="metabolism-flow">
+    <div class="flow-stage" id="m-intake"><div style="color:var(--accent)">取込</div><div>intake</div></div>
+    <div class="flow-arrow" id="ar0">→</div>
+    <div class="flow-stage" id="m-transform"><div style="color:var(--accent2)">変換</div><div>transform</div></div>
+    <div class="flow-arrow" id="ar1">→</div>
+    <div class="flow-stage" id="m-store"><div style="color:var(--accent3)">蓄積</div><div>store</div></div>
+    <div class="flow-arrow" id="ar2">→</div>
+    <div class="flow-stage" id="m-output"><div style="color:var(--accent4)">排出</div><div>output</div></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-value" id="s8b-input">0</div><div class="stat-label">入力エネルギー</div></div>
+    <div class="stat"><div class="stat-value" id="s8b-stored">0</div><div class="stat-label">蓄積量</div></div>
+    <div class="stat"><div class="stat-value" id="s8b-waste">0</div><div class="stat-label">排出量</div></div>
+    <div class="stat"><div class="stat-value" id="s8b-cycles">0</div><div class="stat-label">サイクル数</div></div>
+  </div>
+  <div class="controls">
+    <button class="btn" onclick="startMetabolism()">代謝開始</button>
+    <button class="btn" onclick="feedEnergy()">エネルギー供給</button>
+    <button class="btn" onclick="stopMetabolism()">停止</button>
+  </div>
+  <div class="log" id="log-8b"></div>
+</div>
+
+<!-- ═══ 8c: Genesis Ladder ═══ -->
+<div class="panel" id="p2">
+  <h2>Genesis Ladder</h2>
+  <div class="phase-tag">Phase 8c — genesis ladder / 生成の梯子</div>
+  <p>無から存在が立ち上がっていく過程を、段階的な「梯子」として表現します。各段は不可逆です。</p>
+  <div class="ladder" id="genesis-ladder">
+    <div class="ladder-step"><span class="step-num">L7</span><span>意志の発現 (Will Emergence)</span><div class="step-bar"><div class="step-fill" style="background:var(--accent5)"></div></div></div>
+    <div class="ladder-step"><span class="step-num">L6</span><span>関係の織成 (Relation Weaving)</span><div class="step-bar"><div class="step-fill" style="background:var(--accent4)"></div></div></div>
+    <div class="ladder-step"><span class="step-num">L5</span><span>層の積層 (Layer Stacking)</span><div class="step-bar"><div class="step-fill" style="background:var(--accent3)"></div></div></div>
+    <div class="ladder-step"><span class="step-num">L4</span><span>記憶の刻印 (Memory Imprint)</span><div class="step-bar"><div class="step-fill" style="background:var(--accent2)"></div></div></div>
+    <div class="ladder-step"><span class="step-num">L3</span><span>流れの開始 (Flow Initiation)</span><div class="step-bar"><div class="step-fill" style="background:var(--accent)"></div></div></div>
+    <div class="ladder-step"><span class="step-num">L2</span><span>場の確立 (Field Establishment)</span><div class="step-bar"><div class="step-fill" style="background:var(--accent)"></div></div></div>
+    <div class="ladder-step"><span class="step-num">L1</span><span>零からの発生 (Genesis from 0₀)</span><div class="step-bar"><div class="step-fill" style="background:var(--accent)"></div></div></div>
+  </div>
+  <div class="controls">
+    <button class="btn" onclick="startGenesis()">Genesis 開始</button>
+    <button class="btn" onclick="resetGenesis()">リセット</button>
+  </div>
+  <div class="log" id="log-8c"></div>
+</div>
+
+<!-- ═══ 8d: Colony ═══ -->
+<div class="panel" id="p3">
+  <h2>コロニー進化</h2>
+  <div class="phase-tag">Phase 8d — colony-life / 群れの創発</div>
+  <p>単体の生命エンティティが集まり、群れとして振る舞います。個体間の相互作用から創発的な現象が生まれます。</p>
+  <div class="colony-canvas" id="colony-canvas"></div>
+  <div class="stats">
+    <div class="stat"><div class="stat-value" id="s8d-pop">0</div><div class="stat-label">個体数</div></div>
+    <div class="stat"><div class="stat-value" id="s8d-gen">0</div><div class="stat-label">世代</div></div>
+    <div class="stat"><div class="stat-value" id="s8d-clusters">0</div><div class="stat-label">クラスター</div></div>
+    <div class="stat"><div class="stat-value" id="s8d-avg">0</div><div class="stat-label">平均生命度</div></div>
+  </div>
+  <div class="controls">
+    <button class="btn" onclick="addColonyEntities(5)">+5 個体追加</button>
+    <button class="btn" onclick="evolveColony()">進化ステップ</button>
+    <button class="btn" onclick="autoEvolve()">自動進化</button>
+    <button class="btn" onclick="resetColony()">リセット</button>
+  </div>
+  <div class="log" id="log-8d"></div>
+</div>
+
+<!-- ═══ 8e: Life Metrics ═══ -->
+<div class="panel" id="p4">
+  <h2>生命度メトリクス</h2>
+  <div class="phase-tag">Phase 8e — life-metrics / 6,120行・370テスト</div>
+  <p>「どれだけ生きているか」を数値化します。6つの生命条件を総合した生命度スコアを算出します。</p>
+  <div class="metrics-ring">
+    <svg viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="85" fill="none" stroke="var(--border)" stroke-width="6"/>
+      <circle cx="100" cy="100" r="85" fill="none" stroke="var(--accent)" stroke-width="6"
+        stroke-dasharray="534" stroke-dashoffset="534" stroke-linecap="round"
+        transform="rotate(-90 100 100)" id="metrics-arc"/>
+      <circle cx="100" cy="100" r="70" fill="none" stroke="var(--border)" stroke-width="3"/>
+      <circle cx="100" cy="100" r="70" fill="none" stroke="var(--accent2)" stroke-width="3"
+        stroke-dasharray="440" stroke-dashoffset="440" stroke-linecap="round"
+        transform="rotate(-90 100 100)" id="metrics-arc2"/>
+    </svg>
+    <div class="metrics-center">
+      <div class="big" id="life-score">0</div>
+      <div class="label">生命度</div>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-value" id="sm-energy">0</div><div class="stat-label">⚡ エネルギー</div></div>
+    <div class="stat"><div class="stat-value" id="sm-struct">0</div><div class="stat-label">🔧 構造</div></div>
+    <div class="stat"><div class="stat-value" id="sm-resp">0</div><div class="stat-label">📡 応答</div></div>
+    <div class="stat"><div class="stat-value" id="sm-grow">0</div><div class="stat-label">🌱 成長</div></div>
+    <div class="stat"><div class="stat-value" id="sm-repro">0</div><div class="stat-label">♻ 再生産</div></div>
+    <div class="stat"><div class="stat-value" id="sm-adapt">0</div><div class="stat-label">🧬 適応</div></div>
+  </div>
+  <div class="controls">
+    <button class="btn" onclick="measureLife()">計測開始</button>
+    <button class="btn" onclick="perturbLife()">外乱を加える</button>
+    <button class="btn" onclick="resetMetrics()">リセット</button>
+  </div>
+  <div class="log" id="log-8e"></div>
+</div>
+
+<div class="footer">
+  Rei (0₀式) — D-FUMT Computational Language<br>
+  Author: <a href="https://github.com/fc0web/rei-lang">Nobuki Fujimoto (藤本伸樹)</a><br>
+  <a href="https://github.com/fc0web/rei-lang">GitHub</a> · <a href="https://www.npmjs.com/package/rei-lang">npm</a> · <a href="https://qiita.com/fc0web/items/aa15af656577068c3060">Qiita</a>
+</div>
+
+<script>
+function showPanel(i){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+}
+function addLog(id,msg){
+  const log=document.getElementById(id);
+  const ts=new Date().toLocaleTimeString('ja-JP');
+  log.innerHTML=`<div class="log-entry"><span class="t">[${ts}]</span> ${msg}</div>`+log.innerHTML;
+  if(log.children.length>30)log.lastChild.remove();
+}
+
+// ═══ 8a: Life Entity (Enhanced) ═══
+let entities=[];
+const grid=document.getElementById('entity-grid');
+const gw=document.getElementById('grid-wrapper');
+for(let i=0;i<36;i++){const c=document.createElement('div');c.className='entity-cell';grid.appendChild(c);}
+
+function emitParticles(cell,n,color){
+  const cr=cell.getBoundingClientRect(), wr=gw.getBoundingClientRect();
+  const cx=cr.left-wr.left+cr.width/2, cy=cr.top-wr.top+cr.height/2;
+  for(let i=0;i<n;i++){
+    const p=document.createElement('div');p.className='particle';
+    p.style.left=cx+'px';p.style.top=cy+'px';
+    p.style.background=color||'rgba(126,184,160,0.9)';
+    p.style.width=(3+Math.random()*4)+'px';p.style.height=p.style.width;
+    const a=Math.random()*Math.PI*2, d=50+Math.random()*100;
+    p.style.setProperty('--dx',Math.cos(a)*d+'px');
+    p.style.setProperty('--dy',Math.sin(a)*d+'px');
+    gw.appendChild(p);
+    requestAnimationFrame(()=>p.classList.add('fly'));
+    setTimeout(()=>p.remove(),1700);
+  }
+}
+function emitRipple(cell,cls){
+  const cr=cell.getBoundingClientRect(),wr=gw.getBoundingClientRect();
+  for(let i=0;i<3;i++){
+    setTimeout(()=>{
+      const r=document.createElement('div');
+      r.className='ripple-ring'+(cls?' '+cls:'');
+      r.style.left=(cr.left-wr.left+cr.width/2)+'px';
+      r.style.top=(cr.top-wr.top+cr.height/2)+'px';
+      gw.appendChild(r);
+      requestAnimationFrame(()=>r.classList.add('go'));
+      setTimeout(()=>r.remove(),1900);
+    },i*200);
+  }
+}
+function flashStats(){
+  document.querySelectorAll('#stats-8a .stat').forEach((s,i)=>{
+    setTimeout(()=>{s.classList.add('flash');setTimeout(()=>s.classList.remove('flash'),500);},i*80);
+  });
+}
+function setStatus(t){
+  const el=document.getElementById('genesis-status');el.textContent=t;
+  el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
+}
+
+function spawnEntity(){
+  const idx=entities.length;
+  if(idx>=36){setStatus('⬡ グリッド上限（36/36）');return;}
+  const e={energy:50+Math.random()*50,integrity:60+Math.random()*40,response:30+Math.random()*70,growth:20+Math.random()*60,repro:10+Math.random()*50,adapt:40+Math.random()*60};
+  entities.push(e);
+
+  // Flash background
+  gw.classList.remove('genesis-flash');void gw.offsetWidth;gw.classList.add('genesis-flash');
+
+  updateEntityGrid();
+
+  const cell=grid.children[idx];
+  cell.classList.remove('alive','breathing');void cell.offsetWidth;
+  cell.classList.add('alive');
+  setTimeout(()=>cell.classList.add('breathing'),1500);
+
+  // Effects
+  emitParticles(cell,18,'rgba(126,184,160,0.9)');
+  emitRipple(cell);
+
+  flashStats();updateEntityStats();
+  const life=((e.energy+e.integrity+e.response+e.growth+e.repro+e.adapt)/6).toFixed(0);
+  setStatus(`✦ 生命体 #${idx+1} が発生 — 生命度: ${life}`);
+  addLog('log-8a',`生命体 #${idx+1} 発生 (Genesis) — E:${e.energy.toFixed(0)} 生命度:${life}`);
+}
+
+function spawnBurst(){
+  let c=0;const iv=setInterval(()=>{if(c>=6||entities.length>=36){clearInterval(iv);return;}spawnEntity();c++;},300);
+}
+
+function stimulateEntity(){
+  if(!entities.length){setStatus('⚡ 先に生命を生成してください');return;}
+
+  gw.classList.remove('stim-flash');void gw.offsetWidth;gw.classList.add('stim-flash');
+
+  entities.forEach((e,i)=>{
+    e.response=Math.min(100,e.response+10+Math.random()*20);
+    e.adapt=Math.min(100,e.adapt+5+Math.random()*15);
+    e.growth=Math.min(100,e.growth+3+Math.random()*10);
+    e.energy=Math.max(0,e.energy-5);
+    const cell=grid.children[i];
+    setTimeout(()=>{
+      cell.classList.remove('stimulated');void cell.offsetWidth;
+      cell.classList.add('stimulated');
+      emitParticles(cell,8,'rgba(160,126,184,0.85)');
+      if(i===0||i===entities.length-1) emitRipple(cell,'purple');
+    },i*80);
+  });
+
+  updateEntityGrid();flashStats();updateEntityStats();
+  setStatus(`⚡ 外部刺激 — ${entities.length}体が応答・進化中`);
+  addLog('log-8a',`外部刺激 — 応答↑ 適応↑ (${entities.length}体)`);
+}
+
+function resetEntities(){
+  entities=[];updateEntityGrid();updateEntityStats();
+  grid.querySelectorAll('.entity-cell').forEach(c=>{
+    c.classList.remove('alive','breathing','stimulated');
+    c.style.background='var(--surface)';c.style.border='1px solid var(--border)';c.style.boxShadow='none';
+  });
+  setStatus('⬡ ボタンを押して生命を生成してください');
+  addLog('log-8a','リセット');
+}
+
+function updateEntityGrid(){
+  const cells=grid.children;
+  for(let i=0;i<36;i++){
+    if(i<entities.length){
+      const e=entities[i],life=(e.energy+e.integrity+e.response+e.growth+e.repro+e.adapt)/6;
+      const h=120+(life-40)*1.5,s=35+(life/100)*25,l=35+(life/100)*20,a=0.4+(life/100)*0.6;
+      cells[i].style.background=`hsla(${h},${s}%,${l}%,${a})`;
+      cells[i].style.border=`1px solid hsla(${h},${s+15}%,${l+15}%,0.7)`;
+      cells[i].style.boxShadow=`0 0 ${life/4}px hsla(${h},${s}%,${l+10}%,0.4)`;
+    }else{
+      cells[i].style.background='var(--surface)';cells[i].style.border='1px solid var(--border)';cells[i].style.boxShadow='none';
+    }
+  }
+}
+function updateEntityStats(){
+  if(!entities.length){['energy','integrity','response','growth','repro','adapt'].forEach(k=>document.getElementById('s8a-'+k).textContent='0');return;}
+  const a=k=>(entities.reduce((s,e)=>s+e[k],0)/entities.length).toFixed(1);
+  document.getElementById('s8a-energy').textContent=a('energy');
+  document.getElementById('s8a-integrity').textContent=a('integrity');
+  document.getElementById('s8a-response').textContent=a('response');
+  document.getElementById('s8a-growth').textContent=a('growth');
+  document.getElementById('s8a-repro').textContent=a('repro');
+  document.getElementById('s8a-adapt').textContent=a('adapt');
+}
+
+// ═══ 8b: Metabolism ═══
+let metabIv=null,ms={input:0,stored:0,waste:0,cycles:0,ph:0};
+const ph=['m-intake','m-transform','m-store','m-output'];
+function startMetabolism(){
+  if(metabIv)return;
+  metabIv=setInterval(()=>{
+    ph.forEach(id=>document.getElementById(id).classList.remove('on'));
+    document.querySelectorAll('.flow-arrow').forEach(a=>a.classList.remove('lit'));
+    ms.ph=(ms.ph+1)%4;
+    document.getElementById(ph[ms.ph]).classList.add('on');
+    if(ms.ph>0)document.getElementById('ar'+(ms.ph-1)).classList.add('lit');
+    if(ms.ph===0)ms.input+=10+Math.random()*5;
+    if(ms.ph===2)ms.stored+=6+Math.random()*3;
+    if(ms.ph===3){ms.waste+=4+Math.random()*2;ms.cycles++;}
+    document.getElementById('s8b-input').textContent=ms.input.toFixed(0);
+    document.getElementById('s8b-stored').textContent=ms.stored.toFixed(0);
+    document.getElementById('s8b-waste').textContent=ms.waste.toFixed(0);
+    document.getElementById('s8b-cycles').textContent=ms.cycles;
+    addLog('log-8b',['取込','変換','蓄積','排出'][ms.ph]+`完了 (cycle #${ms.cycles})`);
+  },800);
+  addLog('log-8b','代謝サイクル開始');
+}
+function feedEnergy(){ms.input+=30;document.getElementById('s8b-input').textContent=ms.input.toFixed(0);addLog('log-8b','エネルギー供給: +30');}
+function stopMetabolism(){clearInterval(metabIv);metabIv=null;ph.forEach(id=>document.getElementById(id).classList.remove('on'));addLog('log-8b','代謝停止');}
+
+// ═══ 8c: Genesis Ladder ═══
+let gStep=0,gIv=null;
+function startGenesis(){
+  if(gIv)return;gStep=0;resetGenesis();
+  const steps=document.querySelectorAll('#genesis-ladder .ladder-step'),tot=steps.length;
+  gIv=setInterval(()=>{
+    if(gStep>=tot){clearInterval(gIv);gIv=null;addLog('log-8c','全段階完了 — 生命体が立ち上がりました');return;}
+    const idx=tot-1-gStep,fill=steps[idx].querySelector('.step-fill');
+    fill.style.width='100%';steps[idx].style.background='var(--surface2)';steps[idx].style.borderColor='var(--accent)';
+    steps[idx].classList.add('done');
+    addLog('log-8c',`L${gStep+1}: ${['零からの発生','場の確立','流れの開始','記憶の刻印','層の積層','関係の織成','意志の発現'][gStep]} ✓`);
+    gStep++;
+  },900);
+  addLog('log-8c','Genesis Ladder 開始 — 0₀ から...');
+}
+function resetGenesis(){
+  clearInterval(gIv);gIv=null;gStep=0;
+  document.querySelectorAll('#genesis-ladder .step-fill').forEach(f=>f.style.width='0');
+  document.querySelectorAll('#genesis-ladder .ladder-step').forEach(s=>{s.style.background='var(--surface)';s.style.borderColor='var(--border)';s.classList.remove('done');});
+}
+
+// ═══ 8d: Colony ═══
+let col=[],cGen=0,aIv=null;const cc=document.getElementById('colony-canvas');
+function addColonyEntities(n){
+  for(let i=0;i<n;i++)col.push({x:20+Math.random()*60,y:20+Math.random()*60,size:8+Math.random()*16,life:30+Math.random()*70,hue:120+Math.random()*60,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2});
+  renderColony();addLog('log-8d',`${n}個体追加 — 現在${col.length}個体`);
+}
+function renderColony(){
+  cc.innerHTML='';
+  col.forEach(e=>{
+    const d=document.createElement('div');d.className='colony-entity';
+    d.style.left=e.x+'%';d.style.top=e.y+'%';d.style.width=e.size+'px';d.style.height=e.size+'px';
+    d.style.background=`hsla(${e.hue},40%,50%,${0.3+e.life/150})`;
+    d.style.boxShadow=`0 0 ${e.life/6}px hsla(${e.hue},40%,50%,0.5)`;
+    cc.appendChild(d);
+  });
+  document.getElementById('s8d-pop').textContent=col.length;
+  document.getElementById('s8d-gen').textContent=cGen;
+  document.getElementById('s8d-clusters').textContent=Math.max(1,Math.floor(col.length/4));
+  document.getElementById('s8d-avg').textContent=col.length?(col.reduce((s,e)=>s+e.life,0)/col.length).toFixed(1):0;
+}
+function evolveColony(){
+  cGen++;
+  col.forEach(e=>{
+    e.x=Math.max(3,Math.min(93,e.x+e.vx));e.y=Math.max(3,Math.min(93,e.y+e.vy));
+    e.vx+=(Math.random()-0.5)*0.8;e.vy+=(Math.random()-0.5)*0.8;
+    e.life+=(Math.random()-0.3)*5;e.life=Math.max(5,Math.min(100,e.life));e.size=8+(e.life/100)*16;
+  });
+  if(col.length<60&&Math.random()>0.5){
+    const p=col[Math.floor(Math.random()*col.length)];
+    if(p&&p.life>60){col.push({x:p.x+(Math.random()-0.5)*10,y:p.y+(Math.random()-0.5)*10,size:8,life:40,hue:p.hue+(Math.random()-0.5)*20,vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2});addLog('log-8d',`世代${cGen}: 新個体誕生`);}
+  }
+  col=col.filter(e=>e.life>5);renderColony();
+}
+function autoEvolve(){if(aIv){clearInterval(aIv);aIv=null;return;}aIv=setInterval(evolveColony,500);addLog('log-8d','自動進化モード');}
+function resetColony(){clearInterval(aIv);aIv=null;col=[];cGen=0;renderColony();}
+
+// ═══ 8e: Metrics ═══
+let mIv=null;
+function measureLife(){
+  if(mIv)return;
+  const v={energy:0,struct:0,resp:0,grow:0,repro:0,adapt:0};let tick=0;
+  mIv=setInterval(()=>{
+    tick++;Object.keys(v).forEach(k=>{v[k]=Math.min(100,v[k]+2+Math.random()*5);});
+    ['sm-energy','sm-struct','sm-resp','sm-grow','sm-repro','sm-adapt'].forEach((id,i)=>document.getElementById(id).textContent=Object.values(v)[i].toFixed(1));
+    const t=Object.values(v).reduce((s,x)=>s+x,0)/6;
+    document.getElementById('life-score').textContent=t.toFixed(1);
+    document.getElementById('metrics-arc').setAttribute('stroke-dashoffset',534-(534*t/100));
+    document.getElementById('metrics-arc2').setAttribute('stroke-dashoffset',440-(440*Math.min(...Object.values(v))/100));
+    if(t>=95){clearInterval(mIv);mIv=null;addLog('log-8e',`計測完了 — 生命度: ${t.toFixed(1)}`);}
+    if(tick%5===0)addLog('log-8e',`σ蓄積中... 生命度: ${t.toFixed(1)}`);
+  },200);
+  addLog('log-8e','生命度計測開始');
+}
+function perturbLife(){
+  const ids=['sm-energy','sm-struct','sm-resp','sm-grow','sm-repro','sm-adapt'];
+  ids.forEach(id=>{const el=document.getElementById(id);el.textContent=Math.max(0,parseFloat(el.textContent)-15-Math.random()*20).toFixed(1);});
+  const vs=ids.map(id=>parseFloat(document.getElementById(id).textContent)),t=vs.reduce((s,x)=>s+x,0)/6;
+  document.getElementById('life-score').textContent=t.toFixed(1);
+  document.getElementById('metrics-arc').setAttribute('stroke-dashoffset',534-(534*t/100));
+  addLog('log-8e',`外乱 — 生命度: ${t.toFixed(1)}`);
+}
+function resetMetrics(){
+  clearInterval(mIv);mIv=null;
+  ['sm-energy','sm-struct','sm-resp','sm-grow','sm-repro','sm-adapt'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('life-score').textContent='0';
+  document.getElementById('metrics-arc').setAttribute('stroke-dashoffset','534');
+  document.getElementById('metrics-arc2').setAttribute('stroke-dashoffset','440');
+}
+</script>
+</body>
+</html>
