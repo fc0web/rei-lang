@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei (0₀式) Web Playground v2 — Live Execution Environment</title>
+<meta name="description" content="Rei言語をブラウザ上で実行。構造の作成・進捗管理・AIエクスポートを全てローカルで。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f12;--bg2:#16161c;--bg3:#1c1c25;--bg4:#25252f;
+  --fg:#c8c5be;--fg2:#9a978f;--fg3:#6b685f;
+  --accent:#b8a47e;--accent2:#8a7a5e;--accent3:#d4c5a0;
+  --code-bg:#12121a;--code-border:#2a2a35;
+  --success:#7eb88a;--error:#c87e7e;--info:#7e9eb8;--warn:#c8b87e;
+  --radius:6px;
+}
+html{font-size:15px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:'Noto Sans JP','IBM Plex Mono',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ─── Header ─── */
+header{
+  padding:1.2rem 2rem .8rem;
+  border-bottom:1px solid var(--bg4);
+  display:flex;align-items:baseline;gap:1.5rem;flex-wrap:wrap;
+  background:var(--bg2);
+  flex-shrink:0;
+}
+header h1{
+  font-family:'Noto Serif JP',serif;font-weight:600;font-size:1.3rem;
+  color:var(--accent3);letter-spacing:.05em;
+}
+header h1 .ver{font-weight:400;color:var(--fg3);font-size:.72rem;margin-left:.5rem;font-family:'IBM Plex Mono',monospace}
+header .subtitle{font-size:.72rem;color:var(--fg3);font-family:'IBM Plex Mono',monospace}
+header nav{display:flex;gap:.4rem;flex-wrap:wrap;margin-left:auto}
+header nav button{
+  font-size:.68rem;padding:.3rem .65rem;
+  background:var(--bg3);color:var(--fg2);border:1px solid var(--code-border);
+  border-radius:var(--radius);cursor:pointer;transition:all .2s;
+  font-family:'IBM Plex Mono',monospace;
+}
+header nav button:hover{background:var(--bg4);color:var(--accent3);border-color:var(--accent2)}
+header nav button.active{background:var(--accent2);color:var(--bg);border-color:var(--accent)}
+
+/* ─── Main Layout ─── */
+main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:0;overflow:hidden}
+@media(max-width:900px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+
+.panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel-header{
+  padding:.55rem 1.2rem;font-size:.68rem;
+  color:var(--fg3);font-family:'IBM Plex Mono',monospace;
+  background:var(--bg2);border-bottom:1px solid var(--code-border);
+  display:flex;justify-content:space-between;align-items:center;
+  letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;
+}
+.panel-header .hint{text-transform:none;letter-spacing:0;opacity:.6;font-size:.62rem}
+.left-panel{border-right:1px solid var(--bg4)}
+@media(max-width:900px){.left-panel{border-right:none;border-bottom:1px solid var(--bg4)}}
+
+/* ─── Terminal ─── */
+#terminal{
+  flex:1;overflow-y:auto;padding:1rem;
+  background:var(--code-bg);
+  font-family:'IBM Plex Mono',monospace;font-size:.82rem;line-height:1.65;
+  scroll-behavior:smooth;
+}
+#terminal::-webkit-scrollbar{width:6px}
+#terminal::-webkit-scrollbar-track{background:transparent}
+#terminal::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+.term-line{margin-bottom:.4rem;animation:fadeIn .2s ease}
+.term-welcome{color:var(--accent3);margin-bottom:.8rem;line-height:1.5}
+.term-welcome .logo{font-family:'Noto Serif JP',serif;font-size:1.1rem;font-weight:600;display:block;margin-bottom:.3rem}
+.term-prompt{color:var(--accent);white-space:pre-wrap;word-break:break-word}
+.term-prompt::before{content:'rei › ';color:var(--accent2)}
+.term-result{padding:.4rem .7rem;border-radius:var(--radius);background:var(--bg3);border-left:2px solid var(--accent2);margin:.3rem 0;white-space:pre-wrap;word-break:break-word}
+.term-error{padding:.4rem .7rem;border-radius:var(--radius);background:#1c1418;border-left:2px solid var(--error);color:var(--error);margin:.3rem 0;white-space:pre-wrap}
+.term-info{color:var(--fg3);font-style:italic;font-size:.75rem;margin:.2rem 0}
+.term-success{color:var(--success)}
+.term-table{margin:.4rem 0;font-size:.78rem}
+.term-table table{border-collapse:collapse;width:100%}
+.term-table th,.term-table td{padding:.3rem .6rem;text-align:left;border-bottom:1px solid var(--bg4)}
+.term-table th{color:var(--accent3);font-weight:500;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
+.term-table td{color:var(--fg)}
+.term-table .status-done{color:var(--success)}
+.term-table .status-active{color:var(--info)}
+.term-table .status-pending{color:var(--fg3)}
+.term-table .status-blocked{color:var(--error)}
+.term-sigma-bar{display:inline-block;font-size:.75rem}
+.term-sigma-filled{color:var(--accent3)}
+.term-sigma-empty{color:var(--bg4)}
+.term-json{background:var(--bg3);border:1px solid var(--code-border);border-radius:var(--radius);padding:.6rem .8rem;margin:.4rem 0;font-size:.75rem;white-space:pre-wrap;overflow-x:auto;max-height:300px;overflow-y:auto}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── Input Line ─── */
+.input-bar{
+  display:flex;align-items:center;gap:0;
+  background:var(--bg2);border-top:1px solid var(--code-border);
+  padding:0;flex-shrink:0;
+}
+.input-bar .prompt-label{
+  padding:.6rem .2rem .6rem 1rem;
+  color:var(--accent2);font-family:'IBM Plex Mono',monospace;font-size:.82rem;
+  white-space:nowrap;flex-shrink:0;
+}
+#cmd-input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--fg);font-family:'IBM Plex Mono',monospace;font-size:.82rem;
+  padding:.6rem .5rem;
+}
+#cmd-input::placeholder{color:var(--fg3);font-style:italic}
+
+/* ─── Right Panel: Visualization ─── */
+#viz-area{
+  flex:1;overflow-y:auto;padding:1.2rem;
+  background:var(--bg);
+}
+#viz-area::-webkit-scrollbar{width:6px}
+#viz-area::-webkit-scrollbar-track{background:transparent}
+#viz-area::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+.viz-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;color:var(--fg3);font-size:.82rem;text-align:center;gap:.8rem;
+}
+.viz-empty .icon{font-size:2.5rem;opacity:.3}
+.viz-empty code{font-size:.72rem;background:var(--bg3);padding:.2rem .5rem;border-radius:var(--radius)}
+
+/* Structure Card */
+.struct-card{
+  background:var(--bg2);border:1px solid var(--code-border);border-radius:8px;
+  padding:1.2rem;margin-bottom:1rem;
+  animation:fadeIn .3s ease;
+}
+.struct-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.8rem}
+.struct-title{
+  font-family:'Noto Serif JP',serif;font-size:1.1rem;font-weight:600;
+  color:var(--accent3);
+}
+.struct-type{
+  font-size:.65rem;padding:.2rem .5rem;
+  background:var(--bg4);color:var(--fg2);border-radius:var(--radius);
+  font-family:'IBM Plex Mono',monospace;text-transform:uppercase;
+}
+.struct-meta{font-size:.7rem;color:var(--fg3);margin-bottom:.8rem;font-family:'IBM Plex Mono',monospace}
+
+/* Sigma Gauge */
+.sigma-gauge{margin:.8rem 0}
+.sigma-label{display:flex;justify-content:space-between;font-size:.72rem;color:var(--fg2);margin-bottom:.3rem;font-family:'IBM Plex Mono',monospace}
+.sigma-track{
+  height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;
+  position:relative;
+}
+.sigma-fill{
+  height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--accent2),var(--accent3));
+  transition:width .5s cubic-bezier(.4,0,.2,1);
+}
+
+/* Periphery Nodes */
+.periph-section{margin-top:1rem}
+.periph-title{font-size:.7rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;font-family:'IBM Plex Mono',monospace}
+.periph-node{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.5rem .7rem;margin-bottom:.3rem;
+  background:var(--bg3);border-radius:var(--radius);
+  border-left:3px solid var(--bg4);
+  transition:all .3s;
+}
+.periph-node.done{border-left-color:var(--success)}
+.periph-node.active{border-left-color:var(--info)}
+.periph-node.blocked{border-left-color:var(--error)}
+.periph-node .name{flex:1;font-size:.78rem;color:var(--fg)}
+.periph-node .node-sigma{font-size:.7rem;color:var(--fg2);font-family:'IBM Plex Mono',monospace;min-width:3rem;text-align:right}
+.periph-node .node-status{
+  font-size:.6rem;padding:.15rem .4rem;border-radius:3px;
+  font-family:'IBM Plex Mono',monospace;text-transform:uppercase;
+}
+.periph-node .node-status.done{background:rgba(126,184,138,.15);color:var(--success)}
+.periph-node .node-status.active{background:rgba(126,158,184,.15);color:var(--info)}
+.periph-node .node-status.pending{background:rgba(107,104,95,.15);color:var(--fg3)}
+.periph-node .node-status.blocked{background:rgba(200,126,126,.15);color:var(--error)}
+
+/* Attributes */
+.attr-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:.4rem;
+  margin-top:.8rem;font-size:.72rem;
+}
+.attr-item{
+  background:var(--bg3);padding:.4rem .6rem;border-radius:var(--radius);
+  font-family:'IBM Plex Mono',monospace;
+}
+.attr-item .attr-label{color:var(--fg3);font-size:.62rem;display:block;margin-bottom:.1rem}
+.attr-item .attr-val{color:var(--fg)}
+
+/* Memory List */
+.memory-section{margin-top:.8rem}
+.memory-item{
+  font-size:.72rem;color:var(--fg2);padding:.3rem 0;
+  border-bottom:1px solid var(--bg3);
+  font-family:'IBM Plex Mono',monospace;
+}
+
+/* Examples Panel */
+.examples-panel{
+  background:var(--bg2);border-top:1px solid var(--code-border);
+  max-height:0;overflow:hidden;transition:max-height .4s ease;
+  flex-shrink:0;
+}
+.examples-panel.open{max-height:320px;overflow-y:auto}
+.examples-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:.4rem;padding:.8rem 1rem;
+}
+.example-card{
+  background:var(--bg3);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:.5rem .7rem;cursor:pointer;
+  transition:all .2s;
+}
+.example-card:hover{border-color:var(--accent2);background:var(--bg4)}
+.example-card .ex-title{font-size:.7rem;color:var(--accent3);font-weight:500;margin-bottom:.2rem}
+.example-card code{font-size:.62rem;color:var(--fg3);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Center-Periphery Visualization */
+.cp-viz{
+  position:relative;width:100%;padding-top:100%;margin:.8rem 0;
+}
+.cp-viz-inner{
+  position:absolute;inset:0;
+}
+.cp-viz svg{width:100%;height:100%}
+.cp-center-circle{fill:none;stroke:var(--accent2);stroke-width:2}
+.cp-center-text{fill:var(--accent3);font-family:'Noto Serif JP',serif;font-size:14px;text-anchor:middle;dominant-baseline:central}
+.cp-periph-circle{fill:var(--bg3);stroke:var(--code-border);stroke-width:1.5;transition:all .3s}
+.cp-periph-circle.done{fill:rgba(126,184,138,.15);stroke:var(--success)}
+.cp-periph-circle.active{fill:rgba(126,158,184,.15);stroke:var(--info)}
+.cp-periph-circle.blocked{fill:rgba(200,126,126,.15);stroke:var(--error)}
+.cp-line{stroke:var(--bg4);stroke-width:1;stroke-dasharray:4 3}
+.cp-periph-text{fill:var(--fg2);font-family:'IBM Plex Mono',monospace;font-size:10px;text-anchor:middle;dominant-baseline:central}
+.cp-periph-sigma{fill:var(--fg3);font-family:'IBM Plex Mono',monospace;font-size:9px;text-anchor:middle}
+
+/* Footer */
+footer{
+  padding:.4rem 1.5rem;
+  border-top:1px solid var(--bg4);
+  font-size:.6rem;color:var(--fg3);
+  font-family:'IBM Plex Mono',monospace;
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg2);flex-shrink:0;
+}
+footer a{color:var(--accent2);text-decoration:none}
+footer a:hover{color:var(--accent3)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>零 Rei Playground<span class="ver">v2.0 — Live Engine</span></h1>
+  <span class="subtitle">0₀式 / ブラウザ実行環境</span>
+  <nav>
+    <button id="btn-examples" title="コマンド例">例</button>
+    <button id="btn-clear-all" title="データ全削除">🗑 Reset</button>
+    <button id="btn-help" title="ヘルプ">?</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Left: Terminal -->
+  <div class="panel left-panel">
+    <div class="panel-header">
+      <span>Terminal</span>
+      <span class="hint">Reiコマンドを入力 — ローカル実行</span>
+    </div>
+    <div id="terminal"></div>
+    <div class="input-bar">
+      <span class="prompt-label">rei ›</span>
+      <input type="text" id="cmd-input" placeholder="init project &quot;My Project&quot; --periphery &quot;A,B,C&quot;" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="examples-panel" id="examples-panel">
+      <div class="examples-grid" id="examples-grid"></div>
+    </div>
+  </div>
+
+  <!-- Right: Visualization -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>Structure View</span>
+      <span class="hint" id="struct-count">構造: 0</span>
+    </div>
+    <div id="viz-area">
+      <div class="viz-empty" id="viz-empty">
+        <div class="icon">零</div>
+        <div>構造がありません</div>
+        <code>init project "名前" --periphery "A,B,C"</code>
+        <div style="font-size:.68rem;margin-top:.5rem">でRei構造を作成してください</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Rei (0₀式) — All data stored in localStorage. No server communication.</span>
+  <span><a href="https://github.com/fc0web/rei-lang" target="_blank">GitHub</a> · <a href="https://fc0web.github.io/rei-lang/" target="_blank">Demos</a></span>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// Rei Engine — Browser Edition
+// Ported from packages/cli/src/core/ (types.ts + builder.ts)
+// ═══════════════════════════════════════════════════════════
+
+const REI_VERSION = '0.1.0';
+const STRUCTURE_TYPES = ['project', 'task', 'idea', 'analysis', 'decision'];
+
+// ─── Builder ──────────────────────────────────────────────
+
+function createStructure(opts) {
+  const now = new Date().toISOString();
+  const peripheryNodes = opts.periphery.map(name => ({
+    name: name.trim(),
+    sigma: 0,
+    status: 'pending',
+  }));
+  const attributes = {
+    field: opts.field || inferField(opts.type),
+    flow: opts.flow || inferFlow(opts.type),
+    memory: [],
+    layer: 0,
+    relation: [],
+    will: opts.will || `Complete: ${opts.center}`,
+  };
+  return {
+    rei_version: REI_VERSION,
+    type: opts.type,
+    center: opts.center,
+    periphery: peripheryNodes,
+    attributes,
+    sigma: {
+      current: 0,
+      target: opts.target,
+      history: [{ timestamp: now, delta: 0, note: `Genesis: ${opts.center}`, source: 'init' }],
+    },
+    genesis: { created_at: now, created_by: 'rei-web', seed: opts.seed },
+    meta: { updated_at: now, tags: opts.tags || [], local_only: true },
+  };
+}
+
+function extendPeriphery(structure, names) {
+  const newNodes = names.map(name => ({ name: name.trim(), sigma: 0, status: 'pending' }));
+  return {
+    ...structure,
+    periphery: [...structure.periphery, ...newNodes],
+    meta: { ...structure.meta, updated_at: new Date().toISOString() },
+  };
+}
+
+function reducePeriphery(structure, names) {
+  const removeSet = new Set(names.map(n => n.trim().toLowerCase()));
+  return {
+    ...structure,
+    periphery: structure.periphery.filter(p => !removeSet.has(p.name.toLowerCase())),
+    meta: { ...structure.meta, updated_at: new Date().toISOString() },
+  };
+}
+
+function updateSigma(structure, delta, note, peripheryName) {
+  const now = new Date().toISOString();
+  const entry = { timestamp: now, delta, note };
+  let periphery = structure.periphery;
+
+  if (peripheryName) {
+    entry.source = peripheryName;
+    periphery = structure.periphery.map(p => {
+      if (p.name.toLowerCase() === peripheryName.toLowerCase()) {
+        const newSigma = Math.max(0, Math.min(100, p.sigma + delta));
+        return {
+          ...p,
+          sigma: newSigma,
+          status: newSigma >= 100 ? 'done' : newSigma > 0 ? 'active' : p.status,
+        };
+      }
+      return p;
+    });
+  }
+
+  const overallSigma = periphery.length > 0
+    ? Math.round(periphery.reduce((sum, p) => sum + p.sigma, 0) / periphery.length)
+    : structure.sigma.current + delta;
+
+  return {
+    ...structure,
+    periphery,
+    sigma: { ...structure.sigma, current: overallSigma, history: [...structure.sigma.history, entry] },
+    meta: { ...structure.meta, updated_at: now },
+  };
+}
+
+function addMemory(structure, note) {
+  return {
+    ...structure,
+    attributes: {
+      ...structure.attributes,
+      memory: [...structure.attributes.memory, `[${new Date().toISOString().slice(0, 10)}] ${note}`],
+    },
+    meta: { ...structure.meta, updated_at: new Date().toISOString() },
+  };
+}
+
+function exportForAI(structure) {
+  const recentHistory = structure.sigma.history.slice(-5);
+  return {
+    _rei_context: [
+      `Rei Structure (0₀式): ${structure.type} — "${structure.center}"`,
+      `Progress: σ = ${structure.sigma.current}${structure.sigma.target ? '/' + structure.sigma.target : '%'}`,
+      `Field: ${structure.attributes.field} | Flow: ${structure.attributes.flow}`,
+      `Will: ${structure.attributes.will}`,
+    ].join('\n'),
+    structure: {
+      type: structure.type,
+      center: structure.center,
+      periphery: structure.periphery.map(p => ({ name: p.name, progress: p.sigma, status: p.status })),
+      overall_progress: structure.sigma.current,
+      field: structure.attributes.field,
+      will: structure.attributes.will,
+      flow: structure.attributes.flow,
+    },
+    memory: structure.attributes.memory,
+    sigma: {
+      current: structure.sigma.current,
+      target: structure.sigma.target,
+      recent_changes: recentHistory.map(h => ({ note: h.note, delta: h.delta })),
+    },
+    prompt_hint: generatePromptHint(structure),
+  };
+}
+
+function exportAsMarkdown(structure) {
+  const lines = [];
+  lines.push(`# Rei: ${structure.center}`);
+  lines.push(`> Type: ${structure.type} | σ = ${structure.sigma.current}%`);
+  lines.push('');
+  lines.push('## Periphery (周囲)');
+  for (const p of structure.periphery) {
+    const bar = progressBar(p.sigma);
+    lines.push(`- **${p.name}** ${bar} ${p.sigma}% [${p.status}]`);
+  }
+  lines.push('');
+  lines.push('## Attributes (六属性)');
+  lines.push(`- **Field (場):** ${structure.attributes.field}`);
+  lines.push(`- **Flow (流):** ${structure.attributes.flow}`);
+  lines.push(`- **Layer (層):** ${structure.attributes.layer}`);
+  lines.push(`- **Will (意志):** ${structure.attributes.will}`);
+  lines.push('');
+  if (structure.attributes.memory.length > 0) {
+    lines.push('## Memory (記憶)');
+    for (const m of structure.attributes.memory) lines.push(`- ${m}`);
+    lines.push('');
+  }
+  if (structure.sigma.history.length > 1) {
+    lines.push('## Recent Sigma History');
+    for (const h of structure.sigma.history.slice(-5)) {
+      const sign = h.delta >= 0 ? '+' : '';
+      lines.push(`- [${h.timestamp.slice(0, 16)}] ${sign}${h.delta} — ${h.note}`);
+    }
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push(`*Generated by rei-web v${REI_VERSION} | ${new Date().toISOString().slice(0, 10)}*`);
+  return lines.join('\n');
+}
+
+// Helpers
+function inferField(type) {
+  return { project:'engineering', task:'execution', idea:'exploration', analysis:'research', decision:'strategy' }[type] || 'general';
+}
+function inferFlow(type) {
+  return { project:'sequential', task:'sequential', idea:'cyclical', analysis:'parallel', decision:'adaptive' }[type] || 'sequential';
+}
+function generatePromptHint(s) {
+  const pending = s.periphery.filter(p => p.status === 'pending');
+  const active = s.periphery.filter(p => p.status === 'active');
+  const blocked = s.periphery.filter(p => p.status === 'blocked');
+  const hints = [];
+  if (blocked.length > 0) hints.push(`Blocked: ${blocked.map(b => b.name).join(', ')}`);
+  if (active.length > 0) hints.push(`Active: ${active.map(a => `${a.name}(${a.sigma}%)`).join(', ')}`);
+  if (pending.length > 0 && active.length === 0) hints.push(`Next: ${pending[0].name}`);
+  if (s.sigma.current >= 90) hints.push('Near completion — review and finalize.');
+  return hints.length > 0 ? `Help with this ${s.type}. ${hints.join(' ')}` : `Help advance: "${s.center}"`;
+}
+function progressBar(pct) {
+  const f = Math.round(pct / 10), e = 10 - f;
+  return '[' + '█'.repeat(f) + '░'.repeat(e) + ']';
+}
+
+// ═══════════════════════════════════════════════════════════
+// Browser Storage (replaces fs-based storage.ts)
+// ═══════════════════════════════════════════════════════════
+
+const STORAGE_PREFIX = 'rei_struct_';
+
+function toKey(name) {
+  return STORAGE_PREFIX + name.toLowerCase().replace(/[^\w\u3000-\u9fff\uff00-\uffef-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+
+function saveStructure(structure) {
+  const key = toKey(structure.center);
+  localStorage.setItem(key, JSON.stringify(structure));
+  return key;
+}
+
+function loadStructure(name) {
+  const key = toKey(name);
+  const data = localStorage.getItem(key);
+  if (data) return JSON.parse(data);
+  // Try partial match
+  const found = findStructure(name);
+  return found ? found.structure : null;
+}
+
+function listStructures() {
+  const results = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(STORAGE_PREFIX)) {
+      try {
+        const structure = JSON.parse(localStorage.getItem(key));
+        results.push({ name: key.replace(STORAGE_PREFIX, ''), key, structure });
+      } catch(e) {}
+    }
+  }
+  return results;
+}
+
+function findStructure(query) {
+  const all = listStructures();
+  const q = query.toLowerCase();
+  const exact = all.find(s => s.structure.center.toLowerCase() === q || s.name === q);
+  if (exact) return exact;
+  return all.find(s => s.name.includes(q) || s.structure.center.toLowerCase().includes(q)) || null;
+}
+
+function deleteStructure(name) {
+  const found = findStructure(name);
+  if (found) { localStorage.removeItem(found.key); return true; }
+  return false;
+}
+
+function clearAllStructures() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(STORAGE_PREFIX)) keys.push(k);
+  }
+  keys.forEach(k => localStorage.removeItem(k));
+  return keys.length;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// Terminal UI
+// ═══════════════════════════════════════════════════════════
+
+const terminal = document.getElementById('terminal');
+const cmdInput = document.getElementById('cmd-input');
+const vizArea = document.getElementById('viz-area');
+const vizEmpty = document.getElementById('viz-empty');
+const structCount = document.getElementById('struct-count');
+const examplesPanel = document.getElementById('examples-panel');
+const examplesGrid = document.getElementById('examples-grid');
+let commandHistory = [];
+let historyIndex = -1;
+let selectedStructure = null;
+
+function termPrint(html, cls = '') {
+  const div = document.createElement('div');
+  div.className = 'term-line ' + cls;
+  div.innerHTML = html;
+  terminal.appendChild(div);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function termWelcome() {
+  termPrint(`
+    <div class="term-welcome">
+      <span class="logo">零 Rei (0₀式) Web Playground v2</span>
+      ブラウザ上で動く Rei 実行環境へようこそ。<br>
+      全てのデータは localStorage に保存されます — サーバー通信なし。<br>
+      <span style="color:var(--fg3)">help と入力してコマンド一覧を表示</span>
+    </div>
+  `);
+}
+
+function termPrompt(cmd) {
+  termPrint(`<span class="term-prompt">${escHtml(cmd)}</span>`);
+}
+
+function termResult(text) {
+  termPrint(`<div class="term-result">${escHtml(text)}</div>`);
+}
+
+function termResultHtml(html) {
+  termPrint(`<div class="term-result">${html}</div>`);
+}
+
+function termError(text) {
+  termPrint(`<div class="term-error">${escHtml(text)}</div>`);
+}
+
+function termInfo(text) {
+  termPrint(`<div class="term-info">${escHtml(text)}</div>`);
+}
+
+function termSuccess(text) {
+  termPrint(`<div class="term-result term-success">${escHtml(text)}</div>`);
+}
+
+function termJson(obj) {
+  termPrint(`<div class="term-json">${escHtml(JSON.stringify(obj, null, 2))}</div>`);
+}
+
+function termTable(headers, rows) {
+  let html = '<div class="term-table"><table><thead><tr>';
+  headers.forEach(h => html += `<th>${escHtml(h)}</th>`);
+  html += '</tr></thead><tbody>';
+  rows.forEach(row => {
+    html += '<tr>';
+    row.forEach(cell => html += `<td>${cell}</td>`);
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  termPrint(html);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function sigmaBarHtml(pct) {
+  const f = Math.round(pct / 10), e = 10 - f;
+  return `<span class="term-sigma-bar"><span class="term-sigma-filled">${'█'.repeat(f)}</span><span class="term-sigma-empty">${'░'.repeat(e)}</span></span>`;
+}
+
+function statusHtml(status) {
+  return `<span class="status-${status}">${status}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Command Parser & Executor
+// ═══════════════════════════════════════════════════════════
+
+function parseArgs(input) {
+  const args = [];
+  const flags = {};
+  let current = '';
+  let inQuote = false;
+  let quoteChar = '';
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (inQuote) {
+      if (ch === quoteChar) { inQuote = false; }
+      else { current += ch; }
+    } else if (ch === '"' || ch === "'") {
+      inQuote = true; quoteChar = ch;
+    } else if (ch === ' ') {
+      if (current) { args.push(current); current = ''; }
+    } else {
+      current += ch;
+    }
+  }
+  if (current) args.push(current);
+
+  // Extract flags
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--')) {
+      const key = args[i].slice(2);
+      if (i + 1 < args.length && !args[i + 1].startsWith('--')) {
+        flags[key] = args[++i];
+      } else {
+        flags[key] = true;
+      }
+    } else {
+      positional.push(args[i]);
+    }
+  }
+  return { positional, flags };
+}
+
+function executeCommand(raw) {
+  const input = raw.trim();
+  if (!input) return;
+
+  commandHistory.push(input);
+  historyIndex = commandHistory.length;
+  termPrompt(input);
+
+  const { positional, flags } = parseArgs(input);
+  const cmd = positional[0]?.toLowerCase();
+
+  try {
+    switch (cmd) {
+      case 'init': cmdInit(positional.slice(1), flags); break;
+      case 'list': case 'ls': cmdList(); break;
+      case 'view': case 'show': cmdView(positional.slice(1)); break;
+      case 'sigma': cmdSigma(positional.slice(1), flags); break;
+      case 'extend': cmdExtend(positional.slice(1), flags); break;
+      case 'reduce': cmdReduce(positional.slice(1), flags); break;
+      case 'memory': case 'memo': cmdMemory(positional.slice(1)); break;
+      case 'export': cmdExport(positional.slice(1), flags); break;
+      case 'delete': case 'rm': cmdDelete(positional.slice(1)); break;
+      case 'select': case 'sel': cmdSelect(positional.slice(1)); break;
+      case 'clear': terminal.innerHTML = ''; termWelcome(); break;
+      case 'help': case '?': cmdHelp(); break;
+      case 'version': termResult(`Rei CLI v${REI_VERSION} (Web Edition)`); break;
+      default:
+        termError(`Unknown command: ${cmd}\nType "help" for available commands.`);
+    }
+  } catch (e) {
+    termError(`Error: ${e.message}`);
+  }
+
+  updateViz();
+}
+
+// ─── Commands ─────────────────────────────────────────────
+
+function cmdInit(args, flags) {
+  const type = args[0] || 'project';
+  const center = args[1];
+  if (!center) { termError('Usage: init <type> "<name>" --periphery "A,B,C"'); return; }
+  if (!STRUCTURE_TYPES.includes(type)) { termError(`Invalid type: ${type}\nValid: ${STRUCTURE_TYPES.join(', ')}`); return; }
+  
+  const periphery = flags.periphery ? flags.periphery.split(',').map(s => s.trim()).filter(Boolean) : ['Task 1', 'Task 2', 'Task 3'];
+  
+  const structure = createStructure({
+    type,
+    center,
+    periphery,
+    field: flags.field,
+    flow: flags.flow,
+    will: flags.will,
+    tags: flags.tags ? flags.tags.split(',') : [],
+    target: flags.target ? parseInt(flags.target) : undefined,
+    seed: flags.seed,
+  });
+
+  saveStructure(structure);
+  selectedStructure = center;
+
+  termSuccess(`✓ Created ${type}: "${center}"`);
+  termInfo(`  Periphery: ${periphery.join(', ')}`);
+  termInfo(`  Field: ${structure.attributes.field} | Flow: ${structure.attributes.flow}`);
+  termInfo(`  Stored in localStorage`);
+}
+
+function cmdList() {
+  const all = listStructures();
+  if (all.length === 0) { termInfo('No structures found. Use "init" to create one.'); return; }
+  
+  const headers = ['Name', 'Type', 'σ', 'Nodes', 'Updated'];
+  const rows = all.map(s => {
+    const st = s.structure;
+    const isSel = selectedStructure && st.center.toLowerCase() === selectedStructure.toLowerCase();
+    const name = isSel ? `<strong style="color:var(--accent3)">▸ ${escHtml(st.center)}</strong>` : escHtml(st.center);
+    return [
+      name,
+      `<span style="color:var(--fg3)">${st.type}</span>`,
+      `${sigmaBarHtml(st.sigma.current)} ${st.sigma.current}%`,
+      `${st.periphery.length}`,
+      `<span style="color:var(--fg3)">${st.meta.updated_at.slice(0, 10)}</span>`,
+    ];
+  });
+  termTable(headers, rows);
+}
+
+function cmdView(args) {
+  const name = args[0] || selectedStructure;
+  if (!name) { termError('Usage: view "<name>" or select a structure first'); return; }
+  
+  const found = findStructure(name);
+  if (!found) { termError(`Structure not found: "${name}"`); return; }
+
+  const s = found.structure;
+  selectedStructure = s.center;
+
+  termResultHtml(`<strong style="color:var(--accent3)">${escHtml(s.center)}</strong> <span style="color:var(--fg3)">[${s.type}]</span>`);
+  termInfo(`  σ = ${s.sigma.current}% | Field: ${s.attributes.field} | Flow: ${s.attributes.flow}`);
+  termInfo(`  Will: ${s.attributes.will}`);
+
+  if (s.periphery.length > 0) {
+    const headers = ['Node', 'σ', 'Status'];
+    const rows = s.periphery.map(p => [
+      escHtml(p.name),
+      `${sigmaBarHtml(p.sigma)} ${p.sigma}%`,
+      statusHtml(p.status),
+    ]);
+    termTable(headers, rows);
+  }
+
+  if (s.attributes.memory.length > 0) {
+    termInfo('  Memory:');
+    s.attributes.memory.forEach(m => termInfo(`    ${m}`));
+  }
+}
+
+function cmdSigma(args, flags) {
+  const sub = args[0]; // 'update' or 'history'
+  
+  if (sub === 'history') {
+    const name = args[1] || selectedStructure;
+    if (!name) { termError('Usage: sigma history "<name>"'); return; }
+    const found = findStructure(name);
+    if (!found) { termError(`Not found: "${name}"`); return; }
+    const headers = ['Time', 'Δ', 'Note', 'Source'];
+    const rows = found.structure.sigma.history.map(h => [
+      `<span style="color:var(--fg3)">${h.timestamp.slice(0, 16)}</span>`,
+      `<span style="color:${h.delta >= 0 ? 'var(--success)' : 'var(--error)'}"> ${h.delta >= 0 ? '+' : ''}${h.delta}</span>`,
+      escHtml(h.note),
+      `<span style="color:var(--fg3)">${h.source || '-'}</span>`,
+    ]);
+    termTable(headers, rows);
+    return;
+  }
+
+  if (sub !== 'update') { termError('Usage: sigma update "<name>" <+delta> "<note>" [--node "<node>"]'); return; }
+
+  const name = args[1] || selectedStructure;
+  const deltaStr = args[2];
+  const note = args[3] || 'Progress update';
+
+  if (!name || !deltaStr) { termError('Usage: sigma update "<name>" <+delta> "<note>" [--node "<node>"]'); return; }
+
+  const delta = parseInt(deltaStr);
+  if (isNaN(delta)) { termError(`Invalid delta: ${deltaStr}`); return; }
+
+  const found = findStructure(name);
+  if (!found) { termError(`Not found: "${name}"`); return; }
+
+  const updated = updateSigma(found.structure, delta, note, flags.node);
+  saveStructure(updated);
+  selectedStructure = updated.center;
+
+  termSuccess(`✓ σ updated: ${found.structure.sigma.current}% → ${updated.sigma.current}%`);
+  if (flags.node) {
+    const node = updated.periphery.find(p => p.name.toLowerCase() === flags.node.toLowerCase());
+    if (node) termInfo(`  ${node.name}: ${node.sigma}% [${node.status}]`);
+  }
+}
+
+function cmdExtend(args, flags) {
+  const name = args[0] || selectedStructure;
+  if (!name) { termError('Usage: extend "<name>" --add "A,B"'); return; }
+  if (!flags.add) { termError('Usage: extend "<name>" --add "A,B"'); return; }
+
+  const found = findStructure(name);
+  if (!found) { termError(`Not found: "${name}"`); return; }
+
+  const newNames = flags.add.split(',').map(s => s.trim()).filter(Boolean);
+  const updated = extendPeriphery(found.structure, newNames);
+  saveStructure(updated);
+  selectedStructure = updated.center;
+
+  termSuccess(`✓ Extended: +${newNames.length} nodes → ${updated.periphery.length} total`);
+  termInfo(`  Added: ${newNames.join(', ')}`);
+}
+
+function cmdReduce(args, flags) {
+  const name = args[0] || selectedStructure;
+  if (!name) { termError('Usage: reduce "<name>" --remove "A,B"'); return; }
+  if (!flags.remove) { termError('Usage: reduce "<name>" --remove "A,B"'); return; }
+
+  const found = findStructure(name);
+  if (!found) { termError(`Not found: "${name}"`); return; }
+
+  const removeNames = flags.remove.split(',').map(s => s.trim()).filter(Boolean);
+  const updated = reducePeriphery(found.structure, removeNames);
+  saveStructure(updated);
+  selectedStructure = updated.center;
+
+  termSuccess(`✓ Reduced: -${found.structure.periphery.length - updated.periphery.length} nodes → ${updated.periphery.length} remaining`);
+}
+
+function cmdMemory(args) {
+  const name = args[0] || selectedStructure;
+  const note = args[1];
+  if (!name || !note) { termError('Usage: memory "<name>" "<note>"'); return; }
+
+  const found = findStructure(name);
+  if (!found) { termError(`Not found: "${name}"`); return; }
+
+  const updated = addMemory(found.structure, note);
+  saveStructure(updated);
+  selectedStructure = updated.center;
+
+  termSuccess(`✓ Memory added (${updated.attributes.memory.length} total)`);
+  termInfo(`  ${updated.attributes.memory[updated.attributes.memory.length - 1]}`);
+}
+
+function cmdExport(args, flags) {
+  const name = args[0] || selectedStructure;
+  if (!name) { termError('Usage: export "<name>" [--format json|md|both]'); return; }
+
+  const found = findStructure(name);
+  if (!found) { termError(`Not found: "${name}"`); return; }
+
+  const format = flags.format || 'json';
+  
+  if (format === 'json' || format === 'both') {
+    const json = exportForAI(found.structure);
+    termInfo('JSON Export (for AI chat):');
+    termJson(json);
+    
+    // Copy to clipboard
+    try {
+      navigator.clipboard.writeText(JSON.stringify(json, null, 2));
+      termSuccess('✓ JSON copied to clipboard');
+    } catch(e) {
+      termInfo('(Clipboard not available — copy from above)');
+    }
+  }
+
+  if (format === 'md' || format === 'both') {
+    const md = exportAsMarkdown(found.structure);
+    termInfo('Markdown Export:');
+    termResult(md);
+  }
+}
+
+function cmdDelete(args) {
+  const name = args[0];
+  if (!name) { termError('Usage: delete "<name>"'); return; }
+  
+  if (deleteStructure(name)) {
+    termSuccess(`✓ Deleted: "${name}"`);
+    if (selectedStructure && selectedStructure.toLowerCase() === name.toLowerCase()) selectedStructure = null;
+  } else {
+    termError(`Not found: "${name}"`);
+  }
+}
+
+function cmdSelect(args) {
+  const name = args[0];
+  if (!name) {
+    if (selectedStructure) termResult(`Selected: "${selectedStructure}"`);
+    else termInfo('No structure selected. Usage: select "<name>"');
+    return;
+  }
+  const found = findStructure(name);
+  if (!found) { termError(`Not found: "${name}"`); return; }
+  selectedStructure = found.structure.center;
+  termSuccess(`✓ Selected: "${selectedStructure}"`);
+}
+
+function cmdHelp() {
+  termResultHtml(`
+<strong style="color:var(--accent3)">Rei CLI Commands (Web Edition)</strong>
+
+<span style="color:var(--accent)">Structure Management:</span>
+  init &lt;type&gt; "&lt;name&gt;" --periphery "A,B,C"   Create structure
+  list / ls                                     List all structures
+  view "&lt;name&gt;"                                 Show structure details
+  select "&lt;name&gt;"                               Set active structure
+  delete "&lt;name&gt;"                               Remove structure
+
+<span style="color:var(--accent)">Progress (A3: Sigma):</span>
+  sigma update "&lt;name&gt;" +50 "&lt;note&gt;"            Update overall σ
+  sigma update "&lt;name&gt;" +100 "&lt;note&gt;" --node "X" Update node σ
+  sigma history "&lt;name&gt;"                        View σ history
+
+<span style="color:var(--accent)">Growth (A2: Extension/Reduction):</span>
+  extend "&lt;name&gt;" --add "X,Y"                   Add periphery nodes
+  reduce "&lt;name&gt;" --remove "X,Y"                Remove nodes
+
+<span style="color:var(--accent)">Context:</span>
+  memory "&lt;name&gt;" "&lt;note&gt;"                      Add memory/decision
+
+<span style="color:var(--accent)">Export:</span>
+  export "&lt;name&gt;" --format json                  AI-ready JSON (clipboard)
+  export "&lt;name&gt;" --format md                    Markdown export
+  export "&lt;name&gt;" --format both                  Both formats
+
+<span style="color:var(--accent)">Utility:</span>
+  clear                                         Clear terminal
+  help / ?                                      Show this help
+  version                                       Show version
+
+<span style="color:var(--fg3)">Types: project, task, idea, analysis, decision
+Flags: --field, --flow, --will, --tags, --target, --seed
+Tip: select a structure to omit "&lt;name&gt;" from commands</span>
+  `);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Visualization
+// ═══════════════════════════════════════════════════════════
+
+function updateViz() {
+  const all = listStructures();
+  structCount.textContent = `構造: ${all.length}`;
+
+  if (all.length === 0) {
+    vizArea.innerHTML = '';
+    vizArea.appendChild(vizEmpty.cloneNode(true));
+    return;
+  }
+
+  // If there's a selected structure, show it prominently
+  let displayList = all;
+  if (selectedStructure) {
+    const sel = all.find(s => s.structure.center.toLowerCase() === selectedStructure.toLowerCase());
+    if (sel) {
+      displayList = [sel, ...all.filter(s => s !== sel)];
+    }
+  }
+
+  let html = '';
+  displayList.forEach((item, idx) => {
+    const s = item.structure;
+    const isSelected = selectedStructure && s.center.toLowerCase() === selectedStructure.toLowerCase();
+
+    html += `<div class="struct-card" style="${isSelected ? 'border-color:var(--accent2)' : ''}">`;
+    
+    // Header
+    html += `<div class="struct-header">`;
+    html += `<div class="struct-title">${escHtml(s.center)}</div>`;
+    html += `<div class="struct-type">${s.type}</div>`;
+    html += `</div>`;
+    
+    // Meta
+    html += `<div class="struct-meta">Will: ${escHtml(s.attributes.will)}</div>`;
+
+    // Sigma Gauge
+    html += `<div class="sigma-gauge">`;
+    html += `<div class="sigma-label"><span>σ Progress</span><span>${s.sigma.current}%</span></div>`;
+    html += `<div class="sigma-track"><div class="sigma-fill" style="width:${s.sigma.current}%"></div></div>`;
+    html += `</div>`;
+
+    // Center-Periphery SVG visualization (only for selected)
+    if (isSelected && s.periphery.length > 0) {
+      html += renderCPVisualization(s);
+    }
+
+    // Periphery Nodes
+    if (s.periphery.length > 0) {
+      html += `<div class="periph-section">`;
+      html += `<div class="periph-title">Periphery (周囲) — ${s.periphery.length} nodes</div>`;
+      s.periphery.forEach(p => {
+        html += `<div class="periph-node ${p.status}">`;
+        html += `<span class="name">${escHtml(p.name)}</span>`;
+        html += `<span class="node-sigma">${p.sigma}%</span>`;
+        html += `<span class="node-status ${p.status}">${p.status}</span>`;
+        html += `</div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Attributes Grid
+    html += `<div class="attr-grid">`;
+    html += `<div class="attr-item"><span class="attr-label">場 Field</span><span class="attr-val">${escHtml(s.attributes.field)}</span></div>`;
+    html += `<div class="attr-item"><span class="attr-label">流 Flow</span><span class="attr-val">${escHtml(s.attributes.flow)}</span></div>`;
+    html += `<div class="attr-item"><span class="attr-label">層 Layer</span><span class="attr-val">${s.attributes.layer}</span></div>`;
+    html += `<div class="attr-item"><span class="attr-label">生成 Genesis</span><span class="attr-val">${s.genesis.created_at.slice(0, 10)}</span></div>`;
+    html += `</div>`;
+
+    // Memory
+    if (s.attributes.memory.length > 0) {
+      html += `<div class="memory-section">`;
+      html += `<div class="periph-title">Memory (記憶)</div>`;
+      s.attributes.memory.forEach(m => {
+        html += `<div class="memory-item">${escHtml(m)}</div>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  });
+
+  vizArea.innerHTML = html;
+}
+
+function renderCPVisualization(s) {
+  const n = s.periphery.length;
+  const size = 280;
+  const cx = size / 2, cy = size / 2;
+  const cr = 32; // center radius
+  const pr = 22; // periphery radius
+  const orbit = size / 2 - pr - 10;
+
+  let svg = `<div class="cp-viz" style="padding-top:${size}px"><div class="cp-viz-inner"><svg viewBox="0 0 ${size} ${size}">`;
+
+  // Lines from center to periphery
+  s.periphery.forEach((p, i) => {
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    const px = cx + orbit * Math.cos(angle);
+    const py = cy + orbit * Math.sin(angle);
+    svg += `<line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" class="cp-line"/>`;
+  });
+
+  // Center
+  svg += `<circle cx="${cx}" cy="${cy}" r="${cr}" class="cp-center-circle"/>`;
+  const centerLabel = s.center.length > 8 ? s.center.slice(0, 8) + '…' : s.center;
+  svg += `<text x="${cx}" y="${cy}" class="cp-center-text">${escHtml(centerLabel)}</text>`;
+
+  // Periphery nodes
+  s.periphery.forEach((p, i) => {
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    const px = cx + orbit * Math.cos(angle);
+    const py = cy + orbit * Math.sin(angle);
+    svg += `<circle cx="${px}" cy="${py}" r="${pr}" class="cp-periph-circle ${p.status}"/>`;
+    const label = p.name.length > 6 ? p.name.slice(0, 6) + '…' : p.name;
+    svg += `<text x="${px}" y="${py - 4}" class="cp-periph-text">${escHtml(label)}</text>`;
+    svg += `<text x="${px}" y="${py + 8}" class="cp-periph-sigma">${p.sigma}%</text>`;
+  });
+
+  svg += `</svg></div></div>`;
+  return svg;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Examples
+// ═══════════════════════════════════════════════════════════
+
+const EXAMPLES = [
+  { title: 'プロジェクト作成', cmd: 'init project "Rei App" --periphery "Design,Implement,Test,Deploy"', tag: 'A1+A4' },
+  { title: 'タスク作成', cmd: 'init task "Bug Fix" --periphery "Investigate,Fix,Verify" --field engineering', tag: 'A4' },
+  { title: 'アイデア構造', cmd: 'init idea "New Feature" --periphery "Research,Prototype,Evaluate" --flow cyclical', tag: 'A4' },
+  { title: '進捗更新(ノード)', cmd: 'sigma update "Rei App" +100 "Design complete" --node "Design"', tag: 'A3' },
+  { title: '進捗更新(全体)', cmd: 'sigma update "Rei App" +30 "Good progress"', tag: 'A3' },
+  { title: 'ノード追加(拡張)', cmd: 'extend "Rei App" --add "Documentation,Review"', tag: 'A2' },
+  { title: 'ノード削除(縮約)', cmd: 'reduce "Rei App" --remove "Review"', tag: 'A2' },
+  { title: 'メモリ追加', cmd: 'memory "Rei App" "Decision: Use TypeScript for core engine"', tag: '記憶' },
+  { title: 'AIエクスポート(JSON)', cmd: 'export "Rei App" --format json', tag: 'Export' },
+  { title: 'Markdownエクスポート', cmd: 'export "Rei App" --format md', tag: 'Export' },
+  { title: 'σ履歴表示', cmd: 'sigma history "Rei App"', tag: 'A3' },
+  { title: '構造一覧', cmd: 'list', tag: 'Util' },
+];
+
+function renderExamples() {
+  examplesGrid.innerHTML = '';
+  EXAMPLES.forEach(ex => {
+    const card = document.createElement('div');
+    card.className = 'example-card';
+    card.innerHTML = `<div class="ex-title">${ex.title} <span style="color:var(--fg3);font-size:.6rem">[${ex.tag}]</span></div><code>${escHtml(ex.cmd)}</code>`;
+    card.addEventListener('click', () => {
+      cmdInput.value = ex.cmd;
+      cmdInput.focus();
+      examplesPanel.classList.remove('open');
+    });
+    examplesGrid.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Event Handlers
+// ═══════════════════════════════════════════════════════════
+
+cmdInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const val = cmdInput.value.trim();
+    if (val) {
+      executeCommand(val);
+      cmdInput.value = '';
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (historyIndex > 0) {
+      historyIndex--;
+      cmdInput.value = commandHistory[historyIndex];
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (historyIndex < commandHistory.length - 1) {
+      historyIndex++;
+      cmdInput.value = commandHistory[historyIndex];
+    } else {
+      historyIndex = commandHistory.length;
+      cmdInput.value = '';
+    }
+  }
+});
+
+document.getElementById('btn-examples').addEventListener('click', () => {
+  examplesPanel.classList.toggle('open');
+});
+
+document.getElementById('btn-clear-all').addEventListener('click', () => {
+  if (confirm('全てのRei構造をlocalStorageから削除しますか？')) {
+    const count = clearAllStructures();
+    selectedStructure = null;
+    terminal.innerHTML = '';
+    termWelcome();
+    termSuccess(`✓ ${count} structures deleted.`);
+    updateViz();
+  }
+});
+
+document.getElementById('btn-help').addEventListener('click', () => {
+  cmdInput.value = 'help';
+  executeCommand('help');
+});
+
+// Click terminal to focus input
+terminal.addEventListener('click', () => cmdInput.focus());
+
+// ═══════════════════════════════════════════════════════════
+// Initialize
+// ═══════════════════════════════════════════════════════════
+
+termWelcome();
+renderExamples();
+
+// Load existing structures and auto-select
+const existing = listStructures();
+if (existing.length > 0) {
+  selectedStructure = existing[0].structure.center;
+  termInfo(`${existing.length} structure(s) loaded from localStorage.`);
+}
+
+updateViz();
+cmdInput.focus();
+</script>
+</body>
+</html>
