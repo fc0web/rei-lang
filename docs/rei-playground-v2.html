@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei (0₀式) Web Playground v2 — Live Execution Environment</title>
+<meta name="description" content="Rei言語をブラウザ上で実行。構造の作成・進捗管理・AIエクスポートを全てローカルで。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f12;--bg2:#16161c;--bg3:#1c1c25;--bg4:#25252f;
+  --fg:#c8c5be;--fg2:#9a978f;--fg3:#6b685f;
+  --accent:#b8a47e;--accent2:#8a7a5e;--accent3:#d4c5a0;
+  --code-bg:#12121a;--code-border:#2a2a35;
+  --success:#7eb88a;--error:#c87e7e;--info:#7e9eb8;--warn:#c8b87e;
+  --radius:6px;
+  --tut:#a48ec8;--tut2:#7e6ea8;--tut-bg:#1a1820;
+}
+html{font-size:15px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:'Noto Sans JP','IBM Plex Mono',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ─── Header ─── */
+header{
+  padding:1.2rem 2rem .8rem;
+  border-bottom:1px solid var(--bg4);
+  display:flex;align-items:baseline;gap:1.5rem;flex-wrap:wrap;
+  background:var(--bg2);flex-shrink:0;
+}
+header h1{
+  font-family:'Noto Serif JP',serif;font-weight:600;font-size:1.3rem;
+  color:var(--accent3);letter-spacing:.05em;
+}
+header h1 .ver{font-weight:400;color:var(--fg3);font-size:.72rem;margin-left:.5rem;font-family:'IBM Plex Mono',monospace}
+header .subtitle{font-size:.72rem;color:var(--fg3);font-family:'IBM Plex Mono',monospace}
+header nav{display:flex;gap:.4rem;flex-wrap:wrap;margin-left:auto}
+header nav button{
+  font-size:.68rem;padding:.3rem .65rem;
+  background:var(--bg3);color:var(--fg2);border:1px solid var(--code-border);
+  border-radius:var(--radius);cursor:pointer;transition:all .2s;
+  font-family:'IBM Plex Mono',monospace;
+}
+header nav button:hover{background:var(--bg4);color:var(--accent3);border-color:var(--accent2)}
+header nav button.active{background:var(--accent2);color:var(--bg);border-color:var(--accent)}
+header nav button.tut-btn{background:var(--tut2);color:#fff;border-color:var(--tut)}
+header nav button.tut-btn:hover{background:var(--tut);border-color:#c0b0e0}
+
+/* ─── Main Layout ─── */
+main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:0;overflow:hidden}
+@media(max-width:900px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+
+.panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel-header{
+  padding:.55rem 1.2rem;font-size:.68rem;
+  color:var(--fg3);font-family:'IBM Plex Mono',monospace;
+  background:var(--bg2);border-bottom:1px solid var(--code-border);
+  display:flex;justify-content:space-between;align-items:center;
+  letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;
+}
+.panel-header .hint{text-transform:none;letter-spacing:0;opacity:.6;font-size:.62rem}
+.left-panel{border-right:1px solid var(--bg4)}
+@media(max-width:900px){.left-panel{border-right:none;border-bottom:1px solid var(--bg4)}}
+
+/* ─── Terminal ─── */
+#terminal{
+  flex:1;overflow-y:auto;padding:1rem;
+  background:var(--code-bg);
+  font-family:'IBM Plex Mono',monospace;font-size:.82rem;line-height:1.65;
+  scroll-behavior:smooth;
+}
+#terminal::-webkit-scrollbar{width:6px}
+#terminal::-webkit-scrollbar-track{background:transparent}
+#terminal::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+.term-line{margin-bottom:.4rem;animation:fadeIn .2s ease}
+.term-welcome{color:var(--accent3);margin-bottom:.8rem;line-height:1.5}
+.term-welcome .logo{font-family:'Noto Serif JP',serif;font-size:1.1rem;font-weight:600;display:block;margin-bottom:.3rem}
+.term-prompt{color:var(--accent);white-space:pre-wrap;word-break:break-word}
+.term-prompt::before{content:'rei › ';color:var(--accent2)}
+.term-result{padding:.4rem .7rem;border-radius:var(--radius);background:var(--bg3);border-left:2px solid var(--accent2);margin:.3rem 0;white-space:pre-wrap;word-break:break-word}
+.term-error{padding:.4rem .7rem;border-radius:var(--radius);background:#1c1418;border-left:2px solid var(--error);color:var(--error);margin:.3rem 0;white-space:pre-wrap}
+.term-info{color:var(--fg3);font-style:italic;font-size:.75rem;margin:.2rem 0}
+.term-success{color:var(--success)}
+.term-table{margin:.4rem 0;font-size:.78rem}
+.term-table table{border-collapse:collapse;width:100%}
+.term-table th,.term-table td{padding:.3rem .6rem;text-align:left;border-bottom:1px solid var(--bg4)}
+.term-table th{color:var(--accent3);font-weight:500;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
+.term-table td{color:var(--fg)}
+.term-table .status-done{color:var(--success)}
+.term-table .status-active{color:var(--info)}
+.term-table .status-pending{color:var(--fg3)}
+.term-table .status-blocked{color:var(--error)}
+.term-sigma-bar{display:inline-block;font-size:.75rem}
+.term-sigma-filled{color:var(--accent3)}
+.term-sigma-empty{color:var(--bg4)}
+.term-json{background:var(--bg3);border:1px solid var(--code-border);border-radius:var(--radius);padding:.6rem .8rem;margin:.4rem 0;font-size:.75rem;white-space:pre-wrap;overflow-x:auto;max-height:300px;overflow-y:auto}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── Input Line ─── */
+.input-bar{
+  display:flex;align-items:center;gap:0;
+  background:var(--bg2);border-top:1px solid var(--code-border);
+  padding:0;flex-shrink:0;
+}
+.input-bar .prompt-label{
+  padding:.6rem .2rem .6rem 1rem;
+  color:var(--accent2);font-family:'IBM Plex Mono',monospace;font-size:.82rem;
+  white-space:nowrap;flex-shrink:0;
+}
+#cmd-input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--fg);font-family:'IBM Plex Mono',monospace;font-size:.82rem;
+  padding:.6rem .5rem;
+}
+#cmd-input::placeholder{color:var(--fg3);font-style:italic}
+
+/* ─── Right Panel ─── */
+#viz-area{
+  flex:1;overflow-y:auto;padding:1.2rem;background:var(--bg);
+}
+#viz-area::-webkit-scrollbar{width:6px}
+#viz-area::-webkit-scrollbar-track{background:transparent}
+#viz-area::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+.viz-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;color:var(--fg3);font-size:.82rem;text-align:center;gap:.8rem;
+}
+.viz-empty .icon{font-size:2.5rem;opacity:.3}
+.viz-empty code{font-size:.72rem;background:var(--bg3);padding:.2rem .5rem;border-radius:var(--radius)}
+
+/* Structure Card */
+.struct-card{
+  background:var(--bg2);border:1px solid var(--code-border);border-radius:8px;
+  padding:1.2rem;margin-bottom:1rem;animation:fadeIn .3s ease;
+}
+.struct-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.8rem}
+.struct-title{font-family:'Noto Serif JP',serif;font-size:1.1rem;font-weight:600;color:var(--accent3)}
+.struct-type{font-size:.65rem;padding:.2rem .5rem;background:var(--bg4);color:var(--fg2);border-radius:var(--radius);font-family:'IBM Plex Mono',monospace;text-transform:uppercase}
+.struct-meta{font-size:.7rem;color:var(--fg3);margin-bottom:.8rem;font-family:'IBM Plex Mono',monospace}
+
+.sigma-gauge{margin:.8rem 0}
+.sigma-label{display:flex;justify-content:space-between;font-size:.72rem;color:var(--fg2);margin-bottom:.3rem;font-family:'IBM Plex Mono',monospace}
+.sigma-track{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.sigma-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent2),var(--accent3));transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+.periph-section{margin-top:1rem}
+.periph-title{font-size:.7rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;font-family:'IBM Plex Mono',monospace}
+.periph-node{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;margin-bottom:.3rem;background:var(--bg3);border-radius:var(--radius);border-left:3px solid var(--bg4);transition:all .3s}
+.periph-node.done{border-left-color:var(--success)}
+.periph-node.active{border-left-color:var(--info)}
+.periph-node.blocked{border-left-color:var(--error)}
+.periph-node .name{flex:1;font-size:.78rem;color:var(--fg)}
+.periph-node .node-sigma{font-size:.7rem;color:var(--fg2);font-family:'IBM Plex Mono',monospace;min-width:3rem;text-align:right}
+.periph-node .node-status{font-size:.6rem;padding:.15rem .4rem;border-radius:3px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase}
+.periph-node .node-status.done{background:rgba(126,184,138,.15);color:var(--success)}
+.periph-node .node-status.active{background:rgba(126,158,184,.15);color:var(--info)}
+.periph-node .node-status.pending{background:rgba(107,104,95,.15);color:var(--fg3)}
+.periph-node .node-status.blocked{background:rgba(200,126,126,.15);color:var(--error)}
+
+.attr-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.8rem;font-size:.72rem}
+.attr-item{background:var(--bg3);padding:.4rem .6rem;border-radius:var(--radius);font-family:'IBM Plex Mono',monospace}
+.attr-item .attr-label{color:var(--fg3);font-size:.62rem;display:block;margin-bottom:.1rem}
+.attr-item .attr-val{color:var(--fg)}
+.memory-section{margin-top:.8rem}
+.memory-item{font-size:.72rem;color:var(--fg2);padding:.3rem 0;border-bottom:1px solid var(--bg3);font-family:'IBM Plex Mono',monospace}
+
+.cp-viz{position:relative;width:100%;padding-top:100%;margin:.8rem 0}
+.cp-viz-inner{position:absolute;inset:0}
+.cp-viz svg{width:100%;height:100%}
+.cp-center-circle{fill:none;stroke:var(--accent2);stroke-width:2}
+.cp-center-text{fill:var(--accent3);font-family:'Noto Serif JP',serif;font-size:14px;text-anchor:middle;dominant-baseline:central}
+.cp-periph-circle{fill:var(--bg3);stroke:var(--code-border);stroke-width:1.5;transition:all .3s}
+.cp-periph-circle.done{fill:rgba(126,184,138,.15);stroke:var(--success)}
+.cp-periph-circle.active{fill:rgba(126,158,184,.15);stroke:var(--info)}
+.cp-periph-circle.blocked{fill:rgba(200,126,126,.15);stroke:var(--error)}
+.cp-line{stroke:var(--bg4);stroke-width:1;stroke-dasharray:4 3}
+.cp-periph-text{fill:var(--fg2);font-family:'IBM Plex Mono',monospace;font-size:10px;text-anchor:middle;dominant-baseline:central}
+.cp-periph-sigma{fill:var(--fg3);font-family:'IBM Plex Mono',monospace;font-size:9px;text-anchor:middle}
+
+.examples-panel{background:var(--bg2);border-top:1px solid var(--code-border);max-height:0;overflow:hidden;transition:max-height .4s ease;flex-shrink:0}
+.examples-panel.open{max-height:320px;overflow-y:auto}
+.examples-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.4rem;padding:.8rem 1rem}
+.example-card{background:var(--bg3);border:1px solid var(--code-border);border-radius:var(--radius);padding:.5rem .7rem;cursor:pointer;transition:all .2s}
+.example-card:hover{border-color:var(--accent2);background:var(--bg4)}
+.example-card .ex-title{font-size:.7rem;color:var(--accent3);font-weight:500;margin-bottom:.2rem}
+.example-card code{font-size:.62rem;color:var(--fg3);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ═══ Tutorial ═══ */
+#tutorial-overlay{display:none;flex-direction:column;overflow:hidden}
+#tutorial-overlay.active{display:flex;flex:1}
+
+#tutorial-content{flex:1;overflow-y:auto;padding:1.5rem}
+#tutorial-content::-webkit-scrollbar{width:6px}
+#tutorial-content::-webkit-scrollbar-track{background:transparent}
+#tutorial-content::-webkit-scrollbar-thumb{background:var(--tut2);border-radius:3px}
+
+.tut-progress{display:flex;align-items:center;gap:.6rem;padding:.6rem 1.2rem;background:var(--tut-bg);border-bottom:1px solid var(--tut2);flex-shrink:0}
+.tut-progress-label{font-size:.68rem;color:var(--tut);font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+.tut-progress-track{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.tut-progress-fill{height:100%;background:var(--tut);border-radius:2px;transition:width .4s ease}
+.tut-progress-step{font-size:.62rem;color:var(--fg3);font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+
+.tut-step{animation:tutFadeIn .4s ease}
+@keyframes tutFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.tut-step-number{display:inline-block;font-size:.6rem;padding:.15rem .5rem;border-radius:10px;background:var(--tut2);color:#fff;font-family:'IBM Plex Mono',monospace;margin-bottom:.6rem}
+.tut-axiom-badge{display:inline-block;font-size:.6rem;padding:.15rem .5rem;border-radius:10px;margin-left:.4rem;background:var(--accent2);color:var(--bg);font-family:'IBM Plex Mono',monospace}
+
+.tut-step h3{font-family:'Noto Serif JP',serif;font-size:1.05rem;font-weight:600;color:var(--accent3);margin:.5rem 0;line-height:1.4}
+.tut-step .tut-desc{font-size:.82rem;color:var(--fg);line-height:1.7;margin:.6rem 0}
+.tut-step .tut-desc strong{color:var(--accent3)}
+
+.tut-step .tut-philosophy{font-size:.78rem;color:var(--fg2);line-height:1.6;padding:.6rem .8rem;margin:.6rem 0;background:var(--bg3);border-radius:var(--radius);border-left:2px solid var(--tut2);font-style:italic}
+
+.tut-step .tut-command-box{background:var(--code-bg);border:1px solid var(--tut2);border-radius:var(--radius);padding:.6rem .8rem;margin:.8rem 0;cursor:pointer;transition:all .2s;position:relative}
+.tut-step .tut-command-box:hover{border-color:var(--tut);background:#15141e}
+.tut-step .tut-command-box::after{content:'クリックで実行 ▶';position:absolute;right:.6rem;top:50%;transform:translateY(-50%);font-size:.6rem;color:var(--tut);opacity:.7;font-family:'IBM Plex Mono',monospace}
+.tut-step .tut-command-box code{font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--tut)}
+.tut-step .tut-command-box.executed{border-color:var(--success);opacity:.7}
+.tut-step .tut-command-box.executed::after{content:'✓ 実行済み';color:var(--success)}
+.tut-step .tut-explain{font-size:.75rem;color:var(--fg3);line-height:1.6;margin:.4rem 0 .8rem;font-family:'IBM Plex Mono',monospace}
+.tut-step .tut-check{font-size:.78rem;color:var(--success);margin:.5rem 0;display:none}
+.tut-step .tut-check.visible{display:block}
+
+.tut-nav{display:flex;gap:.6rem;padding:.8rem 1.2rem;background:var(--tut-bg);border-top:1px solid var(--tut2);flex-shrink:0}
+.tut-nav button{padding:.45rem 1.2rem;border-radius:var(--radius);font-family:'IBM Plex Mono',monospace;font-size:.75rem;cursor:pointer;transition:all .2s;border:1px solid var(--tut2)}
+.tut-nav .tut-prev{background:transparent;color:var(--fg2)}
+.tut-nav .tut-prev:hover{background:var(--bg3);color:var(--fg)}
+.tut-nav .tut-next{background:var(--tut2);color:#fff;margin-left:auto}
+.tut-nav .tut-next:hover{background:var(--tut)}
+.tut-nav .tut-next:disabled{opacity:.4;cursor:not-allowed}
+.tut-nav .tut-exit{background:transparent;color:var(--fg3);border-color:var(--bg4)}
+.tut-nav .tut-exit:hover{color:var(--error);border-color:var(--error)}
+
+/* Welcome Screen */
+.welcome-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;gap:1rem;padding:2rem}
+.welcome-screen .w-icon{font-size:3rem;opacity:.5;font-family:'Noto Serif JP',serif;color:var(--accent3)}
+.welcome-screen h2{font-family:'Noto Serif JP',serif;font-size:1.2rem;color:var(--accent3);font-weight:600}
+.welcome-screen p{font-size:.82rem;color:var(--fg2);line-height:1.6;max-width:360px}
+.welcome-screen .w-buttons{display:flex;gap:.8rem;margin-top:.5rem;flex-wrap:wrap;justify-content:center}
+.welcome-screen .w-btn{padding:.6rem 1.5rem;border-radius:var(--radius);font-family:'IBM Plex Mono',monospace;font-size:.78rem;cursor:pointer;transition:all .2s;border:none}
+.welcome-screen .w-btn-tut{background:var(--tut2);color:#fff}
+.welcome-screen .w-btn-tut:hover{background:var(--tut)}
+.welcome-screen .w-btn-free{background:var(--bg3);color:var(--fg2);border:1px solid var(--code-border)}
+.welcome-screen .w-btn-free:hover{background:var(--bg4);color:var(--accent3)}
+
+footer{padding:.4rem 1.5rem;border-top:1px solid var(--bg4);font-size:.6rem;color:var(--fg3);font-family:'IBM Plex Mono',monospace;display:flex;justify-content:space-between;align-items:center;background:var(--bg2);flex-shrink:0}
+footer a{color:var(--accent2);text-decoration:none}
+footer a:hover{color:var(--accent3)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>零 Rei Playground<span class="ver">v2.0 — Live Engine</span></h1>
+  <span class="subtitle">0₀式 / ブラウザ実行環境</span>
+  <nav>
+    <button id="btn-tutorial" class="tut-btn" title="チュートリアル開始">📖 チュートリアル</button>
+    <button id="btn-examples" title="コマンド例">例</button>
+    <button id="btn-clear-all" title="データ全削除">🗑 Reset</button>
+    <button id="btn-help" title="ヘルプ">?</button>
+  </nav>
+</header>
+
+<main>
+  <div class="panel left-panel">
+    <div class="panel-header"><span>Terminal</span><span class="hint">Reiコマンドを入力 — ローカル実行</span></div>
+    <div id="terminal"></div>
+    <div class="input-bar">
+      <span class="prompt-label">rei ›</span>
+      <input type="text" id="cmd-input" placeholder='init project "My Project" --periphery "A,B,C"' autocomplete="off" spellcheck="false">
+    </div>
+    <div class="examples-panel" id="examples-panel"><div class="examples-grid" id="examples-grid"></div></div>
+  </div>
+
+  <div class="panel" id="right-panel">
+    <div class="panel-header"><span id="right-panel-title">Structure View</span><span class="hint" id="struct-count">構造: 0</span></div>
+    <div id="welcome-screen" class="welcome-screen">
+      <div class="w-icon">零</div>
+      <h2>Rei (0₀式) へようこそ</h2>
+      <p>Reiは「中心と周囲」という構造で物事を捉え、進捗を蓄積していく思考ツールです。</p>
+      <p style="font-size:.75rem;color:var(--fg3)">初めての方はチュートリアルをお勧めします。<br>Reiの4つの公理を5分で体験できます。</p>
+      <div class="w-buttons">
+        <button class="w-btn w-btn-tut" id="btn-start-tutorial">📖 チュートリアルを始める</button>
+        <button class="w-btn w-btn-free" id="btn-start-free">自由に使う →</button>
+      </div>
+    </div>
+    <div id="tutorial-overlay">
+      <div class="tut-progress">
+        <span class="tut-progress-label">Tutorial</span>
+        <div class="tut-progress-track"><div class="tut-progress-fill" id="tut-progress-fill"></div></div>
+        <span class="tut-progress-step" id="tut-step-label">0 / 9</span>
+      </div>
+      <div id="tutorial-content"></div>
+      <div class="tut-nav">
+        <button class="tut-exit" id="tut-exit">✕ 終了</button>
+        <button class="tut-prev" id="tut-prev">← 戻る</button>
+        <button class="tut-next" id="tut-next">次へ →</button>
+      </div>
+    </div>
+    <div id="viz-area"></div>
+  </div>
+</main>
+
+<footer>
+  <span>Rei (0₀式) — All data stored in localStorage. No server communication.</span>
+  <span><a href="https://github.com/fc0web/rei-lang" target="_blank">GitHub</a> · <a href="https://fc0web.github.io/rei-lang/" target="_blank">Demos</a></span>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════
+// Rei Engine (from packages/cli/src/core/)
+// ═══════════════════════════════════════════════════
+const REI_VERSION='0.1.0',STRUCTURE_TYPES=['project','task','idea','analysis','decision'];
+function createStructure(o){const n=new Date().toISOString();return{rei_version:REI_VERSION,type:o.type,center:o.center,periphery:o.periphery.map(x=>({name:x.trim(),sigma:0,status:'pending'})),attributes:{field:o.field||inferField(o.type),flow:o.flow||inferFlow(o.type),memory:[],layer:0,relation:[],will:o.will||`Complete: ${o.center}`},sigma:{current:0,target:o.target,history:[{timestamp:n,delta:0,note:`Genesis: ${o.center}`,source:'init'}]},genesis:{created_at:n,created_by:'rei-web',seed:o.seed},meta:{updated_at:n,tags:o.tags||[],local_only:true}}}
+function extendPeriphery(s,names){return{...s,periphery:[...s.periphery,...names.map(n=>({name:n.trim(),sigma:0,status:'pending'}))],meta:{...s.meta,updated_at:new Date().toISOString()}}}
+function reducePeriphery(s,names){const rm=new Set(names.map(n=>n.trim().toLowerCase()));return{...s,periphery:s.periphery.filter(p=>!rm.has(p.name.toLowerCase())),meta:{...s.meta,updated_at:new Date().toISOString()}}}
+function updateSigma(s,delta,note,pn){const now=new Date().toISOString(),entry={timestamp:now,delta,note};let per=s.periphery;if(pn){entry.source=pn;per=s.periphery.map(p=>{if(p.name.toLowerCase()===pn.toLowerCase()){const ns=Math.max(0,Math.min(100,p.sigma+delta));return{...p,sigma:ns,status:ns>=100?'done':ns>0?'active':p.status}}return p})}const ov=per.length>0?Math.round(per.reduce((a,p)=>a+p.sigma,0)/per.length):s.sigma.current+delta;return{...s,periphery:per,sigma:{...s.sigma,current:ov,history:[...s.sigma.history,entry]},meta:{...s.meta,updated_at:now}}}
+function addMemory(s,note){return{...s,attributes:{...s.attributes,memory:[...s.attributes.memory,`[${new Date().toISOString().slice(0,10)}] ${note}`]},meta:{...s.meta,updated_at:new Date().toISOString()}}}
+function exportForAI(s){const h=s.sigma.history.slice(-5);return{_rei_context:`Rei Structure (0₀式): ${s.type} — "${s.center}"\nProgress: σ = ${s.sigma.current}%\nField: ${s.attributes.field} | Flow: ${s.attributes.flow}\nWill: ${s.attributes.will}`,structure:{type:s.type,center:s.center,periphery:s.periphery.map(p=>({name:p.name,progress:p.sigma,status:p.status})),overall_progress:s.sigma.current,field:s.attributes.field,will:s.attributes.will,flow:s.attributes.flow},memory:s.attributes.memory,sigma:{current:s.sigma.current,target:s.sigma.target,recent_changes:h.map(x=>({note:x.note,delta:x.delta}))},prompt_hint:genHint(s)}}
+function exportAsMarkdown(s){const l=[`# Rei: ${s.center}`,`> Type: ${s.type} | σ = ${s.sigma.current}%`,'','## Periphery (周囲)'];s.periphery.forEach(p=>l.push(`- **${p.name}** ${pbar(p.sigma)} ${p.sigma}% [${p.status}]`));l.push('','## Attributes (六属性)',`- **Field:** ${s.attributes.field}`,`- **Flow:** ${s.attributes.flow}`,`- **Layer:** ${s.attributes.layer}`,`- **Will:** ${s.attributes.will}`,'');if(s.attributes.memory.length){l.push('## Memory');s.attributes.memory.forEach(m=>l.push(`- ${m}`));l.push('')}l.push('---',`*rei-web v${REI_VERSION} | ${new Date().toISOString().slice(0,10)}*`);return l.join('\n')}
+function inferField(t){return{project:'engineering',task:'execution',idea:'exploration',analysis:'research',decision:'strategy'}[t]||'general'}
+function inferFlow(t){return{project:'sequential',task:'sequential',idea:'cyclical',analysis:'parallel',decision:'adaptive'}[t]||'sequential'}
+function genHint(s){const h=[];const bl=s.periphery.filter(p=>p.status==='blocked'),ac=s.periphery.filter(p=>p.status==='active'),pe=s.periphery.filter(p=>p.status==='pending');if(bl.length)h.push('Blocked: '+bl.map(b=>b.name).join(', '));if(ac.length)h.push('Active: '+ac.map(a=>`${a.name}(${a.sigma}%)`).join(', '));if(pe.length&&!ac.length)h.push('Next: '+pe[0].name);return h.length?`Help with ${s.type}. ${h.join(' ')}`:`Help advance: "${s.center}"`}
+function pbar(p){const f=Math.round(p/10);return'['+'█'.repeat(f)+'░'.repeat(10-f)+']'}
+
+// ═══════════════════════════════════════════════════
+// Browser Storage
+// ═══════════════════════════════════════════════════
+const SP='rei_struct_';
+function toKey(n){return SP+n.toLowerCase().replace(/[^\w\u3000-\u9fff\uff00-\uffef-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'')}
+function saveStruct(s){localStorage.setItem(toKey(s.center),JSON.stringify(s))}
+function listAll(){const r=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k?.startsWith(SP))try{r.push({name:k.replace(SP,''),key:k,structure:JSON.parse(localStorage.getItem(k))})}catch(e){}}return r}
+function findS(q){const all=listAll(),ql=q.toLowerCase();return all.find(s=>s.structure.center.toLowerCase()===ql||s.name===ql)||all.find(s=>s.name.includes(ql)||s.structure.center.toLowerCase().includes(ql))||null}
+function delS(n){const f=findS(n);if(f){localStorage.removeItem(f.key);return true}return false}
+function clearAll(){const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k?.startsWith(SP))ks.push(k)}ks.forEach(k=>localStorage.removeItem(k));return ks.length}
+
+// ═══════════════════════════════════════════════════
+// Terminal
+// ═══════════════════════════════════════════════════
+const term=document.getElementById('terminal'),inp=document.getElementById('cmd-input'),viz=document.getElementById('viz-area'),scEl=document.getElementById('struct-count');
+let cmdHist=[],histIdx=-1,selStruct=null,tutActive=false;
+
+function tp(html,c=''){const d=document.createElement('div');d.className='term-line '+c;d.innerHTML=html;term.appendChild(d);term.scrollTop=term.scrollHeight}
+function tWelcome(){tp(`<div class="term-welcome"><span class="logo">零 Rei (0₀式) Web Playground v2</span>ブラウザ上で動く Rei 実行環境。全データは localStorage に保存。<br><span style="color:var(--fg3)">help でコマンド一覧 / 右側「チュートリアルを始める」で体験開始</span></div>`)}
+function tPrompt(c){tp(`<span class="term-prompt">${E(c)}</span>`)}
+function tResult(t){tp(`<div class="term-result">${E(t)}</div>`)}
+function tResultH(h){tp(`<div class="term-result">${h}</div>`)}
+function tError(t){tp(`<div class="term-error">${E(t)}</div>`)}
+function tInfo(t){tp(`<div class="term-info">${E(t)}</div>`)}
+function tOk(t){tp(`<div class="term-result term-success">${E(t)}</div>`)}
+function tJson(o){tp(`<div class="term-json">${E(JSON.stringify(o,null,2))}</div>`)}
+function tTable(hd,rows){let h='<div class="term-table"><table><thead><tr>';hd.forEach(x=>h+=`<th>${E(x)}</th>`);h+='</tr></thead><tbody>';rows.forEach(r=>{h+='<tr>';r.forEach(c=>h+=`<td>${c}</td>`);h+='</tr>'});h+='</tbody></table></div>';tp(h)}
+function E(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function sBar(p){const f=Math.round(p/10);return`<span class="term-sigma-bar"><span class="term-sigma-filled">${'█'.repeat(f)}</span><span class="term-sigma-empty">${'░'.repeat(10-f)}</span></span>`}
+function stH(s){return`<span class="status-${s}">${s}</span>`}
+
+// ═══════════════════════════════════════════════════
+// Command Parser & Executor
+// ═══════════════════════════════════════════════════
+function parseArgs(input){const args=[],flags={};let cur='',inQ=false,qc='';for(const ch of input){if(inQ){if(ch===qc)inQ=false;else cur+=ch}else if(ch==='"'||ch==="'"){inQ=true;qc=ch}else if(ch===' '){if(cur){args.push(cur);cur=''}}else cur+=ch}if(cur)args.push(cur);const pos=[];for(let i=0;i<args.length;i++){if(args[i].startsWith('--')){const k=args[i].slice(2);flags[k]=(i+1<args.length&&!args[i+1].startsWith('--'))?args[++i]:true}else pos.push(args[i])}return{positional:pos,flags}}
+
+function exec(raw){const input=raw.trim();if(!input)return;cmdHist.push(input);histIdx=cmdHist.length;tPrompt(input);const{positional:p,flags:f}=parseArgs(input);const cmd=p[0]?.toLowerCase();try{switch(cmd){case'init':cInit(p.slice(1),f);break;case'list':case'ls':cList();break;case'view':case'show':cView(p.slice(1));break;case'sigma':cSigma(p.slice(1),f);break;case'extend':cExtend(p.slice(1),f);break;case'reduce':cReduce(p.slice(1),f);break;case'memory':case'memo':cMem(p.slice(1));break;case'export':cExport(p.slice(1),f);break;case'delete':case'rm':cDel(p.slice(1));break;case'select':case'sel':cSel(p.slice(1));break;case'clear':term.innerHTML='';tWelcome();break;case'help':case'?':cHelp();break;case'version':tResult(`Rei CLI v${REI_VERSION} (Web)`);break;default:tError(`Unknown: ${cmd}\nType "help"`)}}catch(e){tError(e.message)}updateViz()}
+
+function cInit(a,f){const type=a[0]||'project',center=a[1];if(!center){tError('Usage: init <type> "<name>" --periphery "A,B,C"');return}if(!STRUCTURE_TYPES.includes(type)){tError(`Invalid type. Valid: ${STRUCTURE_TYPES.join(', ')}`);return}const per=f.periphery?f.periphery.split(',').map(s=>s.trim()).filter(Boolean):['Task 1','Task 2','Task 3'];const s=createStructure({type,center,periphery:per,field:f.field,flow:f.flow,will:f.will,tags:f.tags?f.tags.split(','):[],target:f.target?parseInt(f.target):undefined,seed:f.seed});saveStruct(s);selStruct=center;tOk(`✓ Created ${type}: "${center}"`);tInfo(`  Periphery: ${per.join(', ')}`);tInfo(`  Field: ${s.attributes.field} | Flow: ${s.attributes.flow}`)}
+function cList(){const all=listAll();if(!all.length){tInfo('No structures. Use "init" to create one.');return}tTable(['Name','Type','σ','Nodes','Updated'],all.map(s=>{const st=s.structure,sel=selStruct&&st.center.toLowerCase()===selStruct.toLowerCase();return[sel?`<strong style="color:var(--accent3)">▸ ${E(st.center)}</strong>`:E(st.center),`<span style="color:var(--fg3)">${st.type}</span>`,`${sBar(st.sigma.current)} ${st.sigma.current}%`,`${st.periphery.length}`,`<span style="color:var(--fg3)">${st.meta.updated_at.slice(0,10)}</span>`]}))}
+function cView(a){const name=a[0]||selStruct;if(!name){tError('Usage: view "<name>"');return}const f=findS(name);if(!f){tError(`Not found: "${name}"`);return}const s=f.structure;selStruct=s.center;tResultH(`<strong style="color:var(--accent3)">${E(s.center)}</strong> <span style="color:var(--fg3)">[${s.type}]</span>`);tInfo(`  σ = ${s.sigma.current}% | Field: ${s.attributes.field} | Flow: ${s.attributes.flow}`);if(s.periphery.length)tTable(['Node','σ','Status'],s.periphery.map(p=>[E(p.name),`${sBar(p.sigma)} ${p.sigma}%`,stH(p.status)]));if(s.attributes.memory.length){tInfo('  Memory:');s.attributes.memory.forEach(m=>tInfo(`    ${m}`))}}
+function cSigma(a,f){if(a[0]==='history'){const n=a[1]||selStruct;if(!n){tError('Usage: sigma history "<name>"');return}const fd=findS(n);if(!fd){tError(`Not found`);return}tTable(['Time','Δ','Note','Source'],fd.structure.sigma.history.map(h=>[`<span style="color:var(--fg3)">${h.timestamp.slice(0,16)}</span>`,`<span style="color:${h.delta>=0?'var(--success)':'var(--error)'}"> ${h.delta>=0?'+':''}${h.delta}</span>`,E(h.note),`<span style="color:var(--fg3)">${h.source||'-'}</span>`]));return}if(a[0]!=='update'){tError('Usage: sigma update "<name>" +delta "<note>" [--node "X"]');return}const name=a[1]||selStruct,ds=a[2],note=a[3]||'Progress';if(!name||!ds){tError('Usage: sigma update "<name>" +delta "<note>"');return}const delta=parseInt(ds);if(isNaN(delta)){tError(`Invalid delta`);return}const fd=findS(name);if(!fd){tError(`Not found`);return}const u=updateSigma(fd.structure,delta,note,f.node);saveStruct(u);selStruct=u.center;tOk(`✓ σ: ${fd.structure.sigma.current}% → ${u.sigma.current}%`);if(f.node){const nd=u.periphery.find(p=>p.name.toLowerCase()===f.node.toLowerCase());if(nd)tInfo(`  ${nd.name}: ${nd.sigma}% [${nd.status}]`)}}
+function cExtend(a,f){const name=a[0]||selStruct;if(!name||!f.add){tError('Usage: extend "<name>" --add "A,B"');return}const fd=findS(name);if(!fd){tError(`Not found`);return}const nn=f.add.split(',').map(s=>s.trim()).filter(Boolean);const u=extendPeriphery(fd.structure,nn);saveStruct(u);selStruct=u.center;tOk(`✓ Extended: +${nn.length} → ${u.periphery.length} total`)}
+function cReduce(a,f){const name=a[0]||selStruct;if(!name||!f.remove){tError('Usage: reduce "<name>" --remove "A,B"');return}const fd=findS(name);if(!fd){tError(`Not found`);return}const u=reducePeriphery(fd.structure,f.remove.split(',').map(s=>s.trim()));saveStruct(u);selStruct=u.center;tOk(`✓ Reduced → ${u.periphery.length} remaining`)}
+function cMem(a){const name=a[0]||selStruct,note=a[1];if(!name||!note){tError('Usage: memory "<name>" "<note>"');return}const f=findS(name);if(!f){tError(`Not found`);return}const u=addMemory(f.structure,note);saveStruct(u);selStruct=u.center;tOk(`✓ Memory added (${u.attributes.memory.length})`)}
+function cExport(a,f){const name=a[0]||selStruct;if(!name){tError('Usage: export "<name>" [--format json|md|both]');return}const fd=findS(name);if(!fd){tError(`Not found`);return}const fmt=f.format||'json';if(fmt==='json'||fmt==='both'){const j=exportForAI(fd.structure);tInfo('JSON Export (for AI):');tJson(j);try{navigator.clipboard.writeText(JSON.stringify(j,null,2));tOk('✓ Copied to clipboard')}catch(e){tInfo('(Copy from above)')}}if(fmt==='md'||fmt==='both'){tInfo('Markdown:');tResult(exportAsMarkdown(fd.structure))}}
+function cDel(a){if(!a[0]){tError('Usage: delete "<name>"');return}if(delS(a[0])){tOk(`✓ Deleted: "${a[0]}"`);if(selStruct?.toLowerCase()===a[0].toLowerCase())selStruct=null}else tError(`Not found`)}
+function cSel(a){if(!a[0]){tResult(selStruct?`Selected: "${selStruct}"`:'None');return}const f=findS(a[0]);if(!f){tError(`Not found`);return}selStruct=f.structure.center;tOk(`✓ Selected: "${selStruct}"`)}
+function cHelp(){tResultH(`<strong style="color:var(--accent3)">Rei CLI (Web Edition)</strong>
+
+<span style="color:var(--accent)">構造管理:</span>
+  init &lt;type&gt; "&lt;name&gt;" --periphery "A,B,C"   新規作成
+  list                                        一覧表示
+  view "&lt;name&gt;"                                詳細表示
+  select "&lt;name&gt;"                              アクティブ設定
+  delete "&lt;name&gt;"                              削除
+
+<span style="color:var(--accent)">進捗 (A3: σ蓄積):</span>
+  sigma update "&lt;name&gt;" +50 "&lt;note&gt;"           σ更新
+  sigma update "&lt;name&gt;" +100 "done" --node "X" ノードσ更新
+  sigma history "&lt;name&gt;"                       履歴表示
+
+<span style="color:var(--accent)">成長 (A2: 拡張-縮約):</span>
+  extend "&lt;name&gt;" --add "X,Y"                  ノード追加
+  reduce "&lt;name&gt;" --remove "X,Y"               ノード削除
+
+<span style="color:var(--accent)">記憶:</span>  memory "&lt;name&gt;" "&lt;note&gt;"
+
+<span style="color:var(--accent)">出力:</span>  export "&lt;name&gt;" --format json|md|both
+
+<span style="color:var(--fg3)">Types: project, task, idea, analysis, decision</span>`)}
+
+// ═══════════════════════════════════════════════════
+// Visualization
+// ═══════════════════════════════════════════════════
+function updateViz(){
+  const all=listAll();scEl.textContent=`構造: ${all.length}`;
+  if(all.length===0&&!tutActive){document.getElementById('welcome-screen').style.display='flex';viz.style.display='none';return}
+  if(!tutActive){document.getElementById('welcome-screen').style.display='none';viz.style.display='block'}
+  let dl=all;if(selStruct){const sel=all.find(s=>s.structure.center.toLowerCase()===selStruct.toLowerCase());if(sel)dl=[sel,...all.filter(s=>s!==sel)]}
+  let h='';dl.forEach(item=>{const s=item.structure,isSel=selStruct&&s.center.toLowerCase()===selStruct.toLowerCase();
+    h+=`<div class="struct-card" style="${isSel?'border-color:var(--accent2)':''}">`;
+    h+=`<div class="struct-header"><div class="struct-title">${E(s.center)}</div><div class="struct-type">${s.type}</div></div>`;
+    h+=`<div class="struct-meta">Will: ${E(s.attributes.will)}</div>`;
+    h+=`<div class="sigma-gauge"><div class="sigma-label"><span>σ Progress</span><span>${s.sigma.current}%</span></div><div class="sigma-track"><div class="sigma-fill" style="width:${s.sigma.current}%"></div></div></div>`;
+    if(isSel&&s.periphery.length>0)h+=renderCP(s);
+    if(s.periphery.length>0){h+=`<div class="periph-section"><div class="periph-title">Periphery — ${s.periphery.length} nodes</div>`;s.periphery.forEach(p=>{h+=`<div class="periph-node ${p.status}"><span class="name">${E(p.name)}</span><span class="node-sigma">${p.sigma}%</span><span class="node-status ${p.status}">${p.status}</span></div>`});h+='</div>'}
+    h+=`<div class="attr-grid"><div class="attr-item"><span class="attr-label">場 Field</span><span class="attr-val">${E(s.attributes.field)}</span></div><div class="attr-item"><span class="attr-label">流 Flow</span><span class="attr-val">${E(s.attributes.flow)}</span></div><div class="attr-item"><span class="attr-label">層 Layer</span><span class="attr-val">${s.attributes.layer}</span></div><div class="attr-item"><span class="attr-label">生成 Genesis</span><span class="attr-val">${s.genesis.created_at.slice(0,10)}</span></div></div>`;
+    if(s.attributes.memory.length){h+=`<div class="memory-section"><div class="periph-title">Memory (記憶)</div>`;s.attributes.memory.forEach(m=>{h+=`<div class="memory-item">${E(m)}</div>`});h+='</div>'}
+    h+='</div>'});
+  viz.innerHTML=h;
+}
+function renderCP(s){const n=s.periphery.length,sz=280,cx=sz/2,cy=sz/2,cr=32,pr=22,orbit=sz/2-pr-10;let svg=`<div class="cp-viz" style="padding-top:${sz}px"><div class="cp-viz-inner"><svg viewBox="0 0 ${sz} ${sz}">`;s.periphery.forEach((p,i)=>{const a=(2*Math.PI*i/n)-Math.PI/2,px=cx+orbit*Math.cos(a),py=cy+orbit*Math.sin(a);svg+=`<line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" class="cp-line"/>`});svg+=`<circle cx="${cx}" cy="${cy}" r="${cr}" class="cp-center-circle"/>`;const cl=s.center.length>8?s.center.slice(0,8)+'…':s.center;svg+=`<text x="${cx}" y="${cy}" class="cp-center-text">${E(cl)}</text>`;s.periphery.forEach((p,i)=>{const a=(2*Math.PI*i/n)-Math.PI/2,px=cx+orbit*Math.cos(a),py=cy+orbit*Math.sin(a),lb=p.name.length>6?p.name.slice(0,6)+'…':p.name;svg+=`<circle cx="${px}" cy="${py}" r="${pr}" class="cp-periph-circle ${p.status}"/><text x="${px}" y="${py-4}" class="cp-periph-text">${E(lb)}</text><text x="${px}" y="${py+8}" class="cp-periph-sigma">${p.sigma}%</text>`});return svg+'</svg></div></div>'}
+
+// ═══════════════════════════════════════════════════
+// Tutorial System
+// ═══════════════════════════════════════════════════
+let tutStep=0,tutExec=[];
+
+const STEPS=[
+  {title:'Reiとは何か？',axiom:null,
+   desc:`Reiは<strong>「構造的に考える」</strong>ためのツールです。<br><br>あらゆるプロジェクト、タスク、アイデアを<strong>「中心」と「周囲」</strong>という形で捉えます。<br><br>例えば「料理を作る」という目標（中心）があるとき、「買い物」「下ごしらえ」「調理」「盛り付け」が周囲になります。<br><br>Reiにはこの考え方を支える<strong>4つの公理</strong>があります。これから一つずつ体験してみましょう。`,
+   philosophy:'「一切のものは中心から生まれ、周囲と関係し合う」— これはReiの根本原理であり、仏教の縁起（えんぎ）の思想に通じます。',cmd:null,explain:null},
+
+  {title:'公理A4「生成」＋ A1「中心-周囲」',axiom:'A4 Genesis + A1 Center-Periphery',
+   desc:`まず、ひとつの<strong>構造</strong>を生み出します（A4: 生成）。<br><br>ここでは「料理を学ぶ」というプロジェクトを作ります。<br>中心は<strong>「料理を学ぶ」</strong>、周囲は<strong>「基礎知識」「レシピ研究」「実践」「振り返り」</strong>の4つです。<br><br>下のコマンドをクリックして実行してください：`,
+   philosophy:'生成（Genesis）：全ての構造は「種」から始まる。中心-周囲（Center-Periphery）：全てのものは中心と、それを取り巻く要素で構成される。',
+   cmd:'init project "料理を学ぶ" --periphery "基礎知識,レシピ研究,実践,振り返り"',explain:'init = 新規作成 / project = 種類 / "料理を学ぶ" = 中心 / --periphery = 周囲の要素'},
+
+  {title:'構造を確認する',axiom:'A1 Center-Periphery',
+   desc:`構造が作成されました！<br><br>ターミナル（左側）に結果が表示されています。<br>全てのノードは<strong>σ = 0%</strong>（まだ何も進んでいない状態）です。<br><br>詳細を確認してみましょう：`,
+   philosophy:'いま目の前にあるのが「中心-周囲」構造（A1）の基本形です。全体を構造として一目で把握できます。',
+   cmd:'view "料理を学ぶ"',explain:'view = 構造の詳細を表示。ノード名、進捗率、ステータスが一覧されます。'},
+
+  {title:'公理A3「σ蓄積」— 進捗を記録する',axiom:'A3 Sigma-Accumulation',
+   desc:`Reiの独自概念が<strong>σ（シグマ）蓄積</strong>です。<br><br>進捗は数値で蓄積されていきます。0%から始まり、100%で完了。<br>「基礎知識」の学習が完了したとしましょう：`,
+   philosophy:'σ蓄積（Sigma-Accumulation）：努力は消えない。全ての進捗は蓄積され、構造の一部となる。一歩一歩の積み重ねが、やがて全体の完成につながります。',
+   cmd:'sigma update "料理を学ぶ" +100 "基礎知識を習得した" --node "基礎知識"',explain:'sigma update = 進捗更新 / +100 = 変化量（100%で完了） / --node = 特定ノードを指定'},
+
+  {title:'さらにσを蓄積する',axiom:'A3 Sigma-Accumulation',
+   desc:`「基礎知識」がdone（完了）になりました！<br><br>次に「レシピ研究」を半分まで進めましょう。<br>σは段階的に蓄積できます：`,
+   philosophy:'学びは一気に完了するものではなく、少しずつ蓄積していく。Reiはこの自然な過程をそのまま反映します。',
+   cmd:'sigma update "料理を学ぶ" +50 "和食のレシピを調査中" --node "レシピ研究"',explain:'+50 = 50%進んだ。ノードは「active」ステータスに変わり、全体のσも自動再計算されます。'},
+
+  {title:'公理A2「拡張-縮約」— 構造を育てる',axiom:'A2 Extension-Reduction',
+   desc:`プロジェクトを進める中で、新しい要素が見つかることがあります。<br><br>「食材の目利き」と「盛り付けの美学」も大切だと気づきました。<br>Reiの構造は<strong>動的に拡張</strong>できます：`,
+   philosophy:'拡張-縮約（Extension-Reduction）：構造は生きている。必要に応じて成長し、不要なものは削ぎ落とす。計画は変化してよい。',
+   cmd:'extend "料理を学ぶ" --add "食材の目利き,盛り付けの美学"',explain:'extend = ノード追加（拡張）。構造が6ノードに成長します。逆に reduce で縮約も可能。'},
+
+  {title:'記憶を残す — 文脈の蓄積',axiom:'六属性: 記憶（Memory）',
+   desc:`Reiの構造には<strong>記憶</strong>を残すことができます。<br><br>「なぜその判断をしたか」「何を学んだか」を記録しておくことで、<br>後でAIに文脈を伝えたり、振り返りに使えます：`,
+   philosophy:'記憶は六属性（場・流・記憶・層・関係・意志）のひとつ。構造に「なぜ」を蓄積することで、単なるタスク管理を超えた思考の記録になります。',
+   cmd:'memory "料理を学ぶ" "和食の基本は出汁。まずは昆布と鰹節から学ぶことにした"',explain:'memory = 記憶の追加。日付が自動付与。エクスポート時にもAIに伝えられます。'},
+
+  {title:'AIへのエクスポート — 実用的な出力',axiom:'Export',
+   desc:`Reiの真価は、<strong>構造化された文脈をAIに渡せる</strong>ことです。<br><br>今作った構造をJSON形式でエクスポートすると、AIチャット（Claude等）に貼り付けるだけで、AIがプロジェクトの全体像を理解してアドバイスできます：`,
+   philosophy:'Reiのユニークな価値：従来のTo-Doリストは「何をするか」だけ。Reiは「構造・進捗・判断の経緯」を含む豊かな文脈をAIに渡せます。',
+   cmd:'export "料理を学ぶ" --format json',explain:'export = AI用にエクスポート。JSONがクリップボードにコピーされ、そのままAIチャットに貼り付けられます。'},
+
+  {title:'チュートリアル完了！',axiom:null,
+   desc:`おめでとうございます！Reiの4つの公理を体験しました。<br><br><strong>A1 中心-周囲：</strong> 物事を構造的に捉える<br><strong>A2 拡張-縮約：</strong> 構造は動的に変化する<br><strong>A3 σ蓄積：</strong> 進捗は消えずに蓄積される<br><strong>A4 生成：</strong> 全ての構造は種から生まれる<br><br>左のターミナルで <code style="color:var(--accent)">help</code> を入力するとコマンド一覧が見られます。<br><br>新しい構造を作って、あなた自身のプロジェクトや学びをReiで管理してみてください。`,
+   philosophy:'「一は全、全は一」— Reiは個々のタスクが全体の中でどう位置づけられるかを可視化し、思考そのものを構造化するツールです。',cmd:null,explain:null},
+];
+
+function startTut(){
+  tutActive=true;tutStep=0;tutExec=STEPS.map(()=>false);
+  clearAll();selStruct=null;term.innerHTML='';tWelcome();
+  tInfo('📖 チュートリアルモードを開始しました。右側のガイドに従ってください。');
+  document.getElementById('welcome-screen').style.display='none';
+  viz.style.display='none';
+  document.getElementById('tutorial-overlay').classList.add('active');
+  renderTut();updateViz();
+}
+
+function endTut(){
+  tutActive=false;
+  document.getElementById('tutorial-overlay').classList.remove('active');
+  viz.style.display='block';
+  tInfo('📖 チュートリアル終了。自由にお使いください！');
+  updateViz();
+}
+
+function renderTut(){
+  const step=STEPS[tutStep],total=STEPS.length,pct=(tutStep/(total-1))*100;
+  document.getElementById('tut-progress-fill').style.width=pct+'%';
+  document.getElementById('tut-step-label').textContent=`${tutStep+1} / ${total}`;
+  
+  const prevBtn=document.getElementById('tut-prev');
+  const nextBtn=document.getElementById('tut-next');
+  prevBtn.style.display=tutStep>0?'':'none';
+  
+  if(tutStep===total-1){nextBtn.textContent='✓ 完了して自由モードへ';nextBtn.disabled=false}
+  else if(step.cmd&&!tutExec[tutStep]){nextBtn.textContent='次へ →';nextBtn.disabled=true}
+  else{nextBtn.textContent='次へ →';nextBtn.disabled=false}
+
+  // Show viz when structures exist
+  if(listAll().length>0){viz.style.display='block';document.getElementById('tutorial-overlay').style.maxHeight='55%';viz.style.flex='1'}
+
+  let h='<div class="tut-step">';
+  h+=`<span class="tut-step-number">Step ${tutStep+1} / ${total}</span>`;
+  if(step.axiom)h+=`<span class="tut-axiom-badge">${E(step.axiom)}</span>`;
+  h+=`<h3>${step.title}</h3>`;
+  h+=`<div class="tut-desc">${step.desc}</div>`;
+  if(step.philosophy)h+=`<div class="tut-philosophy">${E(step.philosophy)}</div>`;
+  if(step.cmd){
+    const done=tutExec[tutStep];
+    h+=`<div class="tut-command-box${done?' executed':''}" id="tut-cmd-box"><code>${E(step.cmd)}</code></div>`;
+    if(step.explain)h+=`<div class="tut-explain">💡 ${E(step.explain)}</div>`;
+    h+=`<div class="tut-check${done?' visible':''}" id="tut-check">✓ 実行完了！左のターミナルで結果を確認してください。</div>`;
+  }
+  h+='</div>';
+  document.getElementById('tutorial-content').innerHTML=h;
+
+  const box=document.getElementById('tut-cmd-box');
+  if(box&&!tutExec[tutStep]){
+    box.addEventListener('click',()=>{
+      exec(step.cmd);tutExec[tutStep]=true;
+      box.classList.add('executed');
+      const ck=document.getElementById('tut-check');if(ck)ck.classList.add('visible');
+      nextBtn.disabled=false;updateViz();
+    });
+  }
+}
+
+document.getElementById('tut-next').addEventListener('click',()=>{if(tutStep>=STEPS.length-1){endTut();return}tutStep++;renderTut();updateViz()});
+document.getElementById('tut-prev').addEventListener('click',()=>{if(tutStep>0){tutStep--;renderTut()}});
+document.getElementById('tut-exit').addEventListener('click',()=>{if(confirm('チュートリアルを終了しますか？')){endTut()}});
+document.getElementById('btn-tutorial').addEventListener('click',startTut);
+document.getElementById('btn-start-tutorial').addEventListener('click',startTut);
+document.getElementById('btn-start-free').addEventListener('click',()=>{
+  document.getElementById('welcome-screen').style.display='none';viz.style.display='block';
+  viz.innerHTML='<div class="viz-empty"><div class="icon">零</div><div>構造がありません</div><code>init project "名前" --periphery "A,B,C"</code><div style="font-size:.68rem;margin-top:.5rem">でRei構造を作成してください</div></div>';
+  inp.focus();
+});
+
+// ═══════════════════════════════════════════════════
+// Examples & Events
+// ═══════════════════════════════════════════════════
+const EXAMPLES=[
+  {title:'プロジェクト作成',cmd:'init project "Rei App" --periphery "Design,Implement,Test,Deploy"',tag:'A1+A4'},
+  {title:'タスク作成',cmd:'init task "Bug Fix" --periphery "Investigate,Fix,Verify"',tag:'A4'},
+  {title:'進捗更新',cmd:'sigma update "Rei App" +100 "Design complete" --node "Design"',tag:'A3'},
+  {title:'ノード追加',cmd:'extend "Rei App" --add "Documentation,Review"',tag:'A2'},
+  {title:'メモリ追加',cmd:'memory "Rei App" "Decision: Use TypeScript"',tag:'記憶'},
+  {title:'AIエクスポート',cmd:'export "Rei App" --format json',tag:'Export'},
+  {title:'一覧表示',cmd:'list',tag:'Util'},
+];
+function renderEx(){const g=document.getElementById('examples-grid');g.innerHTML='';EXAMPLES.forEach(ex=>{const c=document.createElement('div');c.className='example-card';c.innerHTML=`<div class="ex-title">${ex.title} <span style="color:var(--fg3);font-size:.6rem">[${ex.tag}]</span></div><code>${E(ex.cmd)}</code>`;c.addEventListener('click',()=>{inp.value=ex.cmd;inp.focus();document.getElementById('examples-panel').classList.remove('open')});g.appendChild(c)})}
+
+inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const v=inp.value.trim();if(v){exec(v);inp.value=''}}else if(e.key==='ArrowUp'){e.preventDefault();if(histIdx>0){histIdx--;inp.value=cmdHist[histIdx]}}else if(e.key==='ArrowDown'){e.preventDefault();if(histIdx<cmdHist.length-1){histIdx++;inp.value=cmdHist[histIdx]}else{histIdx=cmdHist.length;inp.value=''}}});
+document.getElementById('btn-examples').addEventListener('click',()=>document.getElementById('examples-panel').classList.toggle('open'));
+document.getElementById('btn-clear-all').addEventListener('click',()=>{if(confirm('全Rei構造を削除しますか？')){const n=clearAll();selStruct=null;term.innerHTML='';tWelcome();tOk(`✓ ${n} deleted`);updateViz()}});
+document.getElementById('btn-help').addEventListener('click',()=>exec('help'));
+term.addEventListener('click',()=>inp.focus());
+
+// Init
+tWelcome();renderEx();
+const existing=listAll();
+if(existing.length>0){selStruct=existing[0].structure.center;tInfo(`${existing.length} structure(s) loaded.`);document.getElementById('welcome-screen').style.display='none';viz.style.display='block'}
+else{viz.style.display='none'}
+updateViz();inp.focus();
+</script>
+</body>
+</html>
