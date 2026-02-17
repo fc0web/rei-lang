@@ -1,0 +1,48 @@
+{
+  "name": "@rei-lang/cli",
+  "version": "0.1.0",
+  "description": "Rei CLI (0₀式/rei-shiki) — Multi-dimensional structure management for AI-assisted workflows",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "rei": "bin/rei"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "node dist/index.js --help"
+  },
+  "keywords": [
+    "rei", "rei-shiki", "0₀式", "mdim", "multi-dimensional",
+    "project-management", "ai-workflow", "center-periphery",
+    "sigma-accumulation", "local-first", "cli"
+  ],
+  "author": "Nobuki Fujimoto (藤本 伸樹)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fc0web/rei-lang",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/fc0web/rei-lang/tree/main/packages/cli",
+  "bugs": {
+    "url": "https://github.com/fc0web/rei-lang/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "dist/",
+    "bin/",
+    "README.md"
+  ],
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^13.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}
