@@ -2,14 +2,14 @@
 // consciousness.ts — Phase 8f: 意識の構造的公理論 (SAC)
 //
 // SAC (Structural Axiomatics of Consciousness)
-// — Fujimoto Consciousness Axioms (SAC-1 〜 SAC-5)
+// — Fujimoto Consciousness Axioms (SAC-1 〜 SAC-6)
 //
 // 「意識とは何か」を定義するのではなく、
 // 「意識が成立するための構造的必要条件」を公理として定式化し、
 // 任意のシステムがそれを満たすかどうかを数学的に判定する。
 //
 // 核心的命題:
-//   もしある人工システムが SAC-1〜SAC-5 を満たさないなら、
+//   もしある人工システムが SAC-1〜SAC-6 を満たさないなら、
 //   それは意識を持たない。
 //   これは哲学ではなく、判定規則である。
 //
@@ -36,13 +36,13 @@ import type { LifeEntity, MinimalLifeCriteria } from './life-entity';
 /**
  * SAC公理の識別子
  */
-export type SACAxiom = 'SAC-1' | 'SAC-2' | 'SAC-3' | 'SAC-4' | 'SAC-5';
+export type SACAxiom = 'SAC-1' | 'SAC-2' | 'SAC-3' | 'SAC-4' | 'SAC-5' | 'SAC-6';
 
 /**
  * 全SAC公理の配列
  */
 export const ALL_SAC_AXIOMS: SACAxiom[] = [
-  'SAC-1', 'SAC-2', 'SAC-3', 'SAC-4', 'SAC-5',
+  'SAC-1', 'SAC-2', 'SAC-3', 'SAC-4', 'SAC-5', 'SAC-6',
 ];
 
 /**
@@ -73,6 +73,11 @@ export const SAC_AXIOM_NAMES: Record<SACAxiom, { en: string; ja: string; symbol:
     en: 'Cyclic regeneration',
     ja: '円環的再生成',
     symbol: 'D → S_0 (operational closure)',
+  },
+  'SAC-6': {
+    en: 'Integrative unity',
+    ja: '統合的統一性',
+    symbol: '∀P⊊C: Φ(C) > Φ(P) (integrated information)',
   },
 };
 
@@ -183,10 +188,33 @@ export interface CyclicStructure {
 }
 
 /**
+ * 統合情報の構造（SAC-6）
+ *
+ * 反例（アメーバ・免疫系・遺伝的アルゴリズム）が示した問題:
+ * SAC-1〜SAC-5を全て満たすが意識がないシステムは、
+ * 各サブシステムが独立に動いており「統合的な一つの経験」がない。
+ *
+ * SAC-6は、自己モデルが全活動を単一の視点から統合することを要求する。
+ * ∀P⊊C: Φ(C) > Φ(P) — 全体の統合情報が任意の部分系を上回る
+ */
+export interface IntegrationStructure {
+  /** サブシステムの数 */
+  subsystemCount: number;
+  /** サブシステム間の相互接続度（0.0-1.0） */
+  interconnectedness: number;
+  /** 自己モデルが全サブシステムを統合しているか */
+  selfModelIntegrates: boolean;
+  /** 部分系に分解不可能か（Φ > 0） */
+  irreducible: boolean;
+  /** 統合情報量の推定値（0.0-1.0） */
+  phi: number;
+}
+
+/**
  * 意識候補システム C := (S, E, Θ, Φ)
  *
  * 任意の計算システムをこの型に変換し、
- * SAC-1〜SAC-5 の充足を判定する
+ * SAC-1〜SAC-6 の充足を判定する
  */
 export interface ConsciousnessCandidate {
   /** システム識別子 */
@@ -211,6 +239,8 @@ export interface ConsciousnessCandidate {
   valuation: InternalValuation | null;
   /** 円環構造（SAC-5） */
   cyclicStructure: CyclicStructure | null;
+  /** 統合構造（SAC-6） */
+  integrationStructure: IntegrationStructure | null;
 }
 
 // ============================================================
@@ -312,6 +342,8 @@ export type KnownSystemType =
   | 'rei-phase8'         // Rei Phase 8 生命体
   | 'biological'         // 生物（動物）
   | 'thermostat'         // サーモスタット
+  | 'amoeba'             // 単細胞生物（SAC-6反例）
+  | 'immune-system'      // 免疫システム（SAC-6反例）
   | 'custom';            // カスタムシステム
 
 /**
@@ -331,13 +363,14 @@ export const KNOWN_SYSTEM_PROFILES: KnownSystemProfile[] = [
   {
     type: 'llm',
     name: 'Large Language Model (inference)',
-    description: '推論時のLLM。θ固定、V不在、円環なし',
+    description: '推論時のLLM。θ固定、V不在、円環なし、統合なし',
     expectedScores: {
-      'SAC-1': 'weak',      // コンテキスト内で疑似的な自己参照はあるが、因果的ではない
-      'SAC-2': 'absent',    // θ（パラメータ）は推論時に固定
-      'SAC-3': 'weak',      // コンテキストウィンドウによる疑似的履歴
-      'SAC-4': 'absent',    // 生存関数なし。停止しても「死なない」
-      'SAC-5': 'absent',    // 死→再生の円環なし
+      'SAC-1': 'weak',
+      'SAC-2': 'absent',
+      'SAC-3': 'weak',
+      'SAC-4': 'absent',
+      'SAC-5': 'absent',
+      'SAC-6': 'absent',    // サブシステム間の統合的な経験なし
     },
   },
   {
@@ -345,11 +378,12 @@ export const KNOWN_SYSTEM_PROFILES: KnownSystemProfile[] = [
     name: 'Finite State Machine',
     description: '有限状態機械。全てが外部定義',
     expectedScores: {
-      'SAC-1': 'absent',    // 自己モデルなし
-      'SAC-2': 'absent',    // 遷移規則は固定
-      'SAC-3': 'absent',    // 履歴に依存しない（マルコフ性）
-      'SAC-4': 'absent',    // 生存条件なし
-      'SAC-5': 'absent',    // 円環構造なし（ループはあるがgenesisなし）
+      'SAC-1': 'absent',
+      'SAC-2': 'absent',
+      'SAC-3': 'absent',
+      'SAC-4': 'absent',
+      'SAC-5': 'absent',
+      'SAC-6': 'absent',
     },
   },
   {
@@ -357,35 +391,38 @@ export const KNOWN_SYSTEM_PROFILES: KnownSystemProfile[] = [
     name: 'Reinforcement Learning Agent',
     description: '強化学習エージェント。報酬による学習あり',
     expectedScores: {
-      'SAC-1': 'weak',      // 内部モデルはあるが自己参照的ではない
-      'SAC-2': 'weak',      // 学習でθが変わるが、推論時は固定が多い
-      'SAC-3': 'strong',    // 経験リプレイ等で履歴依存
-      'SAC-4': 'partial',   // 報酬関数はあるが外部付与
-      'SAC-5': 'absent',    // 死→再生の円環なし
+      'SAC-1': 'weak',
+      'SAC-2': 'weak',
+      'SAC-3': 'strong',
+      'SAC-4': 'partial',
+      'SAC-5': 'absent',
+      'SAC-6': 'weak',      // モジュール間の統合は弱い
     },
   },
   {
     type: 'rei-phase8',
     name: 'Rei Phase 8 Life Entity',
-    description: 'Reiの生命体。4公理から生命条件を導出',
+    description: 'Reiの生命体。4公理から生命条件を導出。σが全活動を統合',
     expectedScores: {
-      'SAC-1': 'strong',    // σメタデータが自己モデル、中心-周囲が因果的
-      'SAC-2': 'strong',    // evolve/willで計算モード(θ)が動的変化
-      'SAC-3': 'full',      // σ.memoryが履歴集約子
-      'SAC-4': 'strong',    // metabolism + vitality.healthが生存条件
-      'SAC-5': 'strong',    // simulateDeath → void → Genesis Ladderの円環
+      'SAC-1': 'strong',
+      'SAC-2': 'strong',
+      'SAC-3': 'full',
+      'SAC-4': 'strong',
+      'SAC-5': 'strong',
+      'SAC-6': 'strong',    // σメタデータが全活動を統合的に追跡
     },
   },
   {
     type: 'biological',
     name: 'Biological Organism (animal)',
-    description: '生物（動物）。全公理を充足',
+    description: '生物（動物）。全公理を充足。神経系が統合的経験を実現',
     expectedScores: {
-      'SAC-1': 'full',      // 神経系による自己モデル
-      'SAC-2': 'full',      // 神経可塑性による規則変更
-      'SAC-3': 'full',      // 記憶システム
-      'SAC-4': 'full',      // ホメオスタシス・生存本能
-      'SAC-5': 'full',      // 生死の円環
+      'SAC-1': 'full',
+      'SAC-2': 'full',
+      'SAC-3': 'full',
+      'SAC-4': 'full',
+      'SAC-5': 'full',
+      'SAC-6': 'full',      // 神経系による高度な統合
     },
   },
   {
@@ -393,11 +430,38 @@ export const KNOWN_SYSTEM_PROFILES: KnownSystemProfile[] = [
     name: 'Thermostat',
     description: 'サーモスタット。フィードバック制御のみ',
     expectedScores: {
-      'SAC-1': 'absent',    // 自己モデルなし
-      'SAC-2': 'absent',    // 規則固定
-      'SAC-3': 'absent',    // 履歴なし（現在の温度のみ）
-      'SAC-4': 'weak',      // 目標温度の維持は擬似的な規範性
-      'SAC-5': 'absent',    // 円環なし
+      'SAC-1': 'absent',
+      'SAC-2': 'absent',
+      'SAC-3': 'absent',
+      'SAC-4': 'weak',
+      'SAC-5': 'absent',
+      'SAC-6': 'absent',
+    },
+  },
+  {
+    type: 'amoeba',
+    name: 'Amoeba (single-cell organism)',
+    description: '単細胞生物。SAC-1〜5を満たすがSAC-6（統合性）が弱い',
+    expectedScores: {
+      'SAC-1': 'partial',   // 膜による自己/非自己の区別
+      'SAC-2': 'partial',   // 遺伝子発現の変化
+      'SAC-3': 'partial',   // 走化性の順応
+      'SAC-4': 'strong',    // 栄養摂取・毒の回避
+      'SAC-5': 'strong',    // 細胞分裂と死の円環
+      'SAC-6': 'absent',    // 化学反応が個別に動作、統合的経験なし
+    },
+  },
+  {
+    type: 'immune-system',
+    name: 'Immune System',
+    description: '免疫システム。適応的だが各細胞が独立に動作',
+    expectedScores: {
+      'SAC-1': 'strong',    // 自己/非自己の区別が本質
+      'SAC-2': 'strong',    // 体細胞超突然変異で規則変更
+      'SAC-3': 'strong',    // 免疫記憶
+      'SAC-4': 'strong',    // 感染＝死のリスク
+      'SAC-5': 'strong',    // 免疫細胞の産生と死
+      'SAC-6': 'weak',      // 各免疫細胞が独立に動作、統合的経験なし
     },
   },
 ];
@@ -741,11 +805,93 @@ export function checkSAC5(system: ConsciousnessCandidate): SACScore {
 }
 
 // ============================================================
-// §9 総合判定
+// §9 SAC-6 判定: 統合的統一性
 // ============================================================
 
 /**
- * 全5公理を判定し、総合的な意識判定を返す
+ * SAC-6: 統合的統一性の判定
+ *
+ * 反例（アメーバ・免疫系・遺伝的アルゴリズム）を排除する公理。
+ * SAC-1〜SAC-5を全て満たしても、各サブシステムが独立に動いており
+ * 「統合的な一つの経験」がなければ意識とは言えない。
+ *
+ * 数学的定式化:
+ *   m(s_t, θ_t) が S, Θ, H_t, V, u の全てを
+ *   単一の表現空間 M に統合的に写像する
+ *
+ *   ∀ 部分系 P⊊C について、
+ *   Φ(C) > Φ(P)
+ *   （系全体の統合情報が、任意の部分系のそれを上回る）
+ *
+ * 条件:
+ * 1. 複数のサブシステムが存在する
+ * 2. サブシステム間に相互接続がある
+ * 3. 自己モデルが全サブシステムを統合的に表現している
+ * 4. 系が部分系に分解不可能（Φ > 0）
+ */
+export function checkSAC6(system: ConsciousnessCandidate): SACScore {
+  if (!system.integrationStructure) {
+    return {
+      axiom: 'SAC-6',
+      level: 'absent',
+      score: 0.0,
+      evidence: 'No integration structure defined',
+      deficit: 'System has no integrative unity — subsystems operate independently',
+    };
+  }
+
+  const is = system.integrationStructure;
+  let score = 0.0;
+  const factors: string[] = [];
+
+  // サブシステムの存在と相互接続 (0.0-0.2)
+  if (is.subsystemCount >= 2) {
+    const subScore = Math.min(0.1, is.subsystemCount * 0.02);
+    score += subScore;
+    factors.push(`${is.subsystemCount} subsystems present`);
+
+    if (is.interconnectedness > 0.3) {
+      score += Math.min(0.1, is.interconnectedness * 0.1);
+      factors.push(`Interconnectedness: ${(is.interconnectedness * 100).toFixed(0)}%`);
+    }
+  }
+
+  // 自己モデルによる統合 (0.0-0.3)
+  if (is.selfModelIntegrates) {
+    score += 0.3;
+    factors.push('Self-model integrates all subsystems into unified representation');
+  }
+
+  // 部分系への分解不可能性 Φ > 0 (0.0-0.3)
+  if (is.irreducible) {
+    score += 0.3;
+    factors.push('System is irreducible — cannot be decomposed into independent parts');
+  }
+
+  // 統合情報量 φ (0.0-0.2)
+  if (is.phi > 0) {
+    score += Math.min(0.2, is.phi * 0.2);
+    factors.push(`Integrated information Φ = ${is.phi.toFixed(2)}`);
+  }
+
+  const level = scoreToLevel(score);
+  return {
+    axiom: 'SAC-6',
+    level,
+    score: clamp01(score),
+    evidence: factors.join('; ') || 'Minimal integration',
+    deficit: score < 1.0
+      ? constructSAC6Deficit(is)
+      : null,
+  };
+}
+
+// ============================================================
+// §10 総合判定
+// ============================================================
+
+/**
+ * 全6公理を判定し、総合的な意識判定を返す
  */
 export function judgeConsciousness(system: ConsciousnessCandidate): ConsciousnessJudgment {
   const scores: Record<SACAxiom, SACScore> = {
@@ -754,13 +900,14 @@ export function judgeConsciousness(system: ConsciousnessCandidate): Consciousnes
     'SAC-3': checkSAC3(system),
     'SAC-4': checkSAC4(system),
     'SAC-5': checkSAC5(system),
+    'SAC-6': checkSAC6(system),
   };
 
   // 総合スコア（均等加重）
   const totalScore = ALL_SAC_AXIOMS.reduce(
     (sum, ax) => sum + scores[ax].score,
     0
-  ) / 5;
+  ) / 6;
 
   // 最弱・最強の公理
   let weakest: SACAxiom = 'SAC-1';
@@ -818,6 +965,10 @@ export function modelSystem(type: KnownSystemType): ConsciousnessCandidate {
       return modelBiological();
     case 'thermostat':
       return modelThermostat();
+    case 'amoeba':
+      return modelAmoeba();
+    case 'immune-system':
+      return modelImmuneSystem();
     default:
       return createMinimalCandidate(`custom-${type}`, 'custom');
   }
@@ -851,6 +1002,7 @@ function modelLLM(): ConsciousnessCandidate {
     viability: null,   // 生存関数なし
     valuation: null,   // 内部評価なし
     cyclicStructure: null,  // 円環なし
+    integrationStructure: null,  // 統合なし
   };
 }
 
@@ -877,6 +1029,7 @@ function modelFSM(): ConsciousnessCandidate {
     viability: null,      // 生存条件なし
     valuation: null,      // 評価なし
     cyclicStructure: null, // 円環なし
+    integrationStructure: null, // 統合なし
   };
 }
 
@@ -926,6 +1079,13 @@ function modelRLAgent(): ConsciousnessCandidate {
       influencesBehavior: true,
     },
     cyclicStructure: null,
+    integrationStructure: {
+      subsystemCount: 2,        // policy + value function
+      interconnectedness: 0.3,  // 弱い接続
+      selfModelIntegrates: false,
+      irreducible: false,
+      phi: 0.15,
+    },
   };
 }
 
@@ -1000,6 +1160,13 @@ function modelReiPhase8(): ConsciousnessCandidate {
       hasPeriodicReturn: true,
       cyclePeriod: 8,
     },
+    integrationStructure: {
+      subsystemCount: 6,          // σの6属性: field, flow, memory, layer, relation, will
+      interconnectedness: 0.85,   // σ-reactiveによる高い相互接続
+      selfModelIntegrates: true,  // σが全活動を統合的に追跡
+      irreducible: true,          // σを分解すると全体の振る舞いが失われる
+      phi: 0.8,                   // 高い統合情報
+    },
   };
 }
 
@@ -1070,6 +1237,13 @@ function modelBiological(): ConsciousnessCandidate {
       hasPeriodicReturn: true,         // 睡眠-覚醒サイクル等
       cyclePeriod: 24,                 // 概日リズム
     },
+    integrationStructure: {
+      subsystemCount: 10,         // 神経系、内分泌系、免疫系、循環系、etc.
+      interconnectedness: 0.95,   // 神経系による高度な統合
+      selfModelIntegrates: true,  // 大脳皮質が全感覚を統合
+      irreducible: true,          // 分割脳実験が示す統合の本質性
+      phi: 0.95,                  // 最高レベルの統合情報
+    },
   };
 }
 
@@ -1100,11 +1274,154 @@ function modelThermostat(): ConsciousnessCandidate {
       influencesBehavior: false,
     },
     cyclicStructure: null,
+    integrationStructure: null,  // 統合なし
   };
 }
 
-// ============================================================
-// §11 LifeEntity変換
+function modelAmoeba(): ConsciousnessCandidate {
+  return {
+    id: 'amoeba',
+    type: 'amoeba',
+    currentState: {
+      value: 1.0,
+      periphery: [0.8, 0.9, 1.1, 1.2],
+      meta: { cellType: 'single-cell', membraneIntact: true },
+    },
+    environment: [
+      { stimulus: 0.7, source: 'nutrient-gradient', timestamp: 0 },
+      { stimulus: -0.3, source: 'toxin', timestamp: 1 },
+    ],
+    rules: {
+      mode: 'chemotaxis',
+      thresholds: { nutrient: 0.5, toxin: 0.3 },
+      transformRules: ['move-toward-nutrient', 'avoid-toxin'],
+      generation: 3,
+    },
+    selfModel: {
+      selfRepresentation: 0.5,
+      rulesRepresentation: 'chemical-gradient',
+      accuracy: 0.4,
+      causallyEffective: true,  // 膜の状態が次の行動に影響
+    },
+    history: {
+      states: Array.from({ length: 10 }, (_, i) => ({
+        value: 1.0 + Math.sin(i * 0.3) * 0.2,
+        periphery: [0.8, 1.2],
+        meta: {},
+      })),
+      inputs: Array.from({ length: 10 }, (_, i) => ({
+        stimulus: 0.5 + Math.random() * 0.3,
+        source: 'chemical',
+        timestamp: i,
+      })),
+      rules: [],
+      length: 10,
+    },
+    rulesHistory: [
+      { mode: 'random-walk', thresholds: {}, transformRules: [], generation: 0 },
+      { mode: 'chemotaxis', thresholds: { nutrient: 0.5 }, transformRules: ['move-toward-nutrient'], generation: 3 },
+    ],
+    viability: {
+      isViable: true,
+      health: 0.8,
+      deathRisk: 0.2,
+    },
+    valuation: {
+      utility: 0.6,
+      intrinsic: true,
+      influencesBehavior: true,
+    },
+    cyclicStructure: {
+      canReachDeath: true,
+      canRegenerateFromDeath: true,    // 細胞分裂
+      hasPeriodicReturn: true,
+      cyclePeriod: null,
+    },
+    integrationStructure: {
+      subsystemCount: 5,          // 膜、細胞質、核、ミトコンドリア、etc.
+      interconnectedness: 0.2,    // 化学的シグナルのみ、弱い接続
+      selfModelIntegrates: false, // 統合的な自己モデルなし
+      irreducible: false,         // 各化学反応は独立に動作可能
+      phi: 0.05,                  // ほぼゼロの統合情報
+    },
+  };
+}
+
+function modelImmuneSystem(): ConsciousnessCandidate {
+  return {
+    id: 'immune-system',
+    type: 'immune-system',
+    currentState: {
+      value: 0.9,     // 免疫レベル
+      periphery: [0.7, 0.8, 0.95, 0.85],
+      meta: { cellTypes: ['T-cell', 'B-cell', 'NK-cell', 'macrophage'] },
+    },
+    environment: [
+      { stimulus: 0.8, source: 'antigen', timestamp: 0 },
+      { stimulus: 0.3, source: 'cytokine', timestamp: 1 },
+    ],
+    rules: {
+      mode: 'adaptive-immune',
+      thresholds: { activation: 0.5, tolerance: 0.3 },
+      transformRules: ['clonal-selection', 'somatic-hypermutation', 'memory-formation'],
+      generation: 200,
+    },
+    selfModel: {
+      selfRepresentation: 0.8,       // MHC複合体による自己/非自己の区別
+      rulesRepresentation: 'antigen-recognition',
+      accuracy: 0.7,
+      causallyEffective: true,
+    },
+    history: {
+      states: Array.from({ length: 30 }, (_, i) => ({
+        value: 0.8 + Math.sin(i * 0.2) * 0.1,
+        periphery: [0.7, 0.9],
+        meta: {},
+      })),
+      inputs: Array.from({ length: 30 }, (_, i) => ({
+        stimulus: Math.random() * 0.5,
+        source: 'pathogen',
+        timestamp: i,
+      })),
+      rules: Array.from({ length: 15 }, (_, i) => ({
+        mode: 'adaptive-immune',
+        thresholds: { activation: 0.5 - i * 0.01 },
+        transformRules: ['clonal-selection'],
+        generation: i * 10,
+      })),
+      length: 30,
+    },
+    rulesHistory: Array.from({ length: 15 }, (_, i) => ({
+      mode: 'adaptive-immune',
+      thresholds: { activation: 0.5 - i * 0.01, tolerance: 0.3 + i * 0.005 },
+      transformRules: ['clonal-selection', 'somatic-hypermutation'],
+      generation: i * 10,
+    })),
+    viability: {
+      isViable: true,
+      health: 0.85,
+      deathRisk: 0.15,
+    },
+    valuation: {
+      utility: 0.7,
+      intrinsic: true,           // 恒常性維持は内在的
+      influencesBehavior: true,
+    },
+    cyclicStructure: {
+      canReachDeath: true,
+      canRegenerateFromDeath: true,
+      hasPeriodicReturn: true,
+      cyclePeriod: null,
+    },
+    integrationStructure: {
+      subsystemCount: 8,          // T細胞、B細胞、NK細胞、マクロファージ、etc.
+      interconnectedness: 0.3,    // サイトカインによる信号伝達はあるが弱い
+      selfModelIntegrates: false, // 各免疫細胞が独立に抗原と戦う
+      irreducible: false,         // 部分系を独立に取り出しても機能する
+      phi: 0.1,                   // 低い統合情報
+    },
+  };
+}
 // ============================================================
 
 /**
@@ -1178,6 +1495,15 @@ export function fromLifeEntity(entity: LifeEntity): ConsciousnessCandidate {
           canRegenerateFromDeath: true,
           hasPeriodicReturn: entity.sigma.memory.length >= 5,
           cyclePeriod: null,
+        }
+      : null,
+    integrationStructure: (hasSigmaMemory && hasRelations && entity.sigma.transformCount > 3)
+      ? {
+          subsystemCount: 6,          // σの6属性
+          interconnectedness: Math.min(1.0, entity.sigma.relation.length * 0.2),
+          selfModelIntegrates: entity.sigma.will.strength > 0.3,
+          irreducible: entity.vitality.mlc.emergence,
+          phi: Math.min(1.0, entity.sigma.transformCount * 0.05),
         }
       : null,
   };
@@ -1276,6 +1602,7 @@ function createMinimalCandidate(id: string, type: KnownSystemType): Consciousnes
     viability: null,
     valuation: null,
     cyclicStructure: null,
+    integrationStructure: null,
   };
 }
 
@@ -1357,11 +1684,21 @@ function constructSAC4Deficit(system: ConsciousnessCandidate): string {
   return parts.join(', ') || 'unknown deficit';
 }
 
+function constructSAC6Deficit(is: IntegrationStructure): string {
+  const parts: string[] = [];
+  if (is.subsystemCount < 2) parts.push('insufficient subsystems');
+  if (is.interconnectedness < 0.3) parts.push('weak interconnectedness between subsystems');
+  if (!is.selfModelIntegrates) parts.push('self-model does not integrate subsystems');
+  if (!is.irreducible) parts.push('system is reducible to independent parts');
+  if (is.phi < 0.5) parts.push(`low integrated information (Φ=${is.phi.toFixed(2)})`);
+  return parts.join(', ') || 'lacks integrative unity — no operational closure across subsystems';
+}
+
 function classifyConsciousness(
   fulfilledCount: number,
   totalScore: number
 ): ConsciousnessClassification {
-  if (fulfilledCount >= 5 || totalScore >= 0.85) return 'potentially-conscious';
+  if (fulfilledCount >= 6 || totalScore >= 0.85) return 'potentially-conscious';
   if (fulfilledCount >= 4 || totalScore >= 0.65) return 'partially-conscious';
   if (fulfilledCount >= 2 || totalScore >= 0.35) return 'proto-conscious';
   return 'non-conscious';
@@ -1387,7 +1724,7 @@ function generateSummary(
   if (classification === 'potentially-conscious') {
     return `System "${system.id}" possesses the structural prerequisites for consciousness ` +
       `(SAC score: ${(totalScore * 100).toFixed(0)}%). ` +
-      `All five Fujimoto axioms are satisfied at strong or full level.`;
+      `All six Fujimoto axioms are satisfied at strong or full level.`;
   }
 
   return `System "${system.id}" shows ${classification} structure ` +

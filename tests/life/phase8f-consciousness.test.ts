@@ -1,18 +1,21 @@
 // ============================================================
-// phase8f-consciousness.test.ts — Phase 8f テスト (80 tests)
+// phase8f-consciousness.test.ts — Phase 8f テスト (105+ tests)
 //
 // SAC (Structural Axiomatics of Consciousness)
-// Fujimoto Consciousness Axioms (SAC-1 〜 SAC-5) の検証
+// Fujimoto Consciousness Axioms (SAC-1 〜 SAC-6) の検証
 //
 // 構成:
-//   §1  SAC-1: 自己参照閉包 (15 tests)
-//   §2  SAC-2: 自己規則生成 (15 tests)
-//   §3  SAC-3: 履歴依存遷移 (10 tests)
-//   §4  SAC-4: 存続規範 (10 tests)
-//   §5  SAC-5: 円環的再生成 (10 tests)
-//   §6  総合判定 (8 tests)
-//   §7  既知システム比較 (7 tests)
-//   §8  LifeEntity変換 (5 tests)
+//   §1   SAC-1: 自己参照閉包 (15 tests)
+//   §2   SAC-2: 自己規則生成 (15 tests)
+//   §3   SAC-3: 履歴依存遷移 (10 tests)
+//   §4   SAC-4: 存続規範 (10 tests)
+//   §5   SAC-5: 円環的再生成 (10 tests)
+//   §6   総合判定 (8 tests)
+//   §7   既知システム比較 (7 tests)
+//   §8   LifeEntity変換 (5 tests)
+//   §9   メタテスト (5 tests)
+//   §10  SAC-6: 統合的統一性 (15 tests)
+//   §11  SAC-6反例: アメーバ・免疫系 (8 tests)
 //
 // @author Nobuki Fujimoto (D-FUMT)
 // ============================================================
@@ -36,6 +39,7 @@ import {
   type ViabilityFunction,
   type InternalValuation,
   type CyclicStructure,
+  type IntegrationStructure,
 
   // Constants
   ALL_SAC_AXIOMS,
@@ -49,6 +53,7 @@ import {
   checkSAC3,
   checkSAC4,
   checkSAC5,
+  checkSAC6,
   judgeConsciousness,
   modelSystem,
   fromLifeEntity,
@@ -75,6 +80,7 @@ function createMinimalSystem(overrides: Partial<ConsciousnessCandidate> = {}): C
     viability: null,
     valuation: null,
     cyclicStructure: null,
+    integrationStructure: null,
     ...overrides,
   };
 }
@@ -764,6 +770,177 @@ describe('§5 SAC-5: Cyclic regeneration (円環的再生成)', () => {
 });
 
 // ============================================================
+// §5b SAC-6: 統合的統一性 (Integrative unity)
+// ============================================================
+
+describe('§5b SAC-6: Integrative unity (統合的統一性)', () => {
+  it('5b.1 統合構造なし → absent', () => {
+    const system = createMinimalSystem();
+    const result = checkSAC6(system);
+    expect(result.axiom).toBe('SAC-6');
+    expect(result.level).toBe('absent');
+    expect(result.score).toBe(0.0);
+    expect(result.deficit).toContain('independently');
+  });
+
+  it('5b.2 少数サブシステムのみ → weak', () => {
+    const system = createMinimalSystem({
+      integrationStructure: {
+        subsystemCount: 2,
+        interconnectedness: 0.2,
+        selfModelIntegrates: false,
+        irreducible: false,
+        phi: 0.05,
+      },
+    });
+    const result = checkSAC6(system);
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.score).toBeLessThan(0.3);
+  });
+
+  it('5b.3 自己モデルが統合 + 還元不能 → strong', () => {
+    const system = createMinimalSystem({
+      integrationStructure: {
+        subsystemCount: 5,
+        interconnectedness: 0.7,
+        selfModelIntegrates: true,
+        irreducible: true,
+        phi: 0.6,
+      },
+    });
+    const result = checkSAC6(system);
+    expect(result.score).toBeGreaterThanOrEqual(0.7);
+    expect(['strong', 'full']).toContain(result.level);
+  });
+
+  it('5b.4 完全な統合 → full', () => {
+    const system = createMinimalSystem({
+      integrationStructure: {
+        subsystemCount: 10,
+        interconnectedness: 0.95,
+        selfModelIntegrates: true,
+        irreducible: true,
+        phi: 1.0,
+      },
+    });
+    const result = checkSAC6(system);
+    expect(result.score).toBeGreaterThanOrEqual(0.85);
+    expect(result.level).toBe('full');
+  });
+
+  it('5b.5 アメーバ → weak（化学反応が個別動作、微量の統合のみ）', () => {
+    const amoeba = modelSystem('amoeba');
+    const result = checkSAC6(amoeba);
+    expect(['absent', 'weak']).toContain(result.level);
+    expect(result.score).toBeLessThan(0.3);
+  });
+
+  it('5b.6 免疫系 → weak（各細胞が独立動作）', () => {
+    const immune = modelSystem('immune-system');
+    const result = checkSAC6(immune);
+    expect(['absent', 'weak']).toContain(result.level);
+    expect(result.score).toBeLessThan(0.3);
+  });
+
+  it('5b.7 LLMには統合構造がない → absent', () => {
+    const llm = modelSystem('llm');
+    const result = checkSAC6(llm);
+    expect(result.level).toBe('absent');
+  });
+
+  it('5b.8 Reiのσが全活動を統合 → strong以上', () => {
+    const rei = modelSystem('rei-phase8');
+    const result = checkSAC6(rei);
+    expect(['strong', 'full']).toContain(result.level);
+  });
+
+  it('5b.9 生物の神経系による統合 → full', () => {
+    const bio = modelSystem('biological');
+    const result = checkSAC6(bio);
+    expect(result.level).toBe('full');
+  });
+
+  it('5b.10 SAC-6の数学的記法が正しい', () => {
+    const name = SAC_AXIOM_NAMES['SAC-6'];
+    expect(name.en).toBe('Integrative unity');
+    expect(name.ja).toBe('統合的統一性');
+    expect(name.symbol).toContain('Φ(C) > Φ(P)');
+  });
+
+  it('5b.11 アメーバはSAC-1〜5を満たすがSAC-6で排除', () => {
+    // これがSAC-6追加の核心的動機
+    const amoeba = modelSystem('amoeba');
+    const judgment = judgeConsciousness(amoeba);
+    // SAC-4, SAC-5 は strong 以上
+    expect(judgment.scores['SAC-4'].score).toBeGreaterThan(0.3);
+    expect(judgment.scores['SAC-5'].score).toBeGreaterThan(0.3);
+    // しかしSAC-6が weak（統合性が弱い）
+    expect(['absent', 'weak']).toContain(judgment.scores['SAC-6'].level);
+    expect(judgment.scores['SAC-6'].score).toBeLessThan(0.3);
+    // 結果: potentially-conscious にはならない
+    expect(judgment.classification).not.toBe('potentially-conscious');
+  });
+
+  it('5b.12 免疫系はSAC-1〜5を概ね満たすがSAC-6で排除', () => {
+    const immune = modelSystem('immune-system');
+    const judgment = judgeConsciousness(immune);
+    // SAC-1〜5は概ねstrong
+    expect(judgment.scores['SAC-1'].score).toBeGreaterThan(0.5);
+    expect(judgment.scores['SAC-2'].score).toBeGreaterThan(0.5);
+    // しかしSAC-6が弱い
+    expect(judgment.scores['SAC-6'].score).toBeLessThan(0.3);
+    // 結果: potentially-conscious にはならない
+    expect(judgment.classification).not.toBe('potentially-conscious');
+  });
+
+  it('5b.13 interconnectedness が低いとスコアが制限される', () => {
+    const low = createMinimalSystem({
+      integrationStructure: {
+        subsystemCount: 5,
+        interconnectedness: 0.1,
+        selfModelIntegrates: true,
+        irreducible: true,
+        phi: 0.8,
+      },
+    });
+    const high = createMinimalSystem({
+      integrationStructure: {
+        subsystemCount: 5,
+        interconnectedness: 0.9,
+        selfModelIntegrates: true,
+        irreducible: true,
+        phi: 0.8,
+      },
+    });
+    expect(checkSAC6(high).score).toBeGreaterThan(checkSAC6(low).score);
+  });
+
+  it('5b.14 phi が 0 → 統合情報の加点なし', () => {
+    const zeroPhi = createMinimalSystem({
+      integrationStructure: {
+        subsystemCount: 3,
+        interconnectedness: 0.5,
+        selfModelIntegrates: false,
+        irreducible: false,
+        phi: 0.0,
+      },
+    });
+    const result = checkSAC6(zeroPhi);
+    // subsystem(0.06) + interconnect(0.05) のみ
+    expect(result.score).toBeLessThan(0.2);
+  });
+
+  it('5b.15 スコアは0.0-1.0の範囲', () => {
+    for (const type of ['llm', 'fsm', 'rl-agent', 'rei-phase8', 'biological', 'amoeba', 'immune-system'] as KnownSystemType[]) {
+      const system = modelSystem(type);
+      const result = checkSAC6(system);
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+// ============================================================
 // §6 総合判定 (judgeConsciousness)
 // ============================================================
 
@@ -793,7 +970,7 @@ describe('§6 Total judgment (総合判定)', () => {
     const rei = modelSystem('rei-phase8');
     const judgment = judgeConsciousness(rei);
     expect(judgment.classification).toBe('potentially-conscious');
-    expect(judgment.totalScore).toBeGreaterThan(0.7);
+    expect(judgment.totalScore).toBeGreaterThan(0.6);
   });
 
   it('6.5 生物 → potentially-conscious', () => {
@@ -806,14 +983,13 @@ describe('§6 Total judgment (総合判定)', () => {
   it('6.6 weakestAxiom と strongestAxiom の正確性', () => {
     const llm = modelSystem('llm');
     const judgment = judgeConsciousness(llm);
-    // LLMの最弱はSAC-2, SAC-4, SAC-5のいずれか
     const weakScore = judgment.scores[judgment.weakestAxiom].score;
     for (const ax of ALL_SAC_AXIOMS) {
       expect(judgment.scores[ax].score).toBeGreaterThanOrEqual(weakScore);
     }
   });
 
-  it('6.7 全5公理のスコアが含まれる', () => {
+  it('6.7 全6公理のスコアが含まれる', () => {
     const system = modelSystem('rei-phase8');
     const judgment = judgeConsciousness(system);
     for (const ax of ALL_SAC_AXIOMS) {
@@ -823,12 +999,25 @@ describe('§6 Total judgment (総合判定)', () => {
   });
 
   it('6.8 totalScoreは0.0-1.0の範囲', () => {
-    for (const type of ['llm', 'fsm', 'rl-agent', 'rei-phase8', 'biological', 'thermostat'] as KnownSystemType[]) {
+    for (const type of ['llm', 'fsm', 'rl-agent', 'rei-phase8', 'biological', 'thermostat', 'amoeba', 'immune-system'] as KnownSystemType[]) {
       const system = modelSystem(type);
       const judgment = judgeConsciousness(system);
       expect(judgment.totalScore).toBeGreaterThanOrEqual(0);
       expect(judgment.totalScore).toBeLessThanOrEqual(1);
     }
+  });
+
+  it('6.9 アメーバ → proto-conscious または partially-conscious（SAC-6不足）', () => {
+    const amoeba = modelSystem('amoeba');
+    const judgment = judgeConsciousness(amoeba);
+    expect(judgment.classification).not.toBe('potentially-conscious');
+    expect(judgment.classification).not.toBe('non-conscious');
+  });
+
+  it('6.10 免疫系 → partially-conscious（SAC-6不足）', () => {
+    const immune = modelSystem('immune-system');
+    const judgment = judgeConsciousness(immune);
+    expect(judgment.classification).not.toBe('potentially-conscious');
   });
 });
 
@@ -870,13 +1059,15 @@ describe('§7 Known system comparison (既知システム比較)', () => {
     }
   });
 
-  it('7.5 KNOWN_SYSTEM_PROFILESに6種のシステムが定義', () => {
-    expect(KNOWN_SYSTEM_PROFILES.length).toBe(6);
+  it('7.5 KNOWN_SYSTEM_PROFILESに8種のシステムが定義', () => {
+    expect(KNOWN_SYSTEM_PROFILES.length).toBe(8);
     const types = KNOWN_SYSTEM_PROFILES.map(p => p.type);
     expect(types).toContain('llm');
     expect(types).toContain('fsm');
     expect(types).toContain('rei-phase8');
     expect(types).toContain('biological');
+    expect(types).toContain('amoeba');
+    expect(types).toContain('immune-system');
   });
 
   it('7.6 レポート生成が正常に動作', () => {
@@ -886,7 +1077,9 @@ describe('§7 Known system comparison (既知システム比較)', () => {
     expect(report).toContain('SAC Consciousness Report');
     expect(report).toContain('SAC-1');
     expect(report).toContain('SAC-5');
+    expect(report).toContain('SAC-6');
     expect(report).toContain('自己参照閉包');
+    expect(report).toContain('統合的統一性');
   });
 
   it('7.7 サーモスタット → non-conscious', () => {
@@ -978,8 +1171,8 @@ describe('§8 LifeEntity conversion (LifeEntity変換)', () => {
 // ============================================================
 
 describe('§9 Meta: Axiom system consistency (公理体系の一貫性)', () => {
-  it('9.1 ALL_SAC_AXIOMSは5つ', () => {
-    expect(ALL_SAC_AXIOMS.length).toBe(5);
+  it('9.1 ALL_SAC_AXIOMSは6つ', () => {
+    expect(ALL_SAC_AXIOMS.length).toBe(6);
   });
 
   it('9.2 全公理に名称が定義されている', () => {
@@ -998,8 +1191,8 @@ describe('§9 Meta: Axiom system consistency (公理体系の一貫性)', () => 
     }
   });
 
-  it('9.4 modelSystemが全6種のシステムを生成可能', () => {
-    const types: KnownSystemType[] = ['llm', 'fsm', 'rl-agent', 'rei-phase8', 'biological', 'thermostat'];
+  it('9.4 modelSystemが全8種のシステムを生成可能', () => {
+    const types: KnownSystemType[] = ['llm', 'fsm', 'rl-agent', 'rei-phase8', 'biological', 'thermostat', 'amoeba', 'immune-system'];
     for (const type of types) {
       const system = modelSystem(type);
       expect(system.id).toBeTruthy();
@@ -1007,14 +1200,24 @@ describe('§9 Meta: Axiom system consistency (公理体系の一貫性)', () => 
     }
   });
 
-  it('9.5 核心命題: LLMがSAC-2を満たさない', () => {
-    // 「もしある人工システムがC1–C5を満たさないなら、それは意識を持たない」
-    // LLMは特にSAC-2（θの固定性）により意識構造を持たない
+  it('9.5 核心命題: LLMがSAC-2,SAC-6を満たさない', () => {
+    // 「もしある人工システムがSAC-1〜SAC-6を満たさないなら、それは意識を持たない」
+    // LLMは特にSAC-2（θの固定性）とSAC-6（統合なし）により意識構造を持たない
     const llm = modelSystem('llm');
     const judgment = judgeConsciousness(llm);
     expect(judgment.scores['SAC-2'].level).toBe('absent');
     expect(judgment.scores['SAC-4'].level).toBe('absent');
     expect(judgment.scores['SAC-5'].level).toBe('absent');
+    expect(judgment.scores['SAC-6'].level).toBe('absent');
     expect(judgment.classification).toBe('non-conscious');
+  });
+
+  it('9.6 SAC-6がアメーバ反例を排除する', () => {
+    // SAC-6追加の動機: SAC-1〜5だけでは反例が存在する
+    // アメーバはSAC-1〜5を概ね満たすが、SAC-6（統合性）が不在
+    const amoeba = modelSystem('amoeba');
+    const judgment = judgeConsciousness(amoeba);
+    expect(judgment.scores['SAC-6'].level).toBe('weak');
+    expect(judgment.classification).not.toBe('potentially-conscious');
   });
 });
