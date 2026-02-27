@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei 0₀式 — 多次元螺旋計算デモ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;400;600&family=JetBrains+Mono:wght@300;400&display=swap');
+
+:root {
+  --void: #030308;
+  --deep: #08081a;
+  --spiral-gold: #d4a843;
+  --spiral-cyan: #43b4d4;
+  --spiral-rose: #d44387;
+  --spiral-lime: #87d443;
+  --elliptic: #4ecdc4;
+  --parabolic: #f4d03f;
+  --hyperbolic: #e74c3c;
+  --text: #d0ccc4;
+  --dim: #5a5650;
+  --ibushi: #9a9488;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Noto Serif JP', serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.header {
+  text-align: center;
+  padding: 1.5rem 2rem 0.5rem;
+  z-index: 10;
+  position: relative;
+}
+.header h1 {
+  font-weight: 200;
+  font-size: 1.2rem;
+  letter-spacing: 0.35em;
+  color: var(--ibushi);
+}
+.header h1 .zero { color: #e87248; font-weight: 600; }
+.header .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  margin-top: 0.25rem;
+}
+.header .formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--spiral-gold);
+  margin-top: 0.4rem;
+}
+
+canvas#vis { width: 100%; height: 460px; display: block; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.8rem 1.5rem;
+  z-index: 10;
+  position: relative;
+}
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid rgba(212,168,67,0.2);
+  background: rgba(8,8,26,0.7);
+  color: var(--ibushi);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: var(--spiral-gold);
+  color: var(--spiral-gold);
+}
+.btn.active {
+  background: rgba(212,168,67,0.12);
+  border-color: var(--spiral-gold);
+  color: var(--spiral-gold);
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px;
+  margin: 0 1.5rem 0.8rem;
+  background: rgba(212,168,67,0.06);
+  border: 1px solid rgba(212,168,67,0.06);
+}
+.panel {
+  background: rgba(8,8,26,0.85);
+  padding: 0.8rem;
+}
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.metric {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+.metric-label { font-size: 0.62rem; color: var(--dim); }
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--spiral-gold);
+}
+.metric-value.cyan { color: var(--elliptic); }
+.metric-value.rose { color: var(--spiral-rose); }
+
+.axis-list {
+  margin: 0 1.5rem 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.axis-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(8,8,26,0.7);
+  transition: all 0.3s;
+}
+.axis-tag.elliptic { border-color: rgba(78,205,196,0.3); color: var(--elliptic); }
+.axis-tag.parabolic { border-color: rgba(244,208,63,0.3); color: var(--parabolic); }
+.axis-tag.hyperbolic { border-color: rgba(231,76,60,0.3); color: var(--hyperbolic); }
+
+.log-container {
+  margin: 0 1.5rem 1.5rem;
+  border: 1px solid rgba(212,168,67,0.06);
+  background: rgba(8,8,26,0.5);
+  max-height: 150px;
+  overflow-y: auto;
+}
+.log-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  padding: 0.6rem 0.8rem 0.3rem;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  background: rgba(8,8,26,0.95);
+}
+.log-entry {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  padding: 0.15rem 0.8rem;
+  border-top: 1px solid rgba(255,255,255,0.02);
+  color: var(--dim);
+}
+.log-entry.axis { color: var(--spiral-gold); }
+.log-entry.resonance { color: var(--spiral-rose); }
+.log-entry.projection { color: #e87248; }
+
+.footer {
+  text-align: center;
+  padding: 0.5rem 1.5rem 1.2rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--dim);
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: rgba(212,168,67,0.3); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Rei <span class="zero">0₀式</span> — 多次元螺旋計算</h1>
+  <div class="sub">Multi-Dimensional Spiral Computation · 螺旋数体系 × 中心-周縁</div>
+  <div class="formula">Z(n) = 0₀ · Π e^(iθ_k + s_k·τ_k) &nbsp; | &nbsp; τ² = -1 + ε</div>
+</div>
+
+<canvas id="vis"></canvas>
+
+<div class="controls">
+  <button class="btn active" onclick="setPreset('rei', event)">Rei 4軸計算</button>
+  <button class="btn" onclick="setPreset('galaxy', event)">銀河渦巻き</button>
+  <button class="btn" onclick="setPreset('dna', event)">DNA二重螺旋</button>
+  <button class="btn" onclick="setPreset('nidanas', event)">十二因縁</button>
+  <button class="btn" onclick="addCustomAxis()">軸を追加</button>
+  <button class="btn" onclick="doProjection()">0₀ 射影</button>
+  <button class="btn" onclick="togglePause()" id="btnPause">⏸ 停止</button>
+  <button class="btn" onclick="resetAll()">リセット</button>
+</div>
+
+<div class="axis-list" id="axisTags"></div>
+
+<div class="dashboard">
+  <div class="panel">
+    <div class="panel-title">螺旋状態 / Spiral State</div>
+    <div class="metric"><span class="metric-label">軸数</span><span class="metric-value" id="axisCount">0</span></div>
+    <div class="metric"><span class="metric-label">計算点</span><span class="metric-value" id="totalPoints">0</span></div>
+    <div class="metric"><span class="metric-label">ステップ</span><span class="metric-value" id="stepCount">0</span></div>
+    <div class="metric"><span class="metric-label">相互作用数</span><span class="metric-value" id="interCount">0</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">領域分布 / Regime</div>
+    <div class="metric"><span class="metric-label">楕円 (ε&lt;1)</span><span class="metric-value cyan" id="ellipticN">0</span></div>
+    <div class="metric"><span class="metric-label">放物 (ε=1)</span><span class="metric-value" id="parabolicN">0</span></div>
+    <div class="metric"><span class="metric-label">双曲 (ε&gt;1)</span><span class="metric-value rose" id="hyperbolicN">0</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">エネルギー / Energy</div>
+    <div class="metric"><span class="metric-label">総エネルギー</span><span class="metric-value" id="energy">0</span></div>
+    <div class="metric"><span class="metric-label">圧縮率</span><span class="metric-value cyan" id="compression">—</span></div>
+    <div class="metric"><span class="metric-label">共鳴数</span><span class="metric-value rose" id="resonances">0</span></div>
+  </div>
+</div>
+
+<div class="log-container">
+  <div class="log-header">事象記録 / Event Log</div>
+  <div id="log"></div>
+</div>
+
+<div class="footer">
+  Rei 0₀式 · D-FUMT · 螺旋数体系理論 × 多次元同時計算 · 「常に圧縮」<br>
+  0₀ を中心に、多方向へと同時多発計算が始まる
+</div>
+
+<script>
+// ================================================================
+// Spiral Math Core
+// ================================================================
+function spiralFunctions(s, epsilon) {
+  if (epsilon < 1 - 1e-9) {
+    const w = Math.sqrt(1 - epsilon);
+    return { A: Math.cos(w*s), B: w > 1e-9 ? Math.sin(w*s)/w : s, regime: 'elliptic' };
+  } else if (epsilon > 1 + 1e-9) {
+    const k = Math.sqrt(epsilon - 1);
+    return { A: Math.cosh(k*s), B: k > 1e-9 ? Math.sinh(k*s)/k : s, regime: 'hyperbolic' };
+  }
+  return { A: 1, B: s, regime: 'parabolic' };
+}
+
+function spiralPoint3D(r, theta, s, epsilon) {
+  const f = spiralFunctions(s, epsilon);
+  return {
+    x: r * f.A * Math.cos(theta),
+    y: r * f.A * Math.sin(theta),
+    z: r * f.B,
+    A: f.A, B: f.B, regime: f.regime
+  };
+}
+
+// ================================================================
+// Multi-Dimensional Spiral Engine
+// ================================================================
+class MultiSpiral {
+  constructor() {
+    this.axes = new Map();
+    this.interactions = [];
+    this.histories = new Map();
+    this.step = 0;
+  }
+
+  addAxis(cfg) {
+    const axis = {
+      id: cfg.id, name: cfg.name, epsilon: cfg.epsilon,
+      sRate: cfg.sRate || 0.1, thetaRate: cfg.thetaRate || 0.5,
+      radius: cfg.radius || 1.0, s: 0, theta: 0,
+      hue: cfg.hue || Math.random() * 360
+    };
+    // Auto interactions
+    for (const [eid, ea] of this.axes) {
+      const kappa = 1 / (1 + Math.abs(axis.epsilon - ea.epsilon));
+      this.interactions.push({ src: axis.id, tgt: eid, kappa });
+    }
+    this.axes.set(axis.id, axis);
+    this.histories.set(axis.id, []);
+    return axis;
+  }
+
+  tick() {
+    this.step++;
+    const pts = new Map();
+    // Compute all axes
+    for (const [id, ax] of this.axes) {
+      ax.s += ax.sRate;
+      ax.theta += ax.thetaRate;
+      const p = spiralPoint3D(ax.radius, ax.theta, ax.s, ax.epsilon);
+      const pt = { ...p, axisId: id, step: this.step, r: ax.radius, theta: ax.theta, s: ax.s };
+      pts.set(id, pt);
+      const h = this.histories.get(id);
+      h.push(pt);
+      if (h.length > 300) h.shift(); // Keep max trail
+    }
+    // Interactions
+    for (const inter of this.interactions) {
+      const src = pts.get(inter.src);
+      const tgt = this.axes.get(inter.tgt);
+      if (!src || !tgt) continue;
+      tgt.radius += inter.kappa * 0.0005 * (src.A * src.A + src.B * src.B);
+      tgt.thetaRate += inter.kappa * 0.00005 * Math.sin(src.theta);
+    }
+    return pts;
+  }
+
+  getState() {
+    const dist = { elliptic: 0, parabolic: 0, hyperbolic: 0 };
+    let energy = 0;
+    let totalPts = 0;
+    for (const [id, ax] of this.axes) {
+      dist[spiralFunctions(ax.s, ax.epsilon).regime]++;
+      const h = this.histories.get(id);
+      totalPts += h.length;
+      if (h.length > 0) {
+        const last = h[h.length - 1];
+        energy += ax.radius * ax.radius * (last.A * last.A + last.B * last.B);
+      }
+    }
+    const projSize = this.axes.size * 3;
+    const histSize = totalPts * 7;
+    return {
+      axisCount: this.axes.size,
+      totalPoints: totalPts,
+      dist, energy,
+      compressionRatio: histSize > 0 ? (projSize / histSize).toFixed(4) : '—',
+      interactionCount: this.interactions.length,
+      step: this.step
+    };
+  }
+}
+
+// ================================================================
+// Visualization
+// ================================================================
+const canvas = document.getElementById('vis');
+const ctx = canvas.getContext('2d');
+let engine = null;
+let paused = false;
+let frame = 0;
+let projectionFlash = 0;
+const COLORS = ['#d4a843','#43b4d4','#d44387','#87d443','#a843d4','#d4a887','#43d4a8','#d44343','#4387d4','#87d4a8','#d4d443','#4343d4'];
+
+function resize() {
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+const W = () => canvas.offsetWidth;
+const H = () => canvas.offsetHeight;
+
+// Simple 3D projection
+function project(x, y, z, rotY, rotX) {
+  // Rotate Y
+  const cy = Math.cos(rotY), sy = Math.sin(rotY);
+  let px = x * cy - z * sy;
+  let pz = x * sy + z * cy;
+  // Rotate X
+  const cx = Math.cos(rotX), sx = Math.sin(rotX);
+  let py = y * cx - pz * sx;
+  pz = y * sx + pz * cx;
+  // Perspective
+  const d = 5;
+  const scale = d / (d + pz * 0.3);
+  return { sx: px * scale * 60 + W()/2, sy: py * scale * 60 + H()/2, depth: pz, scale };
+}
+
+function render() {
+  frame++;
+  ctx.clearRect(0, 0, W(), H());
+
+  // Background
+  const bg = ctx.createRadialGradient(W()/2, H()/2, 0, W()/2, H()/2, W()*0.6);
+  bg.addColorStop(0, '#0a0818');
+  bg.addColorStop(1, '#030308');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W(), H());
+
+  if (!engine) { requestAnimationFrame(render); return; }
+
+  // Step engine
+  if (!paused) engine.tick();
+
+  const rotY = frame * 0.003;
+  const rotX = 0.3;
+
+  // Draw 0₀ center
+  const c0 = project(0, 0, 0, rotY, rotX);
+  const centerGlow = ctx.createRadialGradient(c0.sx, c0.sy, 0, c0.sx, c0.sy, 30);
+  centerGlow.addColorStop(0, 'rgba(232, 114, 74, 0.25)');
+  centerGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = centerGlow;
+  ctx.beginPath();
+  ctx.arc(c0.sx, c0.sy, 30, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(232, 114, 74, 0.6)';
+  ctx.font = "14px 'Noto Serif JP'";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('0₀', c0.sx, c0.sy);
+
+  // Draw each axis trail
+  let colorIdx = 0;
+  for (const [id, axis] of engine.axes) {
+    const history = engine.histories.get(id);
+    if (!history || history.length < 2) continue;
+
+    const color = COLORS[colorIdx % COLORS.length];
+    colorIdx++;
+
+    // Trail
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < history.length; i++) {
+      const p = history[i];
+      const proj = project(p.x, p.z, p.y, rotY, rotX);
+      const alpha = (i / history.length) * 0.8;
+      if (first) {
+        ctx.moveTo(proj.sx, proj.sy);
+        first = false;
+      } else {
+        ctx.lineTo(proj.sx, proj.sy);
+      }
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2;
+    ctx.globalAlpha = 0.6;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Head point
+    const last = history[history.length - 1];
+    const headProj = project(last.x, last.z, last.y, rotY, rotX);
+
+    // Glow
+    const glow = ctx.createRadialGradient(headProj.sx, headProj.sy, 0, headProj.sx, headProj.sy, 15);
+    glow.addColorStop(0, color + '60');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(headProj.sx, headProj.sy, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Point
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(headProj.sx, headProj.sy, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Label
+    if (engine.axes.size <= 12) {
+      ctx.fillStyle = color + 'aa';
+      ctx.font = "9px 'Noto Serif JP'";
+      ctx.textAlign = 'left';
+      ctx.fillText(axis.name, headProj.sx + 8, headProj.sy - 4);
+    }
+
+    // Line to center
+    ctx.strokeStyle = color + '15';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(c0.sx, c0.sy);
+    ctx.lineTo(headProj.sx, headProj.sy);
+    ctx.stroke();
+  }
+
+  // Projection flash
+  if (projectionFlash > 0) {
+    ctx.fillStyle = `rgba(232, 114, 74, ${projectionFlash * 0.3})`;
+    ctx.fillRect(0, 0, W(), H());
+    projectionFlash -= 0.015;
+  }
+
+  // Update dashboard
+  if (frame % 5 === 0) updateDashboard();
+
+  requestAnimationFrame(render);
+}
+
+// ================================================================
+// Dashboard & UI
+// ================================================================
+function updateDashboard() {
+  if (!engine) return;
+  const s = engine.getState();
+  document.getElementById('axisCount').textContent = s.axisCount;
+  document.getElementById('totalPoints').textContent = s.totalPoints;
+  document.getElementById('stepCount').textContent = s.step;
+  document.getElementById('interCount').textContent = s.interactionCount;
+  document.getElementById('ellipticN').textContent = s.dist.elliptic;
+  document.getElementById('parabolicN').textContent = s.dist.parabolic;
+  document.getElementById('hyperbolicN').textContent = s.dist.hyperbolic;
+  document.getElementById('energy').textContent = s.energy.toFixed(2);
+  document.getElementById('compression').textContent = s.compressionRatio;
+}
+
+function updateAxisTags() {
+  const container = document.getElementById('axisTags');
+  container.innerHTML = '';
+  if (!engine) return;
+  for (const [id, ax] of engine.axes) {
+    const regime = spiralFunctions(ax.s, ax.epsilon).regime;
+    const tag = document.createElement('div');
+    tag.className = `axis-tag ${regime}`;
+    tag.textContent = `${ax.name} ε=${ax.epsilon.toFixed(1)}`;
+    container.appendChild(tag);
+  }
+}
+
+function addLog(type, msg) {
+  const log = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.textContent = `[${new Date().toLocaleTimeString('ja-JP')}] ${msg}`;
+  log.insertBefore(entry, log.firstChild);
+  while (log.children.length > 60) log.removeChild(log.lastChild);
+}
+
+// ================================================================
+// Presets
+// ================================================================
+function setPreset(name, evt) {
+  engine = new MultiSpiral();
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  if (evt && evt.target) evt.target.classList.add('active');
+
+  if (name === 'rei') {
+    engine.addAxis({ id:'math', name:'数学的計算', epsilon:0.2, sRate:0.1, thetaRate:0.5, radius:1.0 });
+    engine.addAxis({ id:'logic', name:'論理的計算', epsilon:0.8, sRate:0.12, thetaRate:0.4, radius:1.2 });
+    engine.addAxis({ id:'struct', name:'構造的計算', epsilon:1.0, sRate:0.08, thetaRate:0.6, radius:0.8 });
+    engine.addAxis({ id:'meaning', name:'意味的計算', epsilon:1.5, sRate:0.15, thetaRate:0.35, radius:1.5 });
+    addLog('axis', 'Rei 4軸計算: 数学(楕円) + 論理(楕円) + 構造(放物) + 意味(双曲)');
+  } else if (name === 'galaxy') {
+    for (let i = 0; i < 4; i++) {
+      engine.addAxis({ id:`arm${i}`, name:`渦巻き腕${i+1}`, epsilon:0.5+i*0.1, sRate:0.08, thetaRate:0.3+i*0.05, radius:1+i*0.5 });
+    }
+    addLog('axis', '銀河渦巻き: 4本の螺旋腕が中心から放射');
+  } else if (name === 'dna') {
+    engine.addAxis({ id:'strandA', name:'鎖A', epsilon:0.3, sRate:0.1, thetaRate:0.5, radius:1.0 });
+    engine.addAxis({ id:'strandB', name:'鎖B', epsilon:0.3, sRate:0.1, thetaRate:-0.5, radius:1.0 });
+    addLog('axis', 'DNA二重螺旋: 逆方向に巻く2本の鎖');
+  } else if (name === 'nidanas') {
+    const ns = [
+      {id:'avijja',name:'無明',e:0.0},{id:'sankhara',name:'行',e:0.1},{id:'vinnana',name:'識',e:0.2},
+      {id:'namarupa',name:'名色',e:0.3},{id:'salayatana',name:'六処',e:0.5},{id:'phassa',name:'触',e:0.7},
+      {id:'vedana',name:'受',e:0.8},{id:'tanha',name:'愛',e:1.0},{id:'upadana',name:'取',e:1.2},
+      {id:'bhava',name:'有',e:1.5},{id:'jati',name:'生',e:1.8},{id:'jaramarana',name:'老死',e:2.0}
+    ];
+    ns.forEach(n => engine.addAxis({ id:n.id, name:n.name, epsilon:n.e, sRate:0.05, thetaRate:0.3, radius:1.0 }));
+    addLog('axis', '十二因縁: 無明(楕円)→愛(放物/臨界)→老死(双曲)の螺旋的展開');
+  }
+  updateAxisTags();
+}
+
+function addCustomAxis() {
+  if (!engine) { engine = new MultiSpiral(); }
+  const idx = engine.axes.size;
+  const eps = Math.random() * 2.5;
+  engine.addAxis({
+    id: `custom-${idx}`, name: `軸${idx}`,
+    epsilon: eps,
+    sRate: 0.05 + Math.random() * 0.15,
+    thetaRate: 0.2 + Math.random() * 0.6,
+    radius: 0.5 + Math.random() * 1.5
+  });
+  addLog('axis', `カスタム軸追加: ε=${eps.toFixed(2)} (${spiralFunctions(0,eps).regime})`);
+  updateAxisTags();
+}
+
+function doProjection() {
+  if (!engine) return;
+  projectionFlash = 1;
+  const s = engine.getState();
+  addLog('projection', `0₀ 射影: ${s.axisCount}軸 × ${s.totalPoints}点 → 圧縮率 ${s.compressionRatio}`);
+}
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('btnPause').textContent = paused ? '▶ 再開' : '⏸ 停止';
+}
+
+function resetAll() {
+  engine = new MultiSpiral();
+  document.getElementById('axisTags').innerHTML = '';
+  document.getElementById('log').innerHTML = '';
+  addLog('axis', '初期化 — 0₀ が虚空に浮かぶ');
+}
+
+// ================================================================
+// Init
+// ================================================================
+setPreset('rei', null);
+render();
+</script>
+
+</body>
+</html>

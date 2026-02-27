@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei Phase 7e — σ Meta-Bridge Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=Source+Code+Pro:wght@400;600&display=swap');
+
+  :root {
+    --bg: #1a1a1f;
+    --bg2: #22222a;
+    --bg3: #2a2a35;
+    --silver: #b8b8c8;
+    --silver-dim: #7a7a8a;
+    --gold: #c4a44e;
+    --gold-dim: #8a7a3e;
+    --accent-blue: #5a8ab5;
+    --accent-green: #6a9a6a;
+    --accent-rose: #b56a7a;
+    --accent-violet: #8a6ab5;
+    --accent-orange: #c48a4e;
+    --text: #d0d0da;
+    --text-dim: #808090;
+    --border: #3a3a45;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Serif JP', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  }
+  .header h1 { font-weight: 300; font-size: 1.6rem; letter-spacing: 0.15em; color: var(--silver); }
+  .header h1 span { color: var(--gold); font-weight: 500; }
+  .header .sub { font-size: 0.85rem; color: var(--text-dim); margin-top: 0.5rem; font-family: 'Source Code Pro', monospace; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .section-title {
+    font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold-dim); margin-bottom: 1rem;
+    border-left: 3px solid var(--gold); padding-left: 0.8rem;
+  }
+
+  /* Diamond 7 */
+  .diamond-section { margin-bottom: 3rem; }
+  .diamond-canvas-wrap { display: flex; justify-content: center; padding: 1rem 0; }
+  canvas#diamondCanvas { border: 1px solid var(--border); border-radius: 4px; background: var(--bg2); cursor: pointer; }
+
+  /* Axiom Tabs */
+  .axiom-section { margin-bottom: 3rem; }
+  .axiom-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .axiom-tab {
+    padding: 0.6rem 1.2rem; border: 1px solid var(--border); border-radius: 3px;
+    background: var(--bg2); color: var(--silver-dim); cursor: pointer;
+    font-family: 'Source Code Pro', monospace; font-size: 0.8rem;
+    transition: all 0.3s ease; position: relative; overflow: hidden;
+  }
+  .axiom-tab::after { content: ''; position: absolute; inset: 0; background: var(--gold); opacity: 0; transition: opacity 0.4s; }
+  .axiom-tab:hover { border-color: var(--silver-dim); color: var(--silver); }
+  .axiom-tab.active { border-color: var(--gold); color: var(--gold); background: var(--bg3); }
+  .axiom-tab.flash::after { opacity: 0.15; animation: tabFlash 0.5s ease-out forwards; }
+  @keyframes tabFlash { 0% { opacity: 0.25; } 100% { opacity: 0; } }
+
+  .axiom-detail {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1.5rem; min-height: 200px; overflow: hidden;
+  }
+  .axiom-detail.animate-in .axiom-content { animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .axiom-detail h3 { font-size: 1.1rem; font-weight: 500; color: var(--silver); margin-bottom: 0.8rem; }
+  .axiom-detail .desc { font-size: 0.9rem; color: var(--text-dim); line-height: 1.8; margin-bottom: 1rem; }
+  .axiom-detail code {
+    display: block; background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+    padding: 1rem; font-family: 'Source Code Pro', monospace; font-size: 0.82rem;
+    color: var(--silver); line-height: 1.6; white-space: pre; overflow-x: auto;
+  }
+
+  /* Functor Demo */
+  .functor-section { margin-bottom: 3rem; }
+  .functor-demo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; }
+  .functor-panel {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1.2rem; transition: border-color 0.5s, box-shadow 0.5s;
+  }
+  .functor-panel.glow-green { border-color: var(--accent-green); box-shadow: 0 0 20px rgba(106,154,106,0.15); }
+  .functor-panel.glow-blue { border-color: var(--accent-blue); box-shadow: 0 0 20px rgba(90,138,181,0.15); }
+  .functor-panel h4 { font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-dim); margin-bottom: 0.8rem; }
+  .functor-panel .value { font-family: 'Source Code Pro', monospace; font-size: 0.85rem; color: var(--silver); line-height: 1.7; }
+  .functor-arrow { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+  .functor-btn {
+    padding: 0.5rem 1rem; border: 1px solid var(--gold-dim); border-radius: 3px;
+    background: transparent; color: var(--gold); cursor: pointer;
+    font-family: 'Source Code Pro', monospace; font-size: 0.8rem; transition: all 0.3s ease;
+  }
+  .functor-btn:hover { background: var(--gold-dim); color: var(--bg); }
+  .functor-btn:active { transform: scale(0.95); }
+  .arrow-svg { width: 80px; height: 20px; }
+  .arrow-svg line, .arrow-svg polygon { transition: all 0.4s; }
+  .arrow-svg.active-green line { stroke: var(--accent-green); stroke-width: 2.5; }
+  .arrow-svg.active-green polygon { fill: var(--accent-green); }
+  .arrow-svg.active-blue line { stroke: var(--accent-blue); stroke-width: 2.5; }
+  .arrow-svg.active-blue polygon { fill: var(--accent-blue); }
+
+  /* Particles */
+  .particle-container { position: fixed; pointer-events: none; z-index: 999; }
+  .particle {
+    position: absolute; border-radius: 50%;
+    animation: particleFly 0.8s ease-out forwards;
+  }
+  @keyframes particleFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
+  }
+
+  /* Metrics */
+  .metrics-section { margin-bottom: 3rem; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+  .metric-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1.2rem; text-align: center; cursor: pointer;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .metric-card:hover { border-color: var(--silver-dim); transform: translateY(-2px); }
+  .metric-card.pop { animation: cardPop 0.4s cubic-bezier(0.22,1,0.36,1); }
+  @keyframes cardPop { 0% { transform: scale(1); } 40% { transform: scale(1.08); box-shadow: 0 0 25px rgba(196,164,78,0.2); } 100% { transform: scale(1); } }
+  .metric-card .label { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.5rem; }
+  .metric-card .num { font-family: 'Source Code Pro', monospace; font-size: 1.8rem; font-weight: 600; color: var(--gold); }
+  .metric-card .unit { font-size: 0.75rem; color: var(--silver-dim); margin-top: 0.3rem; }
+
+  /* Bridge */
+  .bridge-section { margin-bottom: 3rem; }
+  canvas#bridgeCanvas { width: 100%; border: 1px solid var(--border); border-radius: 4px; background: var(--bg2); cursor: pointer; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 2rem 1rem; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-dim); }
+  .footer a { color: var(--silver-dim); text-decoration: none; border-bottom: 1px solid var(--border); transition: color 0.3s; }
+  .footer a:hover { color: var(--gold); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.6s ease forwards; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 700px) {
+    .functor-demo { grid-template-columns: 1fr; }
+    .functor-arrow { flex-direction: row; justify-content: center; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Rei <span>Phase 7e</span> — σ Meta-Bridge</h1>
+  <div class="sub">compress / expand functors · Diamond 7 · density & coverage metrics</div>
+</div>
+
+<div class="container">
+  <div class="diamond-section fade-in">
+    <div class="section-title">Diamond 7 — 7-Domain Complete Connection (click nodes)</div>
+    <div class="diamond-canvas-wrap">
+      <canvas id="diamondCanvas" width="600" height="420"></canvas>
+    </div>
+  </div>
+
+  <div class="axiom-section fade-in" style="animation-delay:0.1s">
+    <div class="section-title">5 Alternative Axiom Systems</div>
+    <div class="axiom-tabs" id="axiomTabs"></div>
+    <div class="axiom-detail" id="axiomDetail"></div>
+  </div>
+
+  <div class="functor-section fade-in" style="animation-delay:0.2s">
+    <div class="section-title">Compress ↔ Expand Functors</div>
+    <div class="functor-demo">
+      <div class="functor-panel" id="sourcePanel"><h4>Source System</h4><div class="value" id="sourceValue"></div></div>
+      <div class="functor-arrow">
+        <button class="functor-btn" id="compressBtn">compress →</button>
+        <svg class="arrow-svg" id="arrowForward" viewBox="0 0 80 20"><line x1="5" y1="10" x2="65" y2="10" stroke="#8a7a3e" stroke-width="1.5"/><polygon points="65,5 75,10 65,15" fill="#8a7a3e"/></svg>
+        <svg class="arrow-svg" id="arrowBackward" viewBox="0 0 80 20"><line x1="15" y1="10" x2="75" y2="10" stroke="#8a7a3e" stroke-width="1.5"/><polygon points="15,5 5,10 15,15" fill="#8a7a3e"/></svg>
+        <button class="functor-btn" id="expandBtn">← expand</button>
+      </div>
+      <div class="functor-panel" id="targetPanel"><h4>Target System</h4><div class="value" id="targetValue"></div></div>
+    </div>
+  </div>
+
+  <div class="metrics-section fade-in" style="animation-delay:0.3s">
+    <div class="section-title">Density & Coverage Metrics (click cards)</div>
+    <div class="metrics-grid" id="metricsGrid"></div>
+  </div>
+
+  <div class="bridge-section fade-in" style="animation-delay:0.4s">
+    <div class="section-title">36-Direction Bridge Network (click nodes)</div>
+    <canvas id="bridgeCanvas" height="350"></canvas>
+  </div>
+</div>
+
+<div class="footer">
+  Rei (0₀式) by Nobuki Fujimoto · D-FUMT<br>
+  <a href="https://github.com/fc0web/rei-lang">GitHub</a> ·
+  <a href="https://www.npmjs.com/package/rei-lang">npm</a> ·
+  <a href="https://doi.org/10.5281/zenodo.18651614">Zenodo</a>
+</div>
+
+<script>
+const DOMAINS = [
+  { id: 'B', name: 'Natural Science', short: 'NatSci', color: '#5a8ab5' },
+  { id: 'C', name: 'Info Engineering', short: 'InfoEng', color: '#6a9a6a' },
+  { id: 'D', name: 'Humanities', short: 'Human', color: '#b56a7a' },
+  { id: 'E', name: 'Art', short: 'Art', color: '#c48a4e' },
+  { id: 'F', name: 'Music', short: 'Music', color: '#8a6ab5' },
+  { id: 'G', name: 'Economics', short: 'Econ', color: '#5ab5a0' },
+  { id: 'H', name: 'Linguistics', short: 'Ling', color: '#b5a05a' },
+];
+
+const AXIOM_SYSTEMS = [
+  { id:'core', name:'Core (A1–A4)', title:'Core Genesis System',
+    desc:'The standard 4-axiom foundation: center-periphery, extension-reduction, σ-accumulation, and genesis phase transition.',
+    code:'A1: M = (c, N, μ, w)          — center-periphery\nA2: ⊕ : V × S → V, ⊖ : V → V  — extension/reduction\nA3: V̂ = V × Σ                  — σ-accumulation\nA4: void → ・ → 0₀ → 0 → ℕ     — genesis phases' },
+  { id:'wave', name:'Wave Genesis', title:'Wave-Based Genesis',
+    desc:'Replaces point-based genesis with wave interference. Existence emerges from standing waves.',
+    code:'W1: ψ(x,t) = A·sin(kx - ωt)   — wave primitive\nW2: ψ₁ ⊕ ψ₂ = interference     — superposition\nW3: |ψ|² → probability          — collapse to value\nW4: standing wave → stable 0₀   — genesis by resonance' },
+  { id:'categorical', name:'Categorical', title:'Category-Theoretic System',
+    desc:'Reformulates all 4 axioms as natural transformations. Center-periphery becomes an adjunction.',
+    code:'C1: F ⊣ G : Rei ⇄ Set         — CP as adjunction\nC2: η : Id → G∘F               — extension as unit\nC3: ε : F∘G → Id               — reduction as counit\nC4: Nat(F,G) preserves σ       — functorial accumulation' },
+  { id:'topological', name:'Topological', title:'Topological Genesis',
+    desc:'Genesis as continuous deformation. Phases are topological spaces, transitions are continuous maps.',
+    code:'T1: void ≅ ∅ (empty space)      — topological void\nT2: ・ ≅ {*} (point space)      — contractible\nT3: 0₀ ≅ S¹ (circle)           — first non-trivial\nT4: π₁(0₀) → π₁(ℕ)            — fundamental group' },
+  { id:'information', name:'Information', title:'Information-Theoretic System',
+    desc:'Values as information channels. Genesis as entropy reduction. σ as mutual information growth.',
+    code:'I1: H(void) = ∞                — maximum entropy\nI2: H(・) = log₂(n)            — finite entropy\nI3: I(0₀; 0) > 0               — mutual information\nI4: compress → H↓, expand → H↑ — entropy functors' },
+];
+
+const METRICS = [
+  { label:'Tests Passing', num:2011, display:'2,011', unit:'50 files' },
+  { label:'Domain Bridges', num:36, display:'36', unit:'directions' },
+  { label:'Axiom Systems', num:5, display:'5', unit:'alternative' },
+  { label:'σ-Interactions', num:12, display:'12', unit:'rules' },
+  { label:'Density Score', num:0.94, display:'0.94', unit:'compress ratio' },
+  { label:'Coverage', num:100, display:'100%', unit:'7 domains connected' },
+];
+
+// ── Particles ──
+function spawnParticles(x, y, color, count=12) {
+  const c = document.createElement('div');
+  c.className = 'particle-container'; c.style.left = x+'px'; c.style.top = y+'px';
+  document.body.appendChild(c);
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div'); p.className = 'particle';
+    const a = (Math.PI*2*i)/count + (Math.random()-0.5)*0.5;
+    const d = 30 + Math.random()*50;
+    p.style.setProperty('--dx', Math.cos(a)*d+'px');
+    p.style.setProperty('--dy', Math.sin(a)*d+'px');
+    p.style.background = color;
+    const s = (2+Math.random()*4)+'px'; p.style.width=s; p.style.height=s;
+    c.appendChild(p);
+  }
+  setTimeout(() => c.remove(), 900);
+}
+
+// ── §1 Diamond 7 ──
+let dHL = -1, dAngle = 0, dAnim = false;
+
+function dPos() {
+  const cv = document.getElementById('diamondCanvas');
+  return DOMAINS.map((d,i) => {
+    const a = -Math.PI/2 + (2*Math.PI*i)/7 + dAngle;
+    return { x: cv.width/2 + 160*Math.cos(a), y: cv.height/2 + 160*Math.sin(a), ...d };
+  });
+}
+
+function drawD7(t=0) {
+  const cv = document.getElementById('diamondCanvas'), ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const ps = dPos(), cx=cv.width/2, cy=cv.height/2;
+
+  for (let i=0;i<7;i++) for (let j=i+1;j<7;j++) {
+    const a=ps[i], b=ps[j], hl = dHL===i||dHL===j;
+    const g = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+    g.addColorStop(0, a.color+(hl?'90':'30'));
+    g.addColorStop(1, b.color+(hl?'90':'30'));
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=g; ctx.lineWidth=hl?2.5:1; ctx.stroke();
+    if (hl && dAnim) {
+      const p = (Math.sin(t/300+i+j)+1)/2;
+      ctx.beginPath(); ctx.arc(a.x+(b.x-a.x)*p, a.y+(b.y-a.y)*p, 3, 0, Math.PI*2);
+      ctx.fillStyle = dHL===i ? a.color : b.color; ctx.fill();
+    }
+  }
+
+  ps.forEach((p,i) => {
+    const act = dHL===i, gr = act?40:30, r = act?22:18;
+    const gw = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,gr);
+    gw.addColorStop(0, p.color+(act?'a0':'60')); gw.addColorStop(1, p.color+'00');
+    ctx.beginPath(); ctx.arc(p.x,p.y,gr,0,Math.PI*2); ctx.fillStyle=gw; ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle='#1a1a1f'; ctx.fill(); ctx.strokeStyle=p.color; ctx.lineWidth=act?3:2; ctx.stroke();
+    if (act && dAnim) {
+      const pr = r+5+Math.sin(t/200)*5;
+      ctx.beginPath(); ctx.arc(p.x,p.y,pr,0,Math.PI*2); ctx.strokeStyle=p.color+'40'; ctx.lineWidth=1; ctx.stroke();
+    }
+    ctx.fillStyle = act?'#fff':p.color;
+    ctx.font = `${act?700:600} ${act?12:11}px "Source Code Pro",monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(p.short,p.x,p.y);
+    const la = -Math.PI/2+(2*Math.PI*i)/7+dAngle;
+    ctx.fillStyle = act?p.color:'#808090'; ctx.font = '10px "Source Code Pro",monospace';
+    ctx.fillText(p.id, cx+192*Math.cos(la), cy+192*Math.sin(la));
+  });
+
+  ctx.fillStyle='#c4a44e'; ctx.font='500 14px "Noto Serif JP",serif'; ctx.textAlign='center';
+  ctx.fillText('Diamond 7',cx,cy-8);
+  ctx.fillStyle='#808090'; ctx.font='11px "Source Code Pro",monospace';
+  ctx.fillText(dHL>=0?DOMAINS[dHL].name+' — 6 connections':'21 pairs × 2 = 42 bridges',cx,cy+12);
+
+  if (dAnim) requestAnimationFrame(t2 => drawD7(t2));
+}
+
+document.getElementById('diamondCanvas').addEventListener('click', e => {
+  const r = e.target.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  const ps = dPos(); let cl = -1;
+  ps.forEach((p,i) => { if (Math.hypot(mx-p.x,my-p.y)<25) cl=i; });
+  if (cl>=0) { dHL=dHL===cl?-1:cl; dAnim=dHL>=0; spawnParticles(e.clientX,e.clientY,DOMAINS[cl].color,10); }
+  else { dAngle+=Math.PI/7; dHL=-1; dAnim=false; spawnParticles(e.clientX,e.clientY,'#c4a44e',6); }
+  drawD7(performance.now());
+});
+
+// ── §2 Axiom Tabs ──
+let activeAx = 'core';
+
+function renderTabs() {
+  const el = document.getElementById('axiomTabs');
+  el.innerHTML = AXIOM_SYSTEMS.map(s =>
+    `<div class="axiom-tab ${s.id===activeAx?'active':''}" data-id="${s.id}">${s.name}</div>`
+  ).join('');
+  el.querySelectorAll('.axiom-tab').forEach(tab => {
+    tab.addEventListener('click', e => {
+      if (tab.dataset.id===activeAx) return;
+      activeAx = tab.dataset.id;
+      tab.classList.add('flash'); setTimeout(()=>tab.classList.remove('flash'),500);
+      spawnParticles(e.clientX,e.clientY,'#c4a44e',8);
+      renderTabs(); renderDetail(true); updateFunctor();
+    });
+  });
+}
+
+function renderDetail(anim=false) {
+  const s = AXIOM_SYSTEMS.find(x=>x.id===activeAx), el=document.getElementById('axiomDetail');
+  el.className = 'axiom-detail'+(anim?' animate-in':'');
+  el.innerHTML = `<div class="axiom-content"><h3>${s.title}</h3><div class="desc">${s.desc}</div><code>${s.code}</code></div>`;
+}
+
+// ── §3 Functors ──
+let fTarget = 'wave';
+
+function updateFunctor() {
+  const others = AXIOM_SYSTEMS.filter(s=>s.id!==activeAx);
+  fTarget = others[Math.floor(Math.random()*others.length)].id;
+  const src=AXIOM_SYSTEMS.find(s=>s.id===activeAx), tgt=AXIOM_SYSTEMS.find(s=>s.id===fTarget);
+  document.getElementById('sourceValue').innerHTML = `<strong>${src.name}</strong>\n\n${src.code}`;
+  document.getElementById('targetValue').innerHTML = `<strong>${tgt.name}</strong>\n\n${tgt.code}`;
+  ['sourcePanel','targetPanel'].forEach(id => document.getElementById(id).className='functor-panel');
+  ['arrowForward','arrowBackward'].forEach(id => document.getElementById(id).className='arrow-svg');
+}
+
+document.getElementById('compressBtn').addEventListener('click', e => {
+  const btn=e.target; btn.textContent='compressing...';
+  document.getElementById('arrowForward').classList.add('active-green');
+  document.getElementById('targetPanel').classList.add('glow-green');
+  spawnParticles(e.clientX,e.clientY,'#6a9a6a',15);
+  setTimeout(()=>{
+    const others=AXIOM_SYSTEMS.filter(s=>s.id!==activeAx);
+    fTarget=others[Math.floor(Math.random()*others.length)].id;
+    const tgt=AXIOM_SYSTEMS.find(s=>s.id===fTarget);
+    document.getElementById('targetValue').innerHTML =
+      `<strong>${tgt.name}</strong>\n<span style="color:#6a9a6a">✓ compressed from ${AXIOM_SYSTEMS.find(s=>s.id===activeAx).name}</span>\n\n${tgt.code}`;
+    btn.textContent='compress →';
+    setTimeout(()=>{
+      document.getElementById('arrowForward').classList.remove('active-green');
+      document.getElementById('targetPanel').classList.remove('glow-green');
+    },800);
+  },600);
+});
+
+document.getElementById('expandBtn').addEventListener('click', e => {
+  const btn=e.target; btn.textContent='expanding...';
+  document.getElementById('arrowBackward').classList.add('active-blue');
+  document.getElementById('sourcePanel').classList.add('glow-blue');
+  spawnParticles(e.clientX,e.clientY,'#5a8ab5',15);
+  setTimeout(()=>{
+    const src=AXIOM_SYSTEMS.find(s=>s.id===activeAx);
+    document.getElementById('sourceValue').innerHTML =
+      `<strong>${src.name}</strong>\n<span style="color:#5a8ab5">✓ expanded from ${AXIOM_SYSTEMS.find(s=>s.id===fTarget).name}</span>\n\n${src.code}`;
+    btn.textContent='← expand';
+    setTimeout(()=>{
+      document.getElementById('arrowBackward').classList.remove('active-blue');
+      document.getElementById('sourcePanel').classList.remove('glow-blue');
+    },800);
+  },600);
+});
+
+// ── §4 Metrics ──
+function renderMetrics() {
+  const g = document.getElementById('metricsGrid');
+  g.innerHTML = METRICS.map((m,i) => `
+    <div class="metric-card" data-idx="${i}">
+      <div class="label">${m.label}</div>
+      <div class="num" data-target="${m.num}" data-display="${m.display}">0</div>
+      <div class="unit">${m.unit}</div>
+    </div>`).join('');
+  setTimeout(()=>animAll(),400);
+  g.querySelectorAll('.metric-card').forEach(card => {
+    card.addEventListener('click', e => {
+      card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
+      spawnParticles(e.clientX,e.clientY,'#c4a44e',8);
+      animNum(card.querySelector('.num'),400);
+    });
+  });
+}
+
+function animAll() { document.querySelectorAll('.metric-card .num').forEach((el,i) => setTimeout(()=>animNum(el,600),i*100)); }
+
+function animNum(el, dur) {
+  const tgt=parseFloat(el.dataset.target), disp=el.dataset.display;
+  const isF=disp.includes('.'), isP=disp.includes('%'), st=performance.now();
+  function tick(now) {
+    const t=Math.min((now-st)/dur,1), e=1-Math.pow(1-t,3), c=tgt*e;
+    if (isP) el.textContent=Math.round(c)+'%';
+    else if (isF) el.textContent=c.toFixed(2);
+    else if (tgt>=1000) el.textContent=Math.round(c).toLocaleString();
+    else el.textContent=Math.round(c).toString();
+    if (t<1) requestAnimationFrame(tick); else el.textContent=disp;
+  }
+  requestAnimationFrame(tick);
+}
+
+// ── §5 Bridge Network ──
+let bHL = -1;
+
+function drawBridge(t=0) {
+  const cv=document.getElementById('bridgeCanvas'); cv.width=cv.offsetWidth;
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, m=80, sp=(W-m*2)/6;
+  ctx.clearRect(0,0,W,H);
+  const ns = DOMAINS.map((d,i) => ({ x:m+sp*i, y:H/2, ...d }));
+
+  for (let i=0;i<7;i++) for (let j=i+1;j<7;j++) {
+    const a=ns[i],b=ns[j], mx=(a.x+b.x)/2, d=j-i, ah=25+d*18, hl=bHL===i||bHL===j;
+    const al=hl?'70':'25', lw=hl?1.5:0.8;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.quadraticCurveTo(mx,a.y-ah,b.x,b.y);
+    ctx.strokeStyle=a.color+al; ctx.lineWidth=lw; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.quadraticCurveTo(mx,b.y+ah,a.x,a.y);
+    ctx.strokeStyle=b.color+al; ctx.lineWidth=lw; ctx.stroke();
+    if (hl && t>0) {
+      const p=((t/1000+i*0.3+j*0.2)%1);
+      const qx=(1-p)*(1-p)*a.x+2*(1-p)*p*mx+p*p*b.x;
+      const qy=(1-p)*(1-p)*a.y+2*(1-p)*p*(a.y-ah)+p*p*b.y;
+      ctx.beginPath(); ctx.arc(qx,qy,2.5,0,Math.PI*2); ctx.fillStyle=a.color; ctx.fill();
+    }
+  }
+
+  ns.forEach((n,i) => {
+    const act=bHL===i, gr=act?30:25, r=act?17:14;
+    const gw=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,gr);
+    gw.addColorStop(0,n.color+(act?'80':'50')); gw.addColorStop(1,n.color+'00');
+    ctx.beginPath(); ctx.arc(n.x,n.y,gr,0,Math.PI*2); ctx.fillStyle=gw; ctx.fill();
+    ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
+    ctx.fillStyle='#1a1a1f'; ctx.fill(); ctx.strokeStyle=n.color; ctx.lineWidth=act?2.5:2; ctx.stroke();
+    ctx.fillStyle=act?'#fff':n.color; ctx.font='600 9px "Source Code Pro",monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(n.short,n.x,n.y);
+    ctx.fillStyle=act?n.color:'#808090'; ctx.font='10px "Source Code Pro",monospace';
+    ctx.fillText(n.id,n.x,n.y+28);
+  });
+
+  ctx.fillStyle='#808090'; ctx.font='11px "Source Code Pro",monospace'; ctx.textAlign='left';
+  ctx.fillText(bHL>=0?DOMAINS[bHL].name+' — 6 out + 6 in = 12 bridges':'21 pairs × 2 = 42 bridges (36 directed)',m,H-15);
+  if (bHL>=0) requestAnimationFrame(t2=>drawBridge(t2));
+}
+
+document.getElementById('bridgeCanvas').addEventListener('click', e => {
+  const cv=e.target, r=cv.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(cv.width/r.width), my=(e.clientY-r.top)*(cv.height/r.height);
+  const m=80, sp=(cv.width-m*2)/6; let cl=-1;
+  DOMAINS.forEach((d,i) => { if (Math.hypot(mx-(m+sp*i),my-cv.height/2)<22) cl=i; });
+  if (cl>=0) { bHL=bHL===cl?-1:cl; spawnParticles(e.clientX,e.clientY,DOMAINS[cl].color,10); }
+  else bHL=-1;
+  drawBridge(bHL>=0?performance.now():0);
+});
+
+// ── Init ──
+drawD7(); renderTabs(); renderDetail(); updateFunctor(); renderMetrics();
+requestAnimationFrame(()=>drawBridge());
+window.addEventListener('resize',()=>drawBridge());
+</script>
+</body>
+</html>

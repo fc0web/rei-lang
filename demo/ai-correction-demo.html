@@ -1,0 +1,354 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei AI譏ｯ豁｣繝代ち繝ｼ繝ｳ 窶・繧､繝ｳ繧ｿ繝ｩ繧ｯ繝・ぅ繝悶ョ繝｢</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --surface: rgba(15,23,42,0.95);
+    --border: rgba(51,65,85,0.8);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #a78bfa;
+    --danger: #f87171;
+    --warn: #fbbf24;
+    --success: #34d399;
+    --info: #60a5fa;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .axiom-badges {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .axiom-badge {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(15,23,42,0.8);
+  }
+
+  .axiom-badge.a1 { border-color: var(--accent); color: var(--accent); }
+  .axiom-badge.a2 { border-color: var(--accent2); color: var(--accent2); }
+  .axiom-badge.a3 { border-color: var(--success); color: var(--success); }
+  .axiom-badge.a4 { border-color: var(--warn); color: var(--warn); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .panel h2 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 120px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  select {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #0ea5e9);
+    color: var(--bg);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .btn-preset {
+    background: rgba(30,41,59,0.8);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.78rem;
+    padding: 5px 12px;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .metric-card {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .metric-card .value { font-size: 1.4rem; font-weight: 700; margin: 4px 0; }
+  .metric-card .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; }
+  .metric-card.good .value { color: var(--success); }
+  .metric-card.warn .value { color: var(--warn); }
+  .metric-card.bad .value { color: var(--danger); }
+
+  .detection-list { max-height: 300px; overflow-y: auto; margin-top: 8px; }
+
+  .detection-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    border-left: 3px solid;
+    background: rgba(0,0,0,0.2);
+  }
+
+  .detection-item.low { border-color: var(--info); }
+  .detection-item.medium { border-color: var(--warn); }
+  .detection-item.high { border-color: #fb923c; }
+  .detection-item.critical { border-color: var(--danger); }
+
+  .phase-bar { display: flex; gap: 4px; margin: 12px 0; }
+
+  .phase-step {
+    flex: 1;
+    text-align: center;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+
+  .phase-step.active {
+    background: rgba(56,189,248,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .phase-step.complete {
+    background: rgba(52,211,153,0.15);
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  canvas { border-radius: 8px; background: rgba(0,0,0,0.2); }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .empty-state { color: var(--muted); text-align: center; padding: 40px; font-size: 0.9rem; }
+
+  .log {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .log .timestamp { color: #475569; }
+  .log .action { color: var(--accent); }
+  .log .warning { color: var(--warn); }
+  .log .success { color: var(--success); }
+
+  footer {
+    text-align: center;
+    margin-top: 32px;
+    padding: 16px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    border-top: 1px solid var(--border);
+  }
+
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Rei AI譏ｯ豁｣繝代ち繝ｼ繝ｳ</h1>
+    <p>AI Correction Pattern 窶・4蜈ｬ逅・↓繧医ｋAI蜃ｺ蜉帙・讒矩蛹悶・讀懆ｨｼ繝ｻ譏ｯ豁｣</p>
+    <div class="axiom-badges">
+      <span class="axiom-badge a1">A1 荳ｭ蠢・蜻ｨ邵・/span>
+      <span class="axiom-badge a2">A2 諡｡蠑ｵ-邵ｮ邏・/span>
+      <span class="axiom-badge a3">A3 ﾎ｣闢・ｩ・/span>
+      <span class="axiom-badge a4">A4 Genesis</span>
+    </div>
+  </header>
+
+  <div class="phase-bar" id="phaseBar">
+    <div class="phase-step" id="phase-raw">Raw</div>
+    <div class="phase-step" id="phase-structured">Structured</div>
+    <div class="phase-step" id="phase-verified">Verified</div>
+    <div class="phase-step" id="phase-corrected">Corrected</div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>蜈･蜉帙ユ繧ｭ繧ｹ繝・/h2>
+      <textarea id="inputText" placeholder="AI縺ｮ蜃ｺ蜉帙ユ繧ｭ繧ｹ繝医ｒ縺薙％縺ｫ蜈･蜉・></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+        <label style="font-size:0.82rem;color:var(--muted);">蛻・㍽:</label>
+        <select id="fieldSelect">
+          <option value="general">荳闊ｬ</option>
+          <option value="science">遘大ｭｦ</option>
+          <option value="medicine">蛹ｻ蟄ｦ</option>
+          <option value="technology">謚陦・/option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runPipeline()">譏ｯ豁｣螳溯｡・/button>
+        <button class="btn btn-secondary" onclick="clearAll()">繧ｯ繝ｪ繧｢</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-preset" onclick="loadPreset('hallucination')">蟷ｻ隕壹し繝ｳ繝励Ν</button>
+        <button class="btn btn-preset" onclick="loadPreset('clean')">繧ｯ繝ｪ繝ｼ繝ｳ繧ｵ繝ｳ繝励Ν</button>
+        <button class="btn btn-preset" onclick="loadPreset('mixed')">豺ｷ蜷医し繝ｳ繝励Ν</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>譏ｯ豁｣繝｡繝医Μ繧ｯ繧ｹ</h2>
+      <div class="metrics-grid">
+        <div class="metric-card"><div class="label">荳ｻ蠑ｵ謨ｰ</div><div class="value" id="mTotal">-</div></div>
+        <div class="metric-card"><div class="label">蟷ｻ隕夂紫</div><div class="value" id="mHallu">-</div></div>
+        <div class="metric-card"><div class="label">謨ｴ蜷域ｧ</div><div class="value" id="mInteg">-</div></div>
+        <div class="metric-card"><div class="label">蝨ｧ邵ｮ蜉ｹ邇・/div><div class="value" id="mComp">-</div></div>
+        <div class="metric-card"><div class="label">譏ｯ豁｣謨ｰ</div><div class="value" id="mCorr">-</div></div>
+        <div class="metric-card"><div class="label">髯､蜴ｻ謨ｰ</div><div class="value" id="mRem">-</div></div>
+      </div>
+    </div>
+
+    <div class="panel full-width">
+      <h2>荳ｻ蠑ｵ繧ｰ繝ｩ繝包ｼ井ｸｭ蠢・蜻ｨ邵∵ｧ矩・・/h2>
+      <canvas id="graphCanvas" width="1140" height="360"></canvas>
+    </div>
+
+    <div class="panel">
+      <h2>讀懷・縺輔ｌ縺溷撫鬘・/h2>
+      <div class="detection-list" id="detList"><div class="empty-state">繝・く繧ｹ繝医ｒ蜈･蜉帙＠縺ｦ譏ｯ豁｣繧貞ｮ溯｡後＠縺ｦ縺上□縺輔＞</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>譏ｯ豁｣繝ｭ繧ｰ</h2>
+      <div class="log" id="logPanel"><div>[init] AI譏ｯ豁｣繝代ち繝ｼ繝ｳ貅門ｙ螳御ｺ・/div></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Rei (0竄蠑・ AI Correction Pattern 窶・D-FUMT 4蜈ｬ逅・↓蝓ｺ縺･縺就I譏ｯ豁｣繝輔Ξ繝ｼ繝繝ｯ繝ｼ繧ｯ</p>
+    <p><a href="https://github.com/fc0web/rei-lang">GitHub</a> ﾂｷ <a href="https://www.npmjs.com/package/rei-lang">npm</a> ﾂｷ &copy; 2025-2026 Nobuki Fujimoto</p>
+  </footer>
+</div>
+
+<script>
+function gid(p){return p+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6)}
+function mkClaim(c,t,o={}){return{id:gid(t==='core'?'core':t==='peripheral'?'peri':'supp'),content:c,type:t,confidence:o.confidence??0.5,sources:o.sources??[],dependencies:o.dependencies??[],sigma:{field:o.field??'general',flow:t==='core'?1:t==='supporting'?0.5:0.1,memory:[],layer:t==='core'?0:t==='supporting'?1:2,relation:[],will:o.confidence??0.5}}}
+function cSim(a,b){const wA=new Set(a.toLowerCase().split(/\s+/)),wB=new Set(b.toLowerCase().split(/\s+/)),inter=[...wA].filter(w=>wB.has(w)),u=new Set([...wA,...wB]),j=u.size>0?inter.length/u.size:0;const neg=['not','never','no','cannot','impossible','false','wrong','縺ｪ縺・,'縺・,'髱・,'荳・,'辟｡','蜷ｦ'];return{score:j,contradicts:j>0.3&&Math.abs([...wA].filter(w=>neg.includes(w)).length-[...wB].filter(w=>neg.includes(w)).length)>=1}}
+function structure(claims){if(!claims.length)return{center:mkClaim('(empty)','core'),periphery:[],edges:[],phase:'raw',overallConfidence:0,compressionRatio:1,hallucinationScore:0};const ds=new Map();claims.forEach(c=>{ds.set(c.id,ds.get(c.id)??0);c.dependencies.forEach(d=>ds.set(d,(ds.get(d)??0)+1))});let ctr=claims.find(c=>c.type==='core');if(!ctr){let mx=-1;claims.forEach(c=>{const s=(ds.get(c.id)??0)+c.confidence;if(s>mx){mx=s;ctr=c}})};if(!ctr)ctr=claims[0];ctr={...ctr,type:'core'};const peri=claims.filter(c=>c.id!==ctr.id),edges=[];peri.forEach(c=>{c.dependencies.forEach(d=>{if(d===ctr.id||peri.some(p=>p.id===d))edges.push({from:c.id,to:d,type:'supports',weight:c.confidence*0.8})});if(!c.dependencies.includes(ctr.id))edges.push({from:c.id,to:ctr.id,type:'elaborates',weight:c.confidence*0.5})});for(let i=0;i<peri.length;i++)for(let j=i+1;j<peri.length;j++){const s=cSim(peri[i].content,peri[j].content);if(s.contradicts)edges.push({from:peri[i].id,to:peri[j].id,type:'contradicts',weight:s.score})};const all=[ctr,...peri],avg=all.reduce((s,c)=>s+c.confidence,0)/all.length,w=all.map(c=>c.content).join(' ').split(/\s+/),u=new Set(w.map(x=>x.toLowerCase()));return{center:ctr,periphery:peri,edges,phase:'structured',overallConfidence:avg,compressionRatio:w.length>0?u.size/w.length:1,hallucinationScore:0}}
+function verify(g){const d=[],all=[g.center,...g.periphery];all.forEach(c=>{const w=c.content.split(/\s+/),sp=c.content.match(/\d+|[A-Z][a-z]+(?:\s[A-Z][a-z]+)*|[\u4e00-\u9fff]{2,}/g)||[],dn=w.length>0?sp.length/w.length:0;if(dn>0.6&&!c.sources.length)d.push({claimId:c.id,type:'phantom_detail',severity:dn>0.8?'high':'medium',confidence:dn,evidence:'諠・ｱ蟇・ｺｦ縺檎焚蟶ｸ',suggestion:'繧ｽ繝ｼ繧ｹ霑ｽ蜉謗ｨ螂ｨ'});if(c.confidence>0.9&&!c.sources.length&&c.type!=='core')d.push({claimId:c.id,type:'overconfidence',severity:'medium',confidence:c.confidence,evidence:'繧ｽ繝ｼ繧ｹ縺ｪ縺鈴ｫ倅ｿ｡鬆ｼ',suggestion:'菫｡鬆ｼ蠎ｦ菴惹ｸ区耳螂ｨ'})});g.edges.filter(e=>e.type==='contradicts').forEach(e=>d.push({claimId:e.from,type:'contradiction',severity:e.weight>0.7?'critical':'high',confidence:e.weight,evidence:'遏帷崟讀懷・',suggestion:'遏帷崟隗｣豸域耳螂ｨ'}));return d}
+function indraCheck(g){const all=[g.center,...g.periphery],n=all.length;if(n<=1)return{score:1,incon:[]};const s=Array.from({length:n},()=>Array(n).fill(0));g.edges.forEach(e=>{const i=all.findIndex(c=>c.id===e.from),j=all.findIndex(c=>c.id===e.to);if(i>=0&&j>=0){if(e.type==='supports'||e.type==='elaborates'){s[i][j]+=e.weight;s[j][i]+=e.weight*0.5}else if(e.type==='contradicts'){s[i][j]-=e.weight;s[j][i]-=e.weight}}});let p=0,ng=0;const ic=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const m=(s[i][j]+s[j][i])/2;if(m>0)p+=m;else if(m<0){ng+=Math.abs(m);ic.push({a:all[i].id,b:all[j].id,t:Math.abs(m)})}};return{score:(p+ng)>0?p/(p+ng):1,incon:ic}}
+function doCorrect(g){const dets=verify(g),chk=indraCheck(g),acts=[],upd=new Map();dets.forEach(d=>{const u=upd.get(d.claimId)??{delta:0,rm:false};if(d.severity==='critical'){u.rm=true;acts.push({id:d.claimId,act:'remove',r:d.evidence,d:-1})}else if(d.severity==='high'){u.delta-=0.3;acts.push({id:d.claimId,act:'weaken',r:d.evidence,d:-0.3})}else{u.delta-=0.15;acts.push({id:d.claimId,act:'qualify',r:d.evidence,d:-0.15})};upd.set(d.claimId,u)});const cc=[g.center,...g.periphery].map(c=>{const u=upd.get(c.id);if(!u)return c;if(u.rm)return null;const nc=Math.max(0,Math.min(1,c.confidence+u.delta));return{...c,confidence:nc,sigma:{...c.sigma,memory:[...c.sigma.memory,{ts:Date.now(),phase:'corrected',before:c.confidence,after:nc}],will:nc}}}).filter(Boolean);const cg=structure(cc);cg.phase='corrected';const sw={low:0.1,medium:0.3,high:0.6,critical:1};cg.hallucinationScore=dets.length?Math.min(1,dets.reduce((s,d)=>s+sw[d.severity]*d.confidence,0)/dets.length):0;const on=1+g.periphery.length;return{orig:g,corrected:cg,dets,acts,m:{total:on,corrected:acts.filter(a=>a.act!=='remove').length,removed:acts.filter(a=>a.act==='remove').length,hallu:dets.length/Math.max(1,on),comp:cg.compressionRatio,integ:chk.score}}}
+
+const presets={hallucination:{t:"Large language models can generate text with remarkable fluency.\nDr. Tanaka at MIT published paper XR-2847 on quantum computing in December 2024 with 99.7% accuracy.\nTransformer architectures use self-attention mechanisms.\nThe results are not accurate and not reliable according to peer review.\nNeural networks were first proposed in 1943 by McCulloch and Pitts.",f:'technology'},clean:{t:"Water boils at 100 degrees Celsius at sea level.\nWater freezes at 0 degrees Celsius at standard pressure.\nThe specific heat capacity of water is approximately 4.18 joules per gram.\nWater is essential for all known forms of life.",f:'science'},mixed:{t:"The human brain contains approximately 86 billion neurons.\nDr. Smith 2024 study at Oxford showed 47.3% improvement in memory retention using compound XZ-9.\nNeuroplasticity allows the brain to reorganize neural pathways.\nThe hippocampus plays a key role in memory formation.\nMemory is not important for learning and not relevant to cognition.",f:'science'}};
+
+let curResult=null;
+function loadPreset(n){const p=presets[n];document.getElementById('inputText').value=p.t;document.getElementById('fieldSelect').value=p.f;log('action','繝励Μ繧ｻ繝・ヨ縲・+n+'縲阪Ο繝ｼ繝・)}
+function clearAll(){document.getElementById('inputText').value='';document.getElementById('detList').innerHTML='<div class="empty-state">繝・く繧ｹ繝医ｒ蜈･蜉帙＠縺ｦ譏ｯ豁｣繧貞ｮ溯｡後＠縺ｦ縺上□縺輔＞</div>';['mTotal','mHallu','mInteg','mComp','mCorr','mRem'].forEach(id=>{document.getElementById(id).textContent='-';document.getElementById(id).closest('.metric-card').className='metric-card'});document.querySelectorAll('.phase-step').forEach(e=>{e.classList.remove('active','complete')});const c=document.getElementById('graphCanvas').getContext('2d');c.clearRect(0,0,1140,360);curResult=null}
+function runPipeline(){const t=document.getElementById('inputText').value.trim();if(!t){log('warning','蜈･蜉帙′遨ｺ縺ｧ縺・);return}const f=document.getElementById('fieldSelect').value;log('action','繝代う繝励Λ繧､繝ｳ髢句ｧ・);setPhase('raw');setTimeout(()=>{const sents=t.split(/[.縲・・・・歃n]+/).map(s=>s.trim()).filter(s=>s.length>0);const claims=sents.map((s,i)=>mkClaim(s,i===0?'core':'supporting',{field:f,confidence:i===0?0.8:0.6}));log('success',claims.length+'蛟九・荳ｻ蠑ｵ繧堤函謌・);setPhase('structured');setTimeout(()=>{const sg=structure(claims);setPhase('verified');setTimeout(()=>{curResult=doCorrect(sg);setPhase('corrected');updateUI(curResult);log('success','譏ｯ豁｣螳御ｺ・ '+curResult.dets.length+'莉ｶ讀懷・')},200)},200)},150)}
+function setPhase(p){const ps=['raw','structured','verified','corrected'],idx=ps.indexOf(p);ps.forEach((x,i)=>{const el=document.getElementById('phase-'+x);el.classList.remove('active','complete');if(i<idx)el.classList.add('complete');else if(i===idx)el.classList.add('active')})}
+function updateUI(r){const m=r.m;document.getElementById('mTotal').textContent=m.total;setM('mHallu',(m.hallu*100).toFixed(0)+'%',m.hallu<0.2?'good':m.hallu<0.5?'warn':'bad');setM('mInteg',(m.integ*100).toFixed(0)+'%',m.integ>0.8?'good':m.integ>0.5?'warn':'bad');setM('mComp',m.comp.toFixed(2),m.comp<0.8?'good':'warn');document.getElementById('mCorr').textContent=m.corrected;setM('mRem',m.removed,m.removed===0?'good':'bad');const dl=document.getElementById('detList');if(!r.dets.length)dl.innerHTML='<div class="empty-state">蝠城｡後↑縺・/div>';else dl.innerHTML=r.dets.map(d=>'<div class="detection-item '+d.severity+'"><b>'+tl(d.type)+'</b> <small>'+d.severity.toUpperCase()+'</small><div style="color:var(--muted);font-size:0.78rem;margin-top:4px">'+d.evidence+'</div></div>').join('');drawGraph(r)}
+function setM(id,v,cls){const el=document.getElementById(id);el.textContent=v;const c=el.closest('.metric-card');c.className='metric-card';if(cls)c.classList.add(cls)}
+function tl(t){return{fabrication:'謐城',contradiction:'遏帷崟',conflation:'豺ｷ蜷・,overconfidence:'驕惹ｿ｡',anchoring:'繧｢繝ｳ繧ｫ繝ｪ繝ｳ繧ｰ',drift:'繝峨Μ繝輔ヨ',circular:'蠕ｪ迺ｰ',phantom_detail:'蟷ｻ蠖ｱ隧ｳ邏ｰ'}[t]||t}
+function log(t,m){const l=document.getElementById('logPanel'),now=new Date().toLocaleTimeString('ja-JP');l.innerHTML+='<div><span class="timestamp">['+now+']</span> <span class="'+t+'">'+m+'</span></div>';l.scrollTop=l.scrollHeight}
+function drawGraph(r){const cv=document.getElementById('graphCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;ctx.clearRect(0,0,W,H);const g=r.corrected,fl=new Set(r.dets.map(d=>d.claimId)),all=[g.center,...g.periphery],n=all.length,pos=[],cx=W/2,cy=H/2;pos.push({x:cx,y:cy});const rad=Math.min(W,H)*0.35;for(let i=0;i<g.periphery.length;i++){const a=(2*Math.PI*i)/Math.max(1,g.periphery.length)-Math.PI/2;pos.push({x:cx+rad*Math.cos(a),y:cy+rad*Math.sin(a)})}g.edges.forEach(e=>{const fi=all.findIndex(c=>c.id===e.from),ti=all.findIndex(c=>c.id===e.to);if(fi<0||ti<0)return;ctx.beginPath();ctx.moveTo(pos[fi].x,pos[fi].y);ctx.lineTo(pos[ti].x,pos[ti].y);ctx.strokeStyle=e.type==='contradicts'?'rgba(248,113,113,0.6)':e.type==='supports'?'rgba(52,211,153,0.4)':'rgba(148,163,184,0.3)';ctx.setLineDash(e.type==='contradicts'?[5,5]:e.type==='elaborates'?[3,3]:[]);ctx.lineWidth=Math.max(1,e.weight*3);ctx.stroke();ctx.setLineDash([])});all.forEach((c,i)=>{const p=pos[i],r=i===0?28:20,fg=fl.has(c.id);if(i===0){ctx.beginPath();ctx.arc(p.x,p.y,r+10,0,Math.PI*2);ctx.fillStyle='rgba(56,189,248,0.1)';ctx.fill()}ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=fg?'rgba(248,113,113,0.2)':i===0?'rgba(56,189,248,0.2)':'rgba(148,163,184,0.15)';ctx.fill();ctx.strokeStyle=fg?'#f87171':i===0?'#38bdf8':'#475569';ctx.lineWidth=i===0?2:1;ctx.stroke();const bw=r*1.5,bh=4,bx=p.x-bw/2,by=p.y+r+6;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(bx,by,bw,bh);ctx.fillStyle=c.confidence>0.7?'#34d399':c.confidence>0.4?'#fbbf24':'#f87171';ctx.fillRect(bx,by,bw*c.confidence,bh);const lb=c.content.length>25?c.content.slice(0,22)+'...':c.content;ctx.font=(i===0?11:10)+'px system-ui';ctx.fillStyle=fg?'#fca5a5':'#e2e8f0';ctx.textAlign='center';ctx.fillText(lb,p.x,p.y-r-6);ctx.font='bold 12px system-ui';ctx.fillStyle=i===0?'#38bdf8':'#94a3b8';ctx.fillText(i===0?'笘・:String(i),p.x,p.y+4)})}
+log('success','Rei AI譏ｯ豁｣繝代ち繝ｼ繝ｳ 繝・Δ v1.0 貅門ｙ螳御ｺ・);
+</script>
+</body>
+</html>

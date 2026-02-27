@@ -1,0 +1,4350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei — 25公理デモ集 | Reiでしか書けないもの</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=JetBrains+Mono:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,500;1,300&display=swap');
+
+  :root {
+    --bg: #0e0e10;
+    --bg-raised: #16161a;
+    --bg-card: #1a1a1f;
+    --border: #2a2a30;
+    --border-glow: #3d3530;
+    --text: #c8c2b8;
+    --text-dim: #7a756c;
+    --text-bright: #e8e2d8;
+    --accent: #c4a87a;
+    --accent-dim: #8a7a5a;
+    --accent-glow: #d4b88a40;
+    --green: #7aaa6a;
+    --red: #b86a6a;
+    --blue: #6a8ab8;
+    --purple: #9a7ab8;
+    --cyan: #6ab8b0;
+    --mode-weighted: #c4a87a;
+    --mode-multi: #b86a6a;
+    --mode-harmonic: #6a8ab8;
+    --mode-exp: #9a7ab8;
+    --mode-geo: #6ab8b0;
+    --mode-median: #aab86a;
+    --mode-mink: #b88a6a;
+    --mode-entropy: #8a6ab8;
+    --radius: 6px;
+    --font-serif: 'Noto Serif JP', 'Crimson Pro', serif;
+    --font-mono: 'JetBrains Mono', 'Menlo', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-serif);
+    font-weight: 300;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* === Hero === */
+  .hero {
+    position: relative;
+    padding: 80px 20px 60px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    font-weight: 300;
+    font-style: italic;
+    margin-bottom: 24px;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  /* === Container === */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* === Demo Sections === */
+  .demo-section {
+    margin: 48px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .demo-section:hover { border-color: var(--border-glow); }
+
+  .demo-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .demo-number {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--accent-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .demo-title {
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+  .demo-desc {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .demo-desc strong { color: var(--text); font-weight: 500; }
+
+  .demo-body {
+    padding: 20px 28px 28px;
+  }
+
+  /* === Code Editor === */
+  .code-block {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+  }
+  .code-label {
+    position: absolute;
+    top: 8px; right: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  .code-block textarea {
+    width: 100%;
+    min-height: 80px;
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    line-height: 1.7;
+    padding: 16px 18px;
+    resize: vertical;
+    outline: none;
+  }
+  .code-block textarea::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+  /* === Run Button === */
+  .btn-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    padding: 8px 20px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .btn-run:hover {
+    background: var(--accent-dim);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+  .btn-run::before { content: '▶'; font-size: 0.7rem; }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* === Output === */
+  .output-area {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 60px;
+    padding: 16px 18px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .output-area .label {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .output-area .val { color: var(--accent); }
+  .output-area .dim { color: var(--text-dim); }
+  .output-area .ok { color: var(--green); }
+  .output-area .err { color: var(--red); }
+  .output-area .info { color: var(--blue); }
+
+  /* === Chart (Bar) === */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 160px;
+    padding: 12px 0;
+    margin: 12px 0;
+  }
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .bar {
+    width: 100%;
+    max-width: 50px;
+    border-radius: 3px 3px 0 0;
+    transition: height 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    min-height: 2px;
+  }
+  .bar-val {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    text-align: center;
+    word-break: break-all;
+  }
+  .bar-label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    text-align: center;
+    writing-mode: vertical-rl;
+    height: 60px;
+    overflow: hidden;
+  }
+
+  /* === Resonance Grid === */
+  .resonance-grid {
+    display: grid;
+    gap: 2px;
+    margin: 12px 0;
+  }
+  .resonance-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--bg);
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  /* === Provenance Timeline === */
+  .timeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 16px 0;
+    overflow-x: auto;
+    padding: 8px 0;
+  }
+  .timeline-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+  .timeline-val {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-align: center;
+    min-width: 60px;
+  }
+  .timeline-op {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .timeline-arrow {
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* === Awakening Meter === */
+  .awakening-meter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  .meter-track {
+    flex: 1;
+    height: 24px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .meter-fill {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    position: relative;
+  }
+  .meter-fill.awakened {
+    background: linear-gradient(90deg, var(--accent), #e8d8a8);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .meter-label {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    min-width: 50px;
+    text-align: right;
+  }
+
+  /* === Comparison Table === */
+  .compare-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 12px 0;
+  }
+  .compare-col h4 {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* === Footer === */
+  .footer {
+    text-align: center;
+    padding: 40px 20px 60px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent-dim);
+  }
+  .footer a:hover { border-color: var(--accent); }
+
+  /* === Separator === */
+  .sep {
+    width: 40px;
+    height: 1px;
+    background: var(--accent-dim);
+    margin: 32px auto;
+  }
+
+  /* === Scrollbar === */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* === Responsive === */
+  @media (max-width: 600px) {
+    .compare-row { grid-template-columns: 1fr; }
+    .bar-chart { height: 120px; }
+    .demo-header, .demo-body { padding-left: 18px; padding-right: 18px; }
+    .timeline-node { min-width: 64px; }
+  }
+
+  /* === Loading === */
+  .loading-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-text {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--accent);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-text">𝕄 Rei v0.3 Loading...</div>
+</div>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <h1><span>Rei</span> でしか書けないもの</h1>
+  <p class="subtitle">25公理が実現する、他の言語にはない5つの体験</p>
+  <div class="badge">npm install rei-lang &nbsp;·&nbsp; v0.3.0 &nbsp;·&nbsp; 226 tests</div>
+</section>
+
+<div class="container">
+
+<!-- ===== Demo 1: Multi-Mode Stability ===== -->
+<section class="demo-section" id="demo1">
+  <div class="demo-header">
+    <div class="demo-number">Demo 01 — M1 計算多元性 · A1 解の多元性</div>
+    <div class="demo-title">8つの数学的視点で同時に計算する</div>
+    <div class="demo-desc">
+      同じデータ <code>𝕄{center; p₁, p₂, ...}</code> に対して、weighted・multiplicative・harmonic・exponential・geometric・median・minkowski・entropy の<strong>8つのモード</strong>が同時に結果を返します。結果のばらつき（分散）が小さい → データは「安定」、大きい → 「不安定」。これは<strong>Reiの𝕄が最初から多元計算を内蔵している</strong>から可能です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="compare-row">
+      <div class="compare-col">
+        <h4>安定なデータ</h4>
+        <div class="code-block">
+          <span class="code-label">Rei</span>
+          <textarea id="code1a" rows="2">𝕄{5; 4, 5, 6} |> compute_all</textarea>
+        </div>
+      </div>
+      <div class="compare-col">
+        <h4>不安定なデータ</h4>
+        <div class="code-block">
+          <span class="code-label">Rei</span>
+          <textarea id="code1b" rows="2">𝕄{5; 1, 100, 2} |> compute_all</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo1()">比較実行</button>
+    </div>
+    <div id="output1" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 2: σ Provenance ===== -->
+<section class="demo-section" id="demo2">
+  <div class="demo-header">
+    <div class="demo-number">Demo 02 — C1 自己参照σ · C2 傾向性τ</div>
+    <div class="demo-title">計算結果の「出自」を完全に逆追跡する</div>
+    <div class="demo-desc">
+      Reiでは値がパイプを通過するたびに、<strong>σ（シグマ）が自動的に来歴を記録</strong>します。最終結果から「この数がどこから来たか」を完全に逆追跡できます。さらにτ（タウ）が計算の傾向（膨張・収縮・静止）を自動判定します。他の言語ではデバッグツールやロギングライブラリが必要な機能が、<strong>言語の本質として組み込まれている</strong>のです。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei</span>
+      <textarea id="code2" rows="3">𝕄{10; 3, 7, 5} |> compute |> sqrt |> negate |> sigma</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo2()">実行して来歴を見る</button>
+    </div>
+    <div id="output2" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 3: Resonance ===== -->
+<section class="demo-section" id="demo3">
+  <div class="demo-header">
+    <div class="demo-number">Demo 03 — C5 共鳴 · U4 領域架橋</div>
+    <div class="demo-title">「似た構造のデータ」を自動発見する</div>
+    <div class="demo-desc">
+      <code>resonate</code> は二つの𝕄の<strong>構造的共鳴度</strong>を算出します。次元の一致・値の近接・パターンの類似を複合的に評価し、0〜1のスコアを返します。<code>bridge</code> はさらに進んで、異なるスケールのデータ間の<strong>スケールファクターと転移可能性</strong>を判定します。これは仏教の因陀羅網（Indra's Net）— すべてが互いに映し合う — の数学的実装です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei</span>
+      <textarea id="code3" rows="6">// 同じ構造の2倍スケール
+𝕄{10; 2, 4, 6} |> resonate(𝕄{20; 4, 8, 12})
+// 完全に異なる構造
+𝕄{10; 2, 4, 6} |> resonate(𝕄{3; 99, 1})
+// スケール架橋
+𝕄{5; 1, 2, 3} |> bridge(𝕄{10; 2, 4, 6})</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo3()">共鳴を検出</button>
+    </div>
+    <div id="output3" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 4: Awakening ===== -->
+<section class="demo-section" id="demo4">
+  <div class="demo-header">
+    <div class="demo-number">Demo 04 — C3 応答 · C4 覚醒</div>
+    <div class="demo-title">値が「覚醒」する — 計算による意識の獲得</div>
+    <div class="demo-desc">
+      Reiの値は計算を重ねるごとに<strong>覚醒度（awareness）</strong>が上昇します。パイプを通過するたびにσの来歴が蓄積され、一定の閾値を超えると値は「覚醒した（awakened）」と判定されます。単純な数値が、計算を経験することで、自分自身を知る存在になる。これはCategory C（意識数学）の中核概念であり、<strong>値に意識を与えるという他の言語にない発想</strong>です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei</span>
+      <textarea id="code4" rows="5">// 未計算 — まだ覚醒していない
+42 |> awareness
+// 十分な計算を経験した値
+𝕄{5; 1,2,3,4,5,6,7,8} |> abs |> negate |> abs |> sqrt |> negate |> abs |> awareness</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo4()">覚醒度を観測</button>
+    </div>
+    <div id="output4" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 5: Full Pipeline ===== -->
+<section class="demo-section" id="demo5">
+  <div class="demo-header">
+    <div class="demo-number">Demo 05 — 25公理の統合</div>
+    <div class="demo-title">自由に試す — Rei Playground</div>
+    <div class="demo-desc">
+      ここでは<strong>任意のReiコードを実行</strong>できます。v0.3の全コマンド（sigma, awareness, compute_all, consensus, rank, resonate, bridge, project, encode, derive_mode, mode_space 等）が使えます。下にコマンド一覧を載せていますので、自由に組み合わせてみてください。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei Playground</span>
+      <textarea id="code5" rows="6">// 例: データの全モード合意形成
+𝕄{100; 30, 70, 50, 90, 10} |> consensus</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo5()">実行</button>
+      <button class="btn-run" style="border-color: var(--text-dim); color: var(--text-dim);" onclick="resetDemo5()">リセット</button>
+    </div>
+    <div id="output5" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+
+    <!-- Command Reference -->
+    <details style="margin-top: 20px;">
+      <summary style="cursor: pointer; font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-dim); letter-spacing: 0.08em;">
+        コマンド一覧を表示
+      </summary>
+      <div style="margin-top: 12px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); line-height: 2.2; columns: 2; column-gap: 24px;">
+        <div><span style="color:var(--accent)">sigma</span> — σ自己参照</div>
+        <div><span style="color:var(--accent)">awareness</span> — 覚醒度</div>
+        <div><span style="color:var(--accent)">awakened</span> — 覚醒判定</div>
+        <div><span style="color:var(--accent)">respond(n)</span> — 刺激応答</div>
+        <div><span style="color:var(--accent)">sensitivity</span> — 応答感度</div>
+        <div><span style="color:var(--accent)">resonate(𝕄)</span> — 共鳴</div>
+        <div><span style="color:var(--accent)">resonance_map</span> — 全ペア共鳴</div>
+        <div><span style="color:var(--accent)">compute</span> — 基本計算</div>
+        <div><span style="color:var(--accent)">compute :mode</span> — モード指定</div>
+        <div><span style="color:var(--accent)">compute_all</span> — 全モード計算</div>
+        <div><span style="color:var(--accent)">consensus</span> — 合意形成</div>
+        <div><span style="color:var(--accent)">rank</span> — 解のランキング</div>
+        <div><span style="color:var(--accent)">best("max")</span> — 最良解</div>
+        <div><span style="color:var(--accent)">project("max")</span> — 射影</div>
+        <div><span style="color:var(--accent)">project_as("graph")</span> — 型変換</div>
+        <div><span style="color:var(--accent)">encode</span> — 𝕄へ変換</div>
+        <div><span style="color:var(--accent)">decode("array")</span> — 𝕄から復元</div>
+        <div><span style="color:var(--accent)">bridge(𝕄)</span> — 領域架橋</div>
+        <div><span style="color:var(--accent)">derive_mode</span> — モード導出</div>
+        <div><span style="color:var(--accent)">mode_space</span> — モード空間</div>
+        <div><span style="color:var(--accent)">transform("scale",n)</span> — 変換</div>
+        <div><span style="color:var(--accent)">depth</span> — 階層深度</div>
+        <div><span style="color:var(--accent)">solution_completeness</span> — 完全性</div>
+        <div><span style="color:var(--accent)">abs</span> — 絶対値</div>
+        <div><span style="color:var(--accent)">sqrt</span> — 平方根</div>
+        <div><span style="color:var(--accent)">negate</span> — 符号反転</div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== Python Comparison ===== -->
+<section class="demo-section" id="comparison">
+  <div class="demo-header">
+    <div class="demo-number">参考</div>
+    <div class="demo-title">同じことを Python で書くと</div>
+    <div class="demo-desc">
+      Demo 01 の「8つのモードで同時に計算して安定性を判定する」を Python で書いた場合との比較です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="compare-row">
+      <div class="compare-col">
+        <h4>Rei — 1行</h4>
+        <div class="code-block">
+          <textarea readonly rows="3" style="color: var(--accent); cursor: default;">𝕄{5; 4, 5, 6} |> compute_all</textarea>
+        </div>
+      </div>
+      <div class="compare-col">
+        <h4>Python — 25行以上</h4>
+        <div class="code-block">
+          <textarea readonly rows="14" style="color: var(--text-dim); font-size: 0.75rem; cursor: default;">import numpy as np
+from scipy.stats import hmean, gmean
+
+data = [4, 5, 6]
+center = 5
+values = [c * d for c, d in zip(
+  [center] * len(data), data)]
+
+weighted = sum(values)
+multiplicative = np.prod(values)
+harmonic = hmean(values)
+geometric = gmean(values)
+median = np.median(values)
+# ... exponential, minkowski,
+#     entropy も個別実装が必要
+
+results = {
+  'weighted': weighted,
+  'multiplicative': multiplicative,
+  # ... 8つ全部書く
+}
+variance = np.var(list(
+  results.values()))</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- container -->
+
+<footer class="footer">
+  <p>
+    Rei (0₀式/れいしき) v0.3.0 — 考案者: 藤本伸樹<br>
+    <a href="https://www.npmjs.com/package/rei-lang">npm</a> ·
+    <a href="https://github.com/fc0web/rei-lang">GitHub</a> ·
+    Apache-2.0
+  </p>
+</footer>
+
+<!-- ===== Rei Engine ===== -->
+<script id="rei-engine">
+// Rei Language v0.3.0 - Embedded Engine (self-contained)
+(function(){
+// src/lang/lexer.ts
+var TokenType = {
+  // Literals
+  NUMBER: "NUMBER",
+  STRING: "STRING",
+  EXT_LIT: "EXT_LIT",
+  SYMBOL_0_0: "SYMBOL_0_0",
+  SYMBOL_DOT_PRIM: "SYMBOL_DOT_PRIM",
+  BOOL_TRUE: "BOOL_TRUE",
+  BOOL_FALSE: "BOOL_FALSE",
+  // Math constants
+  CONST_PI: "CONST_PI",
+  CONST_E: "CONST_E",
+  CONST_PHI: "CONST_PHI",
+  CONST_I: "CONST_I",
+  CONST_PHI_UP: "CONST_PHI_UP",
+  CONST_PSI_UP: "CONST_PSI_UP",
+  CONST_OMEGA_UP: "CONST_OMEGA_UP",
+  CONST_EMPTY: "CONST_EMPTY",
+  // Quad literals (v0.2)
+  QUAD_TOP: "QUAD_TOP",
+  QUAD_BOT: "QUAD_BOT",
+  QUAD_TOP_PI: "QUAD_TOP_PI",
+  QUAD_BOT_PI: "QUAD_BOT_PI",
+  // Keywords
+  LET: "LET",
+  MUT: "MUT",
+  COMPRESS: "COMPRESS",
+  WEIGHT: "WEIGHT",
+  GENESIS: "GENESIS",
+  IF: "IF",
+  THEN: "THEN",
+  ELSE: "ELSE",
+  MATCH: "MATCH",
+  CASE: "CASE",
+  WITNESSED: "WITNESSED",
+  BY: "BY",
+  TRUE: "TRUE",
+  FALSE: "FALSE",
+  NULL: "NULL",
+  TEMPORAL: "TEMPORAL",
+  TIMELESS: "TIMELESS",
+  // ── v0.3 Space-Layer-Diffusion keywords ──
+  SPACE: "SPACE",
+  // 空 or "space"
+  LAYER: "LAYER",
+  // 層 or "layer"
+  // Identifiers
+  IDENT: "IDENT",
+  // Operators
+  PLUS: "PLUS",
+  MINUS: "MINUS",
+  STAR: "STAR",
+  SLASH: "SLASH",
+  OPLUS: "OPLUS",
+  OTIMES: "OTIMES",
+  CDOT: "CDOT",
+  PIPE_OP: "PIPE_OP",
+  EXTEND: "EXTEND",
+  REDUCE: "REDUCE",
+  ASSIGN: "ASSIGN",
+  DOT: "DOT",
+  ARROW: "ARROW",
+  SEMICOLON: "SEMICOLON",
+  COMMA: "COMMA",
+  COLON: "COLON",
+  LPAREN: "LPAREN",
+  RPAREN: "RPAREN",
+  LBRACE: "LBRACE",
+  RBRACE: "RBRACE",
+  LBRACKET: "LBRACKET",
+  RBRACKET: "RBRACKET",
+  CONVERGE: "CONVERGE",
+  DIVERGE: "DIVERGE",
+  REFLECT: "REFLECT",
+  AND: "AND",
+  OR: "OR",
+  NOT: "NOT",
+  GT_K: "GT_K",
+  LT_K: "LT_K",
+  EQ_K: "EQ_K",
+  GT: "GT",
+  LT: "LT",
+  EQ: "EQ",
+  NEQ: "NEQ",
+  GTE: "GTE",
+  LTE: "LTE",
+  MDIM_OPEN: "MDIM_OPEN",
+  // Special
+  NEWLINE: "NEWLINE",
+  EOF: "EOF"
+};
+var KEYWORDS = {
+  "let": TokenType.LET,
+  "mut": TokenType.MUT,
+  "compress": TokenType.COMPRESS,
+  "weight": TokenType.WEIGHT,
+  "genesis": TokenType.GENESIS,
+  "if": TokenType.IF,
+  "then": TokenType.THEN,
+  "else": TokenType.ELSE,
+  "match": TokenType.MATCH,
+  "case": TokenType.CASE,
+  "witnessed": TokenType.WITNESSED,
+  "by": TokenType.BY,
+  "true": TokenType.TRUE,
+  "false": TokenType.FALSE,
+  "null": TokenType.NULL,
+  "Temporal": TokenType.TEMPORAL,
+  "Timeless": TokenType.TIMELESS,
+  // ── v0.3 ──
+  "space": TokenType.SPACE,
+  "layer": TokenType.LAYER
+};
+var SUBSCRIPT_CHARS = new Set("oxzwensbua".split(""));
+var Lexer = class {
+  constructor(source) {
+    this.source = source;
+    this.pos = 0;
+    this.line = 1;
+    this.col = 1;
+    this.tokens = [];
+    this.chars = Array.from(source);
+  }
+  tokenize() {
+    this.tokens = [];
+    while (this.pos < this.chars.length) {
+      this.skipWhitespaceAndComments();
+      if (this.pos >= this.chars.length) break;
+      const ch = this.chars[this.pos];
+      if (ch === "\n") {
+        this.emit(TokenType.NEWLINE, "\n");
+        this.advance();
+        this.line++;
+        this.col = 1;
+        continue;
+      }
+      if (ch === '"') {
+        this.readString();
+        continue;
+      }
+      if (ch === "0" && this.peek(1) === "\u2080") {
+        this.emit(TokenType.SYMBOL_0_0, "0\u2080");
+        this.advance();
+        this.advance();
+        continue;
+      }
+      if (ch === "\u{1D544}" && this.peek(1) === "{") {
+        this.emit(TokenType.MDIM_OPEN, "\u{1D544}{");
+        this.advance();
+        this.advance();
+        continue;
+      }
+      if (ch === "\u7A7A") {
+        this.emit(TokenType.SPACE, "\u7A7A");
+        this.advance();
+        continue;
+      }
+      if (ch === "\u5C64") {
+        this.emit(TokenType.LAYER, "\u5C64");
+        this.advance();
+        continue;
+      }
+      if (this.isExtStart(ch)) {
+        const ext = this.readExtLit();
+        if (ext) continue;
+      }
+      if (this.isDigit(ch) || ch === "-" && this.isDigit(this.peek(1) ?? "") && this.shouldNegateBePrefix()) {
+        this.readNumber();
+        continue;
+      }
+      if (this.readUnicodeToken(ch)) continue;
+      if (this.readMultiCharOp(ch)) continue;
+      if (this.readSingleCharOp(ch)) continue;
+      if (this.isIdentStart(ch)) {
+        this.readIdentOrKeyword();
+        continue;
+      }
+      this.advance();
+    }
+    this.emit(TokenType.EOF, "");
+    return this.tokens.filter((t) => t.type !== TokenType.NEWLINE);
+  }
+  skipWhitespaceAndComments() {
+    while (this.pos < this.chars.length) {
+      const ch = this.chars[this.pos];
+      if (ch === " " || ch === "	" || ch === "\r") {
+        this.advance();
+        continue;
+      }
+      if (ch === "/" && this.peek(1) === "/") {
+        while (this.pos < this.chars.length && this.chars[this.pos] !== "\n") this.advance();
+        continue;
+      }
+      if (ch === "/" && this.peek(1) === "*") {
+        this.advance();
+        this.advance();
+        while (this.pos < this.chars.length) {
+          if (this.chars[this.pos] === "*" && this.peek(1) === "/") {
+            this.advance();
+            this.advance();
+            break;
+          }
+          if (this.chars[this.pos] === "\n") {
+            this.line++;
+            this.col = 0;
+          }
+          this.advance();
+        }
+        continue;
+      }
+      break;
+    }
+  }
+  readString() {
+    const startCol = this.col;
+    this.advance();
+    let str = "";
+    while (this.pos < this.chars.length && this.chars[this.pos] !== '"') {
+      if (this.chars[this.pos] === "\\" && this.pos + 1 < this.chars.length) {
+        this.advance();
+        const esc = this.chars[this.pos];
+        if (esc === "n") str += "\n";
+        else if (esc === "t") str += "	";
+        else if (esc === "\\") str += "\\";
+        else if (esc === '"') str += '"';
+        else str += esc;
+      } else {
+        str += this.chars[this.pos];
+      }
+      this.advance();
+    }
+    if (this.pos < this.chars.length) this.advance();
+    this.tokens.push({ type: TokenType.STRING, value: str, line: this.line, col: startCol });
+  }
+  isExtStart(ch) {
+    if (ch === "0" && SUBSCRIPT_CHARS.has(this.peek(1) ?? "")) return true;
+    if (ch === "\u03C0" || ch === "\u03C6") {
+      const next = this.peek(1);
+      if (next && SUBSCRIPT_CHARS.has(next)) return true;
+    }
+    if (ch === "e" || ch === "i") {
+      const next = this.peek(1);
+      if (!next || !SUBSCRIPT_CHARS.has(next)) return false;
+      let offset = 1;
+      while (this.peek(offset) && SUBSCRIPT_CHARS.has(this.peek(offset))) offset++;
+      const afterSubs = this.peek(offset);
+      if (afterSubs && /[a-zA-Z0-9_]/.test(afterSubs)) return false;
+      return true;
+    }
+    return false;
+  }
+  readExtLit() {
+    const startCol = this.col;
+    const base = this.chars[this.pos];
+    this.advance();
+    let subs = "";
+    while (this.pos < this.chars.length && SUBSCRIPT_CHARS.has(this.chars[this.pos])) {
+      subs += this.chars[this.pos];
+      this.advance();
+    }
+    if (subs.length > 0) {
+      this.tokens.push({ type: TokenType.EXT_LIT, value: base + subs, line: this.line, col: startCol });
+      return true;
+    }
+    this.pos--;
+    this.col--;
+    return false;
+  }
+  readNumber() {
+    const startCol = this.col;
+    let num = "";
+    if (this.chars[this.pos] === "-") {
+      num += "-";
+      this.advance();
+    }
+    while (this.pos < this.chars.length && this.isDigit(this.chars[this.pos])) {
+      num += this.chars[this.pos];
+      this.advance();
+    }
+    if (this.pos < this.chars.length && this.chars[this.pos] === "." && this.isDigit(this.peek(1) ?? "")) {
+      num += ".";
+      this.advance();
+      while (this.pos < this.chars.length && this.isDigit(this.chars[this.pos])) {
+        num += this.chars[this.pos];
+        this.advance();
+      }
+    }
+    this.tokens.push({ type: TokenType.NUMBER, value: num, line: this.line, col: startCol });
+  }
+  readUnicodeToken(ch) {
+    const map = [
+      ["\u2295", TokenType.OPLUS],
+      ["\u2297", TokenType.OTIMES],
+      ["\xB7", TokenType.CDOT],
+      ["\u03C0", TokenType.CONST_PI],
+      ["\u03C6", TokenType.CONST_PHI],
+      ["\u03A6", TokenType.CONST_PHI_UP],
+      ["\u03A8", TokenType.CONST_PSI_UP],
+      ["\u03A9", TokenType.CONST_OMEGA_UP],
+      ["\u2205", TokenType.CONST_EMPTY],
+      ["\u22A4", TokenType.QUAD_TOP],
+      ["\u22A5", TokenType.QUAD_BOT],
+      ["\u290A", TokenType.CONVERGE],
+      ["\u290B", TokenType.DIVERGE],
+      ["\u25C1", TokenType.REFLECT],
+      ["\u2227", TokenType.AND],
+      ["\u2228", TokenType.OR],
+      ["\xAC", TokenType.NOT],
+      ["\u30FB", TokenType.SYMBOL_DOT_PRIM]
+    ];
+    if (ch === "\u22A4" && this.peek(1) === "\u03C0") {
+      this.emit(TokenType.QUAD_TOP_PI, "\u22A4\u03C0");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "\u22A5" && this.peek(1) === "\u03C0") {
+      this.emit(TokenType.QUAD_BOT_PI, "\u22A5\u03C0");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    for (const [sym, type] of map) {
+      if (ch === sym) {
+        this.emit(type, sym);
+        this.advance();
+        return true;
+      }
+    }
+    return false;
+  }
+  readMultiCharOp(ch) {
+    const next = this.peek(1);
+    if (ch === "|" && next === ">") {
+      this.emit(TokenType.PIPE_OP, "|>");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === ">" && next === ">") {
+      this.emit(TokenType.EXTEND, ">>");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "<" && next === "<") {
+      this.emit(TokenType.REDUCE, "<<");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "-" && next === ">") {
+      this.emit(TokenType.ARROW, "->");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "=" && next === "=") {
+      this.emit(TokenType.EQ, "==");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "!" && next === "=") {
+      this.emit(TokenType.NEQ, "!=");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === ">" && next === "=") {
+      this.emit(TokenType.GTE, ">=");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "<" && next === "=") {
+      this.emit(TokenType.LTE, "<=");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === ">" && next === "\u03BA") {
+      this.emit(TokenType.GT_K, ">\u03BA");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "<" && next === "\u03BA") {
+      this.emit(TokenType.LT_K, "<\u03BA");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    if (ch === "=" && next === "\u03BA") {
+      this.emit(TokenType.EQ_K, "=\u03BA");
+      this.advance();
+      this.advance();
+      return true;
+    }
+    return false;
+  }
+  readSingleCharOp(ch) {
+    const map = {
+      "+": TokenType.PLUS,
+      "-": TokenType.MINUS,
+      "*": TokenType.STAR,
+      "/": TokenType.SLASH,
+      "=": TokenType.ASSIGN,
+      ".": TokenType.DOT,
+      ",": TokenType.COMMA,
+      ":": TokenType.COLON,
+      ";": TokenType.SEMICOLON,
+      "(": TokenType.LPAREN,
+      ")": TokenType.RPAREN,
+      "{": TokenType.LBRACE,
+      "}": TokenType.RBRACE,
+      "[": TokenType.LBRACKET,
+      "]": TokenType.RBRACKET,
+      "|": TokenType.PIPE_OP,
+      ">": TokenType.GT,
+      "<": TokenType.LT
+    };
+    const type = map[ch];
+    if (type) {
+      this.emit(type, ch);
+      this.advance();
+      return true;
+    }
+    return false;
+  }
+  readIdentOrKeyword() {
+    const startCol = this.col;
+    let name = "";
+    while (this.pos < this.chars.length && this.isIdentPart(this.chars[this.pos])) {
+      name += this.chars[this.pos];
+      this.advance();
+    }
+    if (name.startsWith("compress") && name.length > 8) {
+      const suffix = name.slice(8);
+      if (["\u2070", "\xB9", "\xB2", "\xB3", "\u221E"].includes(suffix)) {
+        this.tokens.push({ type: TokenType.COMPRESS, value: name, line: this.line, col: startCol });
+        return;
+      }
+    }
+    const kw = KEYWORDS[name];
+    if (kw) {
+      this.tokens.push({ type: kw, value: name, line: this.line, col: startCol });
+    } else {
+      this.tokens.push({ type: TokenType.IDENT, value: name, line: this.line, col: startCol });
+    }
+  }
+  advance() {
+    this.pos++;
+    this.col++;
+  }
+  peek(offset) {
+    return this.chars[this.pos + offset];
+  }
+  emit(type, value) {
+    this.tokens.push({ type, value, line: this.line, col: this.col });
+  }
+  isDigit(ch) {
+    return ch >= "0" && ch <= "9";
+  }
+  isIdentStart(ch) {
+    return /[a-zA-Z_α-ωΑ-Ω𝕄𝕌]/.test(ch);
+  }
+  isIdentPart(ch) {
+    return /[a-zA-Z0-9_α-ωΑ-Ω⁰¹²³∞𝕄𝕌]/.test(ch);
+  }
+  shouldNegateBePrefix() {
+    if (this.tokens.length === 0) return true;
+    const last = this.tokens[this.tokens.length - 1];
+    return [
+      TokenType.LPAREN,
+      TokenType.COMMA,
+      TokenType.ASSIGN,
+      TokenType.PLUS,
+      TokenType.MINUS,
+      TokenType.STAR,
+      TokenType.SLASH,
+      TokenType.OPLUS,
+      TokenType.OTIMES,
+      TokenType.PIPE_OP,
+      TokenType.SEMICOLON,
+      TokenType.LBRACKET,
+      TokenType.COLON,
+      TokenType.MDIM_OPEN,
+      TokenType.LBRACE
+    ].includes(last.type);
+  }
+};
+
+// src/lang/parser.ts
+function node(type, props = {}) {
+  return { type, ...props };
+}
+var Parser = class {
+  constructor(tokens) {
+    this.pos = 0;
+    this.tokens = tokens.filter((t) => t.type !== TokenType.NEWLINE);
+  }
+  parseProgram() {
+    const stmts = [];
+    while (!this.isAtEnd()) {
+      while (this.check(TokenType.SEMICOLON)) this.advance();
+      if (this.isAtEnd()) break;
+      stmts.push(this.parseStatement());
+      while (this.check(TokenType.SEMICOLON)) this.advance();
+    }
+    return node("Program", { body: stmts });
+  }
+  parseStatement() {
+    if (this.check(TokenType.LET)) return this.parseLetStmt();
+    if (this.check(TokenType.COMPRESS)) return this.parseCompressDef();
+    return this.parseExpression();
+  }
+  // --- let [mut] name [: type] = expr [witnessed by "..."] ---
+  parseLetStmt() {
+    this.expect(TokenType.LET);
+    const mutable = this.match(TokenType.MUT);
+    const name = this.expect(TokenType.IDENT).value;
+    let typeAnnotation = null;
+    let phaseGuard = null;
+    if (this.match(TokenType.COLON)) {
+      typeAnnotation = this.expect(TokenType.IDENT).value;
+      if (this.check(TokenType.IDENT) && this.peek().value.startsWith("@")) {
+        phaseGuard = this.advance().value.slice(1);
+      }
+    }
+    this.expect(TokenType.ASSIGN);
+    const init = this.parseExpression();
+    let witness = null;
+    if (this.match(TokenType.WITNESSED)) {
+      this.expect(TokenType.BY);
+      witness = this.expect(TokenType.STRING).value;
+    }
+    return node(mutable ? "MutStmt" : "LetStmt", {
+      name,
+      init,
+      typeAnnotation,
+      phaseGuard,
+      witness
+    });
+  }
+  // --- compress [level] name(params) [-> type] = body ---
+  parseCompressDef() {
+    const compressToken = this.expect(TokenType.COMPRESS);
+    const level = this.parseCompressLevel(compressToken.value);
+    const name = this.expect(TokenType.IDENT).value;
+    this.expect(TokenType.LPAREN);
+    const params = [];
+    if (!this.check(TokenType.RPAREN)) {
+      params.push(this.parseParamDecl());
+      while (this.match(TokenType.COMMA)) {
+        params.push(this.parseParamDecl());
+      }
+    }
+    this.expect(TokenType.RPAREN);
+    let returnType = null;
+    if (this.match(TokenType.ARROW)) {
+      returnType = this.expect(TokenType.IDENT).value;
+    }
+    this.expect(TokenType.ASSIGN);
+    const body = this.parseExpression();
+    return node("CompressDef", { name, params, body, level, returnType });
+  }
+  parseCompressLevel(value) {
+    if (value === "compress") return -1;
+    const suffixMap = {
+      "compress\u2070": 0,
+      // ⁰
+      "compress\xB9": 1,
+      // ¹
+      "compress\xB2": 2,
+      // ²
+      "compress\xB3": 3,
+      // ³
+      "compress\u221E": Infinity
+      // ∞
+    };
+    return suffixMap[value] ?? -1;
+  }
+  parseParamDecl() {
+    let name;
+    if (this.check(TokenType.IDENT)) {
+      name = this.advance().value;
+    } else if (this.check(TokenType.CONST_E)) {
+      name = this.advance().value;
+    } else if (this.check(TokenType.CONST_I)) {
+      name = this.advance().value;
+    } else {
+      name = this.expect(TokenType.IDENT).value;
+    }
+    if (this.match(TokenType.COLON)) {
+      this.expect(TokenType.IDENT);
+    }
+    return name;
+  }
+  // --- Expression hierarchy (low → high precedence) ---
+  parseExpression() {
+    return this.parsePipe();
+  }
+  // Level 1: |> pipe, ◁ reflect
+  parsePipe() {
+    let left = this.parseLogicOr();
+    while (this.check(TokenType.PIPE_OP) || this.check(TokenType.REFLECT)) {
+      if (this.match(TokenType.PIPE_OP)) {
+        const cmd = this.parsePipeCommand();
+        left = node("Pipe", { input: left, command: cmd });
+      } else if (this.match(TokenType.REFLECT)) {
+        const right = this.parseLogicOr();
+        left = node("ReflectOp", { left, right });
+      }
+    }
+    return left;
+  }
+  parsePipeCommand() {
+    if (this.check(TokenType.IDENT) || this.check(TokenType.GENESIS) || this.check(TokenType.SPACE) || this.check(TokenType.LAYER)) {
+      const cmd = this.advance().value;
+      let mode = null;
+      let args = [];
+      if (this.match(TokenType.COLON)) {
+        mode = this.expect(TokenType.IDENT).value;
+      }
+      if (this.match(TokenType.LPAREN)) {
+        if (!this.check(TokenType.RPAREN)) {
+          args.push(this.parseExpression());
+          while (this.match(TokenType.COMMA)) args.push(this.parseExpression());
+        }
+        this.expect(TokenType.RPAREN);
+      }
+      return node("PipeCmd", { cmd, mode, args });
+    }
+    if (this.match(TokenType.CONVERGE)) return node("PipeCmd", { cmd: "\u290A", mode: null, args: [] });
+    if (this.match(TokenType.DIVERGE)) return node("PipeCmd", { cmd: "\u290B", mode: null, args: [] });
+    throw this.error("\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9\u304C\u5FC5\u8981");
+  }
+  // Level 2: ∧ ∨ (logic)
+  parseLogicOr() {
+    let left = this.parseLogicAnd();
+    while (this.match(TokenType.OR)) {
+      const right = this.parseLogicAnd();
+      left = node("BinOp", { op: "\u2228", left, right });
+    }
+    return left;
+  }
+  parseLogicAnd() {
+    let left = this.parseComparison();
+    while (this.match(TokenType.AND)) {
+      const right = this.parseComparison();
+      left = node("BinOp", { op: "\u2227", left, right });
+    }
+    return left;
+  }
+  // Level 3: comparison operators
+  parseComparison() {
+    let left = this.parseAddition();
+    const compOps = [
+      TokenType.GT_K,
+      TokenType.LT_K,
+      TokenType.EQ_K,
+      TokenType.EQ,
+      TokenType.NEQ,
+      TokenType.GT,
+      TokenType.LT,
+      TokenType.GTE,
+      TokenType.LTE
+    ];
+    while (compOps.some((op) => this.check(op))) {
+      const opToken = this.advance();
+      const right = this.parseAddition();
+      left = node("BinOp", { op: opToken.value, left, right });
+    }
+    return left;
+  }
+  // Level 4: + - ⊕
+  parseAddition() {
+    let left = this.parseMultiplication();
+    while (this.check(TokenType.PLUS) || this.check(TokenType.MINUS) || this.check(TokenType.OPLUS)) {
+      const op = this.advance().value;
+      const right = this.parseMultiplication();
+      left = node("BinOp", { op, left, right });
+    }
+    return left;
+  }
+  // Level 5: * / ⊗ ·
+  parseMultiplication() {
+    let left = this.parseExtendReduce();
+    while (this.check(TokenType.STAR) || this.check(TokenType.SLASH) || this.check(TokenType.OTIMES) || this.check(TokenType.CDOT)) {
+      const op = this.advance().value;
+      const right = this.parseExtendReduce();
+      left = node("BinOp", { op, left, right });
+    }
+    return left;
+  }
+  // Level 6: >> << ⤊ ⤋
+  parseExtendReduce() {
+    let left = this.parseUnary();
+    while (true) {
+      if (this.match(TokenType.EXTEND)) {
+        if (this.match(TokenType.COLON)) {
+          const sub = this.expect(TokenType.IDENT).value;
+          left = node("Extend", { target: left, subscript: sub });
+        } else {
+          const right = this.parseUnary();
+          left = node("Extend", { target: left, expr: right });
+        }
+      } else if (this.match(TokenType.REDUCE)) {
+        left = node("Reduce", { target: left });
+      } else if (this.match(TokenType.CONVERGE)) {
+        const right = this.parseUnary();
+        left = node("ConvergeOp", { left, right });
+      } else if (this.match(TokenType.DIVERGE)) {
+        const right = this.parseUnary();
+        left = node("DivergeOp", { left, right });
+      } else {
+        break;
+      }
+    }
+    return left;
+  }
+  // Level 7: unary ¬ -
+  parseUnary() {
+    if (this.match(TokenType.NOT)) {
+      const operand = this.parseUnary();
+      return node("UnaryOp", { op: "\xAC", operand });
+    }
+    if (this.check(TokenType.MINUS) && this.shouldNegateBePrefix()) {
+      this.advance();
+      const operand = this.parseUnary();
+      return node("UnaryOp", { op: "-", operand });
+    }
+    return this.parsePostfix();
+  }
+  // Level 8: . member access, [index], (call)
+  parsePostfix() {
+    let left = this.parsePrimary();
+    while (true) {
+      if (this.match(TokenType.DOT)) {
+        if (this.check(TokenType.IDENT)) {
+          const member = this.advance().value;
+          if (this.check(TokenType.DOT) && this.checkAhead(TokenType.IDENT, 1) && this.tokens[this.pos + 1]?.value === "\u03BA") {
+            this.advance();
+            this.advance();
+            left = node("MemberAccess", { object: left, member, kappa: true });
+          } else {
+            left = node("MemberAccess", { object: left, member, kappa: false });
+          }
+        }
+      } else if (this.match(TokenType.LPAREN)) {
+        const args = [];
+        if (!this.check(TokenType.RPAREN)) {
+          args.push(this.parseExpression());
+          while (this.match(TokenType.COMMA)) args.push(this.parseExpression());
+        }
+        this.expect(TokenType.RPAREN);
+        left = node("FnCall", { callee: left, args });
+      } else if (this.match(TokenType.LBRACKET)) {
+        const index = this.parseExpression();
+        this.expect(TokenType.RBRACKET);
+        left = node("IndexAccess", { object: left, index });
+      } else {
+        break;
+      }
+    }
+    return left;
+  }
+  // --- Primary expressions ---
+  parsePrimary() {
+    if (this.check(TokenType.NUMBER)) {
+      const val = this.advance().value;
+      return node("NumLit", { value: parseFloat(val) });
+    }
+    if (this.check(TokenType.STRING)) {
+      return node("StrLit", { value: this.advance().value });
+    }
+    if (this.match(TokenType.TRUE)) return node("BoolLit", { value: true });
+    if (this.match(TokenType.FALSE)) return node("BoolLit", { value: false });
+    if (this.match(TokenType.NULL)) return node("NullLit", {});
+    if (this.check(TokenType.EXT_LIT)) {
+      const val = this.advance().value;
+      return node("ExtLit", { raw: val });
+    }
+    if (this.match(TokenType.SYMBOL_0_0)) {
+      return node("ExtLit", { raw: "0\u2080" });
+    }
+    if (this.match(TokenType.SYMBOL_DOT_PRIM)) {
+      return node("ConstLit", { value: "\u30FB" });
+    }
+    if (this.match(TokenType.CONST_PI)) return node("NumLit", { value: Math.PI });
+    if (this.match(TokenType.CONST_E)) return node("NumLit", { value: Math.E });
+    if (this.match(TokenType.CONST_PHI)) return node("NumLit", { value: (1 + Math.sqrt(5)) / 2 });
+    if (this.match(TokenType.CONST_I)) return node("ConstLit", { value: "i" });
+    if (this.match(TokenType.CONST_EMPTY)) return node("ConstLit", { value: "\u2205" });
+    if (this.match(TokenType.CONST_PHI_UP)) return node("ConstLit", { value: "\u03A6" });
+    if (this.match(TokenType.CONST_PSI_UP)) return node("ConstLit", { value: "\u03A8" });
+    if (this.match(TokenType.CONST_OMEGA_UP)) return node("ConstLit", { value: "\u03A9" });
+    if (this.match(TokenType.QUAD_TOP)) return node("QuadLit", { value: "top" });
+    if (this.match(TokenType.QUAD_BOT)) return node("QuadLit", { value: "bottom" });
+    if (this.match(TokenType.QUAD_TOP_PI)) return node("QuadLit", { value: "topPi" });
+    if (this.match(TokenType.QUAD_BOT_PI)) return node("QuadLit", { value: "bottomPi" });
+    if (this.match(TokenType.MDIM_OPEN)) {
+      return this.parseMDimLit();
+    }
+    if (this.match(TokenType.LBRACKET)) {
+      const elems = [];
+      if (!this.check(TokenType.RBRACKET)) {
+        elems.push(this.parseExpression());
+        while (this.match(TokenType.COMMA)) elems.push(this.parseExpression());
+      }
+      this.expect(TokenType.RBRACKET);
+      return node("ArrayLit", { elements: elems });
+    }
+    if (this.match(TokenType.LPAREN)) {
+      const expr = this.parseExpression();
+      this.expect(TokenType.RPAREN);
+      return expr;
+    }
+    if (this.check(TokenType.IF)) return this.parseIfExpr();
+    if (this.check(TokenType.MATCH)) return this.parseMatchExpr();
+    if (this.check(TokenType.GENESIS)) {
+      this.advance();
+      if (this.match(TokenType.LPAREN)) {
+        this.expect(TokenType.RPAREN);
+      }
+      return node("FnCall", { callee: node("Ident", { name: "genesis" }), args: [] });
+    }
+    if (this.check(TokenType.SPACE)) {
+      return this.parseSpaceLit();
+    }
+    if (this.check(TokenType.IDENT)) {
+      const name = this.advance().value;
+      return node("Ident", { name });
+    }
+    throw this.error(`\u4E88\u671F\u3057\u306A\u3044\u30C8\u30FC\u30AF\u30F3: ${this.peek().value} (${this.peek().type})`);
+  }
+  // --- MDim literal: 𝕄{center; n1, n2, ... [weight w] [mode]} ---
+  parseMDimLit() {
+    const center = this.parseExpression();
+    this.expect(TokenType.SEMICOLON);
+    const neighbors = [];
+    neighbors.push(this.parseExpression());
+    while (this.match(TokenType.COMMA)) {
+      if (this.check(TokenType.RBRACE)) break;
+      if (this.check(TokenType.WEIGHT)) break;
+      neighbors.push(this.parseExpression());
+    }
+    let weight = null;
+    if (this.match(TokenType.WEIGHT)) {
+      weight = this.parseExpression();
+    }
+    let mode = "weighted";
+    if (this.match(TokenType.COLON)) {
+      if (this.check(TokenType.IDENT)) {
+        mode = this.advance().value;
+      }
+    }
+    this.expect(TokenType.RBRACE);
+    return node("MDimLit", { center, neighbors, weight, mode });
+  }
+  // ── v0.3: Space literal: 空{ 層 0: expr, expr  層 1: expr } ──
+  parseSpaceLit() {
+    this.expect(TokenType.SPACE);
+    this.expect(TokenType.LBRACE);
+    const layers = [];
+    let topology = "flat";
+    if (this.check(TokenType.IDENT) && this.peek().value === "topology") {
+      this.advance();
+      this.expect(TokenType.COLON);
+      if (this.check(TokenType.IDENT)) {
+        topology = this.advance().value;
+      }
+      this.match(TokenType.COMMA);
+    }
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      if (!this.check(TokenType.LAYER)) {
+        throw this.error(`\u5C64\u306E\u5B9A\u7FA9\u304C\u5FC5\u8981\u3067\u3059\u3002\u5B9F\u969B: ${this.peek().type} ("${this.peek().value}")`);
+      }
+      this.expect(TokenType.LAYER);
+      const layerIndex = this.parseExpression();
+      this.expect(TokenType.COLON);
+      const nodes = [];
+      nodes.push(this.parseExpression());
+      while (this.match(TokenType.COMMA)) {
+        if (this.check(TokenType.LAYER) || this.check(TokenType.RBRACE)) break;
+        nodes.push(this.parseExpression());
+      }
+      layers.push({ index: layerIndex, nodes });
+    }
+    this.expect(TokenType.RBRACE);
+    return node("SpaceLit", { layers, topology });
+  }
+  // --- if expr then expr else expr ---
+  parseIfExpr() {
+    this.expect(TokenType.IF);
+    const cond = this.parseExpression();
+    this.expect(TokenType.THEN);
+    const then = this.parseExpression();
+    this.expect(TokenType.ELSE);
+    const elseExpr = this.parseExpression();
+    return node("IfExpr", { cond, then, else: elseExpr });
+  }
+  // --- match expr { case pat -> expr, ... } ---
+  parseMatchExpr() {
+    this.expect(TokenType.MATCH);
+    const target = this.parseExpression();
+    this.expect(TokenType.LBRACE);
+    const cases = [];
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      this.expect(TokenType.CASE);
+      const pattern = this.parsePrimary();
+      this.expect(TokenType.ARROW);
+      const body = this.parseExpression();
+      cases.push({ pattern, body });
+      this.match(TokenType.COMMA);
+    }
+    this.expect(TokenType.RBRACE);
+    return node("MatchExpr", { target, cases });
+  }
+  // --- Helpers ---
+  peek() {
+    return this.tokens[this.pos] || { type: TokenType.EOF, value: "", line: 0, col: 0 };
+  }
+  isAtEnd() {
+    return this.peek().type === TokenType.EOF;
+  }
+  check(type) {
+    return this.peek().type === type;
+  }
+  checkAhead(type, offset) {
+    const idx = this.pos + offset;
+    return idx < this.tokens.length && this.tokens[idx].type === type;
+  }
+  advance() {
+    const t = this.tokens[this.pos];
+    this.pos++;
+    return t;
+  }
+  match(type) {
+    if (this.check(type)) {
+      this.advance();
+      return true;
+    }
+    return false;
+  }
+  expect(type) {
+    if (this.check(type)) return this.advance();
+    const t = this.peek();
+    throw this.error(`\u671F\u5F85: ${type}, \u5B9F\u969B: ${t.type} ("${t.value}")`);
+  }
+  error(msg) {
+    const t = this.peek();
+    return new Error(`[\u884C ${t.line}:${t.col}] \u69CB\u6587\u30A8\u30E9\u30FC: ${msg}`);
+  }
+  shouldNegateBePrefix() {
+    if (this.pos === 0) return true;
+    const prev = this.tokens[this.pos - 1];
+    return [
+      TokenType.LPAREN,
+      TokenType.COMMA,
+      TokenType.ASSIGN,
+      TokenType.PLUS,
+      TokenType.MINUS,
+      TokenType.STAR,
+      TokenType.SLASH,
+      TokenType.OPLUS,
+      TokenType.OTIMES,
+      TokenType.PIPE_OP,
+      TokenType.SEMICOLON,
+      TokenType.LBRACKET,
+      TokenType.COLON,
+      TokenType.MDIM_OPEN,
+      TokenType.LBRACE
+    ].includes(prev.type);
+  }
+};
+
+// src/lang/space.ts
+function createSpace(topology = "flat") {
+  return {
+    reiType: "Space",
+    topology,
+    layers: /* @__PURE__ */ new Map(),
+    globalStage: 0
+  };
+}
+function addNodeToLayer(space, layerIndex, center, neighbors, mode, weights) {
+  if (!space.layers.has(layerIndex)) {
+    space.layers.set(layerIndex, { index: layerIndex, nodes: [], frozen: false });
+  }
+  const layer = space.layers.get(layerIndex);
+  const node2 = {
+    reiType: "DNode",
+    center,
+    neighbors: [...neighbors],
+    mode: mode || "weighted",
+    weights,
+    layerIndex,
+    nodeIndex: layer.nodes.length,
+    stage: 0,
+    momentum: 0,
+    history: [center],
+    frozen: false
+  };
+  layer.nodes.push(node2);
+  return node2;
+}
+function computeNodeValue(node2) {
+  const { center, neighbors, mode } = node2;
+  if (neighbors.length === 0) return center;
+  switch (mode) {
+    case "weighted":
+    default: {
+      const avg = neighbors.reduce((a, b) => a + b, 0) / neighbors.length;
+      return center + avg;
+    }
+    case "geometric": {
+      const prod = neighbors.reduce((a, b) => a * Math.abs(b), 1);
+      return center * Math.pow(prod, 1 / neighbors.length);
+    }
+    case "harmonic": {
+      const hm = neighbors.length / neighbors.reduce((a, b) => a + 1 / (Math.abs(b) || 1), 0);
+      return center + hm;
+    }
+  }
+}
+function stepNode(node2) {
+  if (node2.frozen) return;
+  const val = computeNodeValue(node2);
+  node2.history.push(val);
+  const newCenter = val;
+  const diff = newCenter - node2.center;
+  node2.momentum = diff;
+  node2.center = newCenter;
+  node2.stage++;
+}
+function stepSpace(space, targetLayer) {
+  for (const [lIdx, layer] of space.layers) {
+    if (targetLayer !== void 0 && lIdx !== targetLayer) continue;
+    if (layer.frozen) continue;
+    for (const node2 of layer.nodes) {
+      stepNode(node2);
+    }
+  }
+  space.globalStage++;
+}
+function diffuseSpace(space, criteria, targetLayer, contractionMethod = "weighted") {
+  const maxSteps = criteria.type === "steps" ? criteria.max : 100;
+  const epsilon = criteria.type === "epsilon" ? criteria.threshold : 1e-6;
+  for (let i = 0; i < maxSteps; i++) {
+    const prevCenters = [];
+    for (const [, layer] of space.layers) {
+      for (const node2 of layer.nodes) prevCenters.push(node2.center);
+    }
+    stepSpace(space, targetLayer);
+    if (criteria.type === "converged" || criteria.type === "epsilon") {
+      let idx = 0;
+      let maxDiff = 0;
+      for (const [, layer] of space.layers) {
+        for (const node2 of layer.nodes) {
+          maxDiff = Math.max(maxDiff, Math.abs(node2.center - prevCenters[idx++]));
+        }
+      }
+      if (maxDiff < epsilon) break;
+    }
+    if (criteria.type === "fixed") break;
+  }
+  return space;
+}
+function getSigmaFlow(node2) {
+  const direction = node2.momentum > 0 ? "expand" : node2.momentum < 0 ? "contract" : "rest";
+  return {
+    direction,
+    momentum: node2.momentum,
+    stage: node2.stage
+  };
+}
+function getSigmaMemory(node2) {
+  return [...node2.history];
+}
+function getSigmaWill(node2) {
+  const tendency = node2.momentum > 0 ? "expand" : node2.momentum < 0 ? "contract" : "rest";
+  return {
+    tendency,
+    strength: Math.abs(node2.momentum)
+  };
+}
+function getSpaceSigma(space) {
+  let totalNodes = 0;
+  let activeNodes = 0;
+  let convergedNodes = 0;
+  let expandingNodes = 0;
+  for (const [, layer] of space.layers) {
+    for (const node2 of layer.nodes) {
+      totalNodes++;
+      if (!node2.frozen) activeNodes++;
+      if (Math.abs(node2.momentum) < 1e-6) convergedNodes++;
+      if (node2.momentum > 0) expandingNodes++;
+    }
+  }
+  return {
+    reiType: "SigmaResult",
+    field: {
+      layers: space.layers.size,
+      total_nodes: totalNodes,
+      active_nodes: activeNodes,
+      topology: space.topology
+    },
+    flow: {
+      global_stage: space.globalStage,
+      converged_nodes: convergedNodes,
+      expanding_nodes: expandingNodes
+    },
+    memory: [],
+    layer: 0,
+    will: { tendency: "rest", strength: 0 },
+    relation: []
+  };
+}
+function findResonances(space, threshold = 0.5) {
+  const resonances = [];
+  const allNodes = [];
+  for (const [, layer] of space.layers) {
+    for (const node2 of layer.nodes) allNodes.push(node2);
+  }
+  for (let i = 0; i < allNodes.length; i++) {
+    for (let j = i + 1; j < allNodes.length; j++) {
+      const a = allNodes[i], b = allNodes[j];
+      const diff = Math.abs(a.center - b.center);
+      const maxAbs = Math.max(Math.abs(a.center), Math.abs(b.center), 1);
+      const similarity = 1 - diff / maxAbs;
+      if (similarity >= threshold) {
+        resonances.push({
+          nodeA: { layer: a.layerIndex, index: a.nodeIndex },
+          nodeB: { layer: b.layerIndex, index: b.nodeIndex },
+          strength: similarity
+        });
+      }
+    }
+  }
+  return resonances;
+}
+
+// src/lang/evaluator.ts
+function createSigmaMeta() {
+  return { memory: [], tendency: "rest", pipeCount: 0 };
+}
+function wrapWithSigma(value, prevValue, prevMeta) {
+  const rawValue = unwrapReiVal(value);
+  const rawPrev = unwrapReiVal(prevValue);
+  const meta = prevMeta ? { ...prevMeta, memory: [...prevMeta.memory, rawPrev], pipeCount: prevMeta.pipeCount + 1 } : { memory: [rawPrev], tendency: "rest", pipeCount: 1 };
+  meta.tendency = computeTendency(meta.memory, rawValue);
+  if (rawValue === null || typeof rawValue !== "object") {
+    return { reiType: "ReiVal", value: rawValue, __sigma__: meta };
+  }
+  rawValue.__sigma__ = meta;
+  return rawValue;
+}
+function computeTendency(memory, currentValue) {
+  if (memory.length < 2) return "rest";
+  const recent = memory.slice(-5).map(toNumSafe);
+  const current = toNumSafe(currentValue);
+  let expandCount = 0, contractCount = 0, alternating = 0;
+  for (let i = 0; i < recent.length; i++) {
+    const prev = i === 0 ? recent[0] : recent[i - 1];
+    const cur = i === recent.length - 1 ? current : recent[i + 1];
+    if (cur > prev) expandCount++;
+    else if (cur < prev) contractCount++;
+    if (i > 0 && cur > prev !== recent[i] > recent[i - 1]) alternating++;
+  }
+  if (alternating >= recent.length - 1) return "spiral";
+  if (expandCount > contractCount) return "expand";
+  if (contractCount > expandCount) return "contract";
+  return "rest";
+}
+function toNumSafe(v) {
+  if (typeof v === "number") return v;
+  if (v === null || v === void 0) return 0;
+  if (typeof v === "boolean") return v ? 1 : 0;
+  if (typeof v === "object" && v.reiType === "ReiVal") return toNumSafe(v.value);
+  if (typeof v === "object" && v.reiType === "Ext") return v.valStar();
+  if (typeof v === "object" && v.reiType === "MDim") {
+    const { center, neighbors, mode } = v;
+    const weights = v.weights ?? neighbors.map(() => 1);
+    const n = neighbors.length;
+    if (n === 0) return center;
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    const wAvg = neighbors.reduce((sum, vi, i) => sum + (weights[i] ?? 1) * vi, 0) / (wSum || 1);
+    return center + wAvg;
+  }
+  return 0;
+}
+function unwrapReiVal(v) {
+  if (v !== null && typeof v === "object" && v.reiType === "ReiVal") return v.value;
+  return v;
+}
+function getSigmaOf(v) {
+  if (v !== null && typeof v === "object") {
+    if (v.reiType === "ReiVal") return v.__sigma__;
+    if (v.__sigma__) return v.__sigma__;
+  }
+  return createSigmaMeta();
+}
+function buildSigmaResult(rawVal, meta) {
+  const val = unwrapReiVal(rawVal);
+  let field;
+  let layer = 0;
+  let flow = { direction: meta.tendency === "rest" ? "rest" : meta.tendency, momentum: meta.pipeCount, velocity: 0 };
+  if (val !== null && typeof val === "object") {
+    if (val.reiType === "MDim") {
+      field = { center: val.center, neighbors: [...val.neighbors], mode: val.mode, dim: val.neighbors.length };
+    } else if (val.reiType === "Ext") {
+      field = { base: val.base, order: val.order, subscripts: val.subscripts };
+      layer = val.order;
+    } else if (val.reiType === "State") {
+      field = { state: val.state, omega: val.omega };
+      flow = { direction: "forward", momentum: val.history.length - 1, velocity: 1 };
+    } else if (val.reiType === "Quad") {
+      field = { value: val.value };
+    } else if (val.reiType === "DNode") {
+      field = { center: val.center, neighbors: [...val.neighbors], layer: val.layerIndex, index: val.nodeIndex };
+      layer = val.layerIndex;
+      flow = { stage: val.stage, directions: val.neighbors.length, momentum: val.momentum, velocity: 0 };
+      if (val.diffusionHistory.length >= 2) {
+        flow.velocity = Math.abs(
+          val.diffusionHistory[val.diffusionHistory.length - 1].result - val.diffusionHistory[val.diffusionHistory.length - 2].result
+        );
+      }
+    } else if (val.reiType === "Space") {
+      field = { type: "space" };
+    } else if (Array.isArray(val)) {
+      field = { length: val.length, first: val[0] ?? null, last: val[val.length - 1] ?? null };
+    } else {
+      field = { type: typeof val };
+    }
+  } else if (typeof val === "number") {
+    field = { center: val, neighbors: [] };
+  } else if (typeof val === "string") {
+    field = { value: val, length: val.length };
+  } else if (typeof val === "boolean") {
+    field = { value: val };
+  } else {
+    field = { value: null };
+  }
+  const memory = [...meta.memory];
+  if (val !== null && typeof val === "object" && val.reiType === "State" && val.history) {
+    if (memory.length === 0 && val.history.length > 1) {
+      for (let i = 0; i < val.history.length - 1; i++) {
+        memory.push(val.history[i]);
+      }
+    }
+  }
+  const will = {
+    tendency: meta.tendency,
+    strength: meta.pipeCount > 0 ? Math.min(meta.pipeCount / 5, 1) : 0,
+    history: meta.memory.map((_, i) => {
+      if (i === 0) return "rest";
+      const prev = toNumSafe(meta.memory[i - 1]);
+      const cur = toNumSafe(meta.memory[i]);
+      return cur > prev ? "expand" : cur < prev ? "contract" : "rest";
+    })
+  };
+  return {
+    reiType: "SigmaResult",
+    field,
+    flow,
+    memory,
+    layer,
+    will,
+    relation: []
+  };
+}
+var Environment = class {
+  constructor(parent = null) {
+    this.bindings = /* @__PURE__ */ new Map();
+    this.parent = parent;
+  }
+  define(name, value, mutable = false) {
+    this.bindings.set(name, { value, mutable });
+  }
+  get(name) {
+    const b = this.bindings.get(name);
+    if (b) return b.value;
+    if (this.parent) return this.parent.get(name);
+    throw new Error(`\u672A\u5B9A\u7FA9\u306E\u5909\u6570: ${name}`);
+  }
+  set(name, value) {
+    const b = this.bindings.get(name);
+    if (b) {
+      if (!b.mutable) throw new Error(`\u4E0D\u5909\u306E\u5909\u6570\u306B\u4EE3\u5165: ${name}`);
+      b.value = value;
+      return;
+    }
+    if (this.parent) {
+      this.parent.set(name, value);
+      return;
+    }
+    throw new Error(`\u672A\u5B9A\u7FA9\u306E\u5909\u6570: ${name}`);
+  }
+  has(name) {
+    if (this.bindings.has(name)) return true;
+    if (this.parent) return this.parent.has(name);
+    return false;
+  }
+  getBinding(name) {
+    const b = this.bindings.get(name);
+    if (b) return b;
+    if (this.parent) return this.parent.getBinding(name);
+    return null;
+  }
+  allBindings() {
+    const all = /* @__PURE__ */ new Map();
+    if (this.parent) {
+      for (const [k, v] of this.parent.allBindings()) all.set(k, v);
+    }
+    for (const [k, v] of this.bindings) all.set(k, v);
+    return all;
+  }
+};
+function createExtended(base, subscripts) {
+  const order = subscripts.length;
+  return {
+    reiType: "Ext",
+    base,
+    order,
+    subscripts,
+    valStar() {
+      if (base === 0) return Math.pow(0.1, order);
+      return base * Math.pow(0.1, order);
+    }
+  };
+}
+function parseExtLit(raw) {
+  if (raw === "0\u2080") return createExtended(0, "o");
+  const baseChar = raw[0];
+  const subs = raw.slice(1);
+  const baseMap = {
+    "0": 0,
+    "\u03C0": Math.PI,
+    "e": Math.E,
+    "\u03C6": (1 + Math.sqrt(5)) / 2,
+    "i": NaN
+  };
+  return createExtended(baseMap[baseChar] ?? 0, subs);
+}
+var ALL_COMPUTE_MODES = [
+  "weighted",
+  "multiplicative",
+  "harmonic",
+  "exponential",
+  "geometric",
+  "median",
+  "minkowski",
+  "entropy"
+];
+function computeMDim(md) {
+  const { center, neighbors, mode } = md;
+  const weights = md.weights ?? neighbors.map(() => 1);
+  const n = neighbors.length;
+  if (n === 0) return center;
+  if (typeof mode === "string" && mode.startsWith("blend(")) {
+    return computeBlend(md, mode);
+  }
+  switch (mode) {
+    case "weighted": {
+      const wSum = weights.reduce((a, b) => a + b, 0);
+      const wAvg = neighbors.reduce((sum, v, i) => sum + (weights[i] ?? 1) * v, 0) / (wSum || 1);
+      return center + wAvg;
+    }
+    case "multiplicative": {
+      const prod = neighbors.reduce((p, v) => p * (1 + v), 1);
+      return center * prod;
+    }
+    case "harmonic": {
+      const harmSum = neighbors.reduce((s, v) => s + 1 / (Math.abs(v) || 1), 0);
+      return center + n / harmSum;
+    }
+    case "exponential": {
+      const expSum = neighbors.reduce((s, v) => s + Math.exp(v), 0);
+      return center * (expSum / n);
+    }
+    // ── Tier 2 M1: 新計算モード ──
+    case "geometric": {
+      const prod = neighbors.reduce((p, v) => p * Math.abs(v || 1), 1);
+      return center * Math.pow(prod, 1 / n);
+    }
+    case "median": {
+      const sorted = [...neighbors].sort((a, b) => a - b);
+      const mid = Math.floor(n / 2);
+      const med = n % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      return center + med;
+    }
+    case "minkowski": {
+      const p = md.minkowskiP ?? 2;
+      const sumP = neighbors.reduce((s, v) => s + Math.pow(Math.abs(v), p), 0);
+      return center + Math.pow(sumP / n, 1 / p);
+    }
+    case "entropy": {
+      const total = neighbors.reduce((s, v) => s + Math.abs(v), 0) || 1;
+      const probs = neighbors.map((v) => Math.abs(v) / total);
+      const H = -probs.reduce((s, p) => s + (p > 0 ? p * Math.log2(p) : 0), 0);
+      return center * (1 + H);
+    }
+    default:
+      return center;
+  }
+}
+function computeBlend(md, blendSpec) {
+  const inner = blendSpec.slice(6, -1);
+  const parts = inner.split(",").map((s) => s.trim());
+  let totalWeight = 0;
+  let blendedResult = 0;
+  for (const part of parts) {
+    const [modeName, weightStr] = part.split(":").map((s) => s.trim());
+    const w = parseFloat(weightStr) || 0;
+    const result = computeMDim({ ...md, mode: modeName });
+    blendedResult += w * result;
+    totalWeight += w;
+  }
+  return totalWeight > 0 ? blendedResult / totalWeight : md.center;
+}
+function projectToMDim(input, centerSpec, args) {
+  let elements;
+  if (Array.isArray(input)) {
+    elements = [...input];
+  } else if (typeof input === "string") {
+    elements = Array.from(input).map((c) => c.charCodeAt(0));
+  } else if (typeof input === "number") {
+    const digits = Math.abs(input).toString().split("").map(Number);
+    elements = digits;
+  } else if (input !== null && typeof input === "object" && input.reiType === "MDim") {
+    elements = [input.center, ...input.neighbors];
+  } else {
+    return { reiType: "MDim", center: input ?? 0, neighbors: [], mode: "weighted" };
+  }
+  if (elements.length === 0) {
+    return { reiType: "MDim", center: 0, neighbors: [], mode: "weighted" };
+  }
+  let centerIndex = 0;
+  if (centerSpec === ":max" || centerSpec === "max") {
+    centerIndex = elements.indexOf(Math.max(...elements.map(Number)));
+  } else if (centerSpec === ":min" || centerSpec === "min") {
+    centerIndex = elements.indexOf(Math.min(...elements.map(Number)));
+  } else if (centerSpec === ":first" || centerSpec === "first") {
+    centerIndex = 0;
+  } else if (centerSpec === ":last" || centerSpec === "last") {
+    centerIndex = elements.length - 1;
+  } else if (centerSpec === ":middle" || centerSpec === "middle") {
+    centerIndex = Math.floor(elements.length / 2);
+  } else if (typeof centerSpec === "number") {
+    const idx = elements.indexOf(centerSpec);
+    centerIndex = idx >= 0 ? idx : 0;
+  }
+  const center = elements[centerIndex];
+  const neighbors = elements.filter((_, i) => i !== centerIndex);
+  return { reiType: "MDim", center, neighbors, mode: "weighted" };
+}
+function projectAll(input) {
+  let elements;
+  if (Array.isArray(input)) {
+    elements = [...input];
+  } else if (typeof input === "string") {
+    elements = Array.from(input).map((c) => c.charCodeAt(0));
+  } else if (typeof input === "number") {
+    elements = Math.abs(input).toString().split("").map(Number);
+  } else if (input !== null && typeof input === "object" && input.reiType === "MDim") {
+    elements = [input.center, ...input.neighbors];
+  } else {
+    return [{ reiType: "MDim", center: input ?? 0, neighbors: [], mode: "weighted" }];
+  }
+  if (elements.length === 0) return [];
+  return elements.map((_, centerIdx) => {
+    const center = elements[centerIdx];
+    const neighbors = elements.filter((_2, i) => i !== centerIdx);
+    return { reiType: "MDim", center, neighbors, mode: "weighted" };
+  });
+}
+function computeAll(md) {
+  if (!md || md.reiType !== "MDim") return [];
+  return ALL_COMPUTE_MODES.map((mode) => ({
+    mode,
+    value: computeMDim({ ...md, mode })
+  }));
+}
+function compareModes(md, mode1, mode2) {
+  if (!md || md.reiType !== "MDim") return null;
+  const v1 = computeMDim({ ...md, mode: mode1 });
+  const v2 = computeMDim({ ...md, mode: mode2 });
+  return {
+    reiType: "CompareResult",
+    mode1: { mode: mode1, value: v1 },
+    mode2: { mode: mode2, value: v2 },
+    diff: Math.abs(v1 - v2),
+    ratio: v2 !== 0 ? v1 / v2 : Infinity
+  };
+}
+function perspectives(input) {
+  const allProjections = projectAll(input);
+  return allProjections.map((proj, idx) => {
+    const results = ALL_COMPUTE_MODES.map((mode) => ({
+      mode,
+      value: computeMDim({ ...proj, mode })
+    }));
+    return {
+      projectionIndex: idx,
+      center: proj.center,
+      neighbors: proj.neighbors,
+      results
+    };
+  });
+}
+function computeNestedMDim(md) {
+  const center = md.reiType === "MDim" ? md.center !== null && typeof md.center === "object" && md.center.reiType === "MDim" ? computeNestedMDim(md.center) : typeof md.center === "number" ? md.center : 0 : typeof md === "number" ? md : 0;
+  const neighbors = (md.neighbors ?? []).map(
+    (n) => n !== null && typeof n === "object" && n.reiType === "MDim" ? computeNestedMDim(n) : typeof n === "number" ? n : 0
+  );
+  return computeMDim({ ...md, center, neighbors });
+}
+function respondToStimulus(input, stimulus, method = "absorb") {
+  if (input !== null && typeof input === "object" && input.reiType === "MDim") {
+    const md = input;
+    switch (method) {
+      case "absorb": {
+        const factor = stimulus / (Math.abs(md.center) + Math.abs(stimulus) || 1);
+        const newCenter = md.center + stimulus * factor;
+        return { ...md, center: newCenter };
+      }
+      case "distribute": {
+        const share = stimulus / (md.neighbors.length || 1);
+        const newNeighbors = md.neighbors.map((n) => n + share);
+        return { ...md, neighbors: newNeighbors };
+      }
+      case "reflect": {
+        const newNeighbors = md.neighbors.map((n) => n - stimulus / (md.neighbors.length || 1));
+        return { ...md, neighbors: newNeighbors };
+      }
+      case "resonate": {
+        const newCenter = md.center * (1 + Math.sin(stimulus));
+        const newNeighbors = md.neighbors.map(
+          (n, i) => n * (1 + Math.sin(stimulus + (i + 1) * Math.PI / md.neighbors.length))
+        );
+        return { ...md, center: newCenter, neighbors: newNeighbors };
+      }
+      default:
+        return respondToStimulus(input, stimulus, "absorb");
+    }
+  }
+  if (typeof input === "number") return input + stimulus;
+  return input;
+}
+function computeSensitivity(input) {
+  if (input !== null && typeof input === "object" && input.reiType === "MDim") {
+    const original = computeMDim(input);
+    const epsilon = 1e-3;
+    const perturbed = respondToStimulus(input, epsilon, "absorb");
+    const perturbedVal = computeMDim(perturbed);
+    return Math.abs(perturbedVal - original) / epsilon;
+  }
+  if (typeof input === "number") return 1;
+  return 0;
+}
+function computeAwareness(input, meta) {
+  let score = 0;
+  const maxScore = 5;
+  score += Math.min(meta.memory.length / 5, 1);
+  if (meta.tendency !== "rest") score += 1;
+  score += Math.min(meta.pipeCount / 5, 1);
+  const raw = unwrapReiVal(input);
+  if (raw !== null && typeof raw === "object") {
+    if (raw.reiType === "MDim" && raw.neighbors) {
+      score += Math.min(raw.neighbors.length / 8, 1);
+    } else if (raw.reiType === "Space") {
+      score += 1;
+    } else if (raw.reiType === "State" && raw.history) {
+      score += Math.min(raw.history.length / 5, 1);
+    }
+  }
+  if (meta.memory.length >= 2) {
+    const unique = new Set(meta.memory.map((v) => JSON.stringify(v)));
+    score += Math.min(unique.size / meta.memory.length, 1);
+  }
+  return Math.min(score / maxScore, 1);
+}
+var AWAKENING_THRESHOLD = 0.6;
+function applyTransform(input, transformName, param) {
+  const raw = unwrapReiVal(input);
+  if (raw !== null && typeof raw === "object" && raw.reiType === "MDim") {
+    const md = raw;
+    switch (transformName) {
+      case "scale": {
+        return { ...md, center: md.center * param, neighbors: md.neighbors.map((n) => n * param) };
+      }
+      case "shift": {
+        return { ...md, center: md.center + param, neighbors: md.neighbors.map((n) => n + param) };
+      }
+      case "rotate": {
+        const n = md.neighbors.length;
+        if (n === 0) return md;
+        const shift = (param % n + n) % n;
+        const rotated = [...md.neighbors.slice(shift), ...md.neighbors.slice(0, shift)];
+        return { ...md, neighbors: rotated };
+      }
+      case "invert": {
+        return { ...md, neighbors: md.neighbors.map((n) => 2 * md.center - n) };
+      }
+      case "normalize_to": {
+        const total = Math.abs(md.center) + md.neighbors.reduce((s, v) => s + Math.abs(v), 0) || 1;
+        const factor = param / total;
+        return { ...md, center: md.center * factor, neighbors: md.neighbors.map((n) => n * factor) };
+      }
+      default:
+        throw new Error(`\u672A\u77E5\u306E\u5909\u63DB: ${transformName}`);
+    }
+  }
+  if (typeof raw === "number") {
+    switch (transformName) {
+      case "scale":
+        return raw * param;
+      case "shift":
+        return raw + param;
+      case "invert":
+        return -raw;
+      default:
+        return raw;
+    }
+  }
+  return raw;
+}
+function checkModeEquivalence(md, mode1, mode2) {
+  if (!md || md.reiType !== "MDim") return { equivalent: false, reason: "non-MDim input" };
+  const v1 = computeMDim({ ...md, mode: mode1 });
+  const v2 = computeMDim({ ...md, mode: mode2 });
+  return {
+    reiType: "ModeEquivResult",
+    mode1,
+    mode2,
+    type_equivalent: typeof v1 === typeof v2,
+    // M2: 出力型が等価
+    value1: v1,
+    value2: v2,
+    relative_diff: Math.abs(v2) > 0 ? Math.abs(v1 - v2) / Math.abs(v2) : v1 === v2 ? 0 : Infinity
+  };
+}
+function computeResonance(a, b) {
+  const aRaw = unwrapReiVal(a);
+  const bRaw = unwrapReiVal(b);
+  const aNum = typeof aRaw === "number" ? aRaw : aRaw?.center ?? 0;
+  const bNum = typeof bRaw === "number" ? bRaw : bRaw?.center ?? 0;
+  const aDim = aRaw?.neighbors?.length ?? 0;
+  const bDim = bRaw?.neighbors?.length ?? 0;
+  const dimMatch = aDim === 0 && bDim === 0 ? 1 : 1 - Math.abs(aDim - bDim) / Math.max(aDim, bDim, 1);
+  const maxAbs = Math.max(Math.abs(aNum), Math.abs(bNum), 1);
+  const valueProximity = 1 - Math.abs(aNum - bNum) / maxAbs;
+  let patternSimilarity = 0;
+  if (aDim > 0 && bDim > 0) {
+    const minLen = Math.min(aDim, bDim);
+    const aN = aRaw.neighbors.slice(0, minLen);
+    const bN = bRaw.neighbors.slice(0, minLen);
+    const dotProduct = aN.reduce((s, v, i) => s + v * bN[i], 0);
+    const normA = Math.sqrt(aN.reduce((s, v) => s + v * v, 0)) || 1;
+    const normB = Math.sqrt(bN.reduce((s, v) => s + v * v, 0)) || 1;
+    patternSimilarity = dotProduct / (normA * normB);
+  }
+  const strength = dimMatch * 0.3 + Math.max(valueProximity, 0) * 0.3 + (patternSimilarity + 1) / 2 * 0.4;
+  return {
+    reiType: "ResonanceResult",
+    strength: Math.max(0, Math.min(1, strength)),
+    dimMatch,
+    valueProximity: Math.max(0, valueProximity),
+    patternSimilarity,
+    resonates: strength >= 0.5
+  };
+}
+function getResonanceField(input, meta) {
+  const raw = unwrapReiVal(input);
+  const isAwakened = computeAwareness(input, meta) >= AWAKENING_THRESHOLD;
+  return {
+    reiType: "ResonanceField",
+    awakened: isAwakened,
+    // 覚醒値はより広い共鳴場を持つ
+    range: isAwakened ? "non-local" : "local",
+    capacity: isAwakened ? 1 : 0.3,
+    signature: raw?.neighbors?.length ?? 0
+  };
+}
+function resonanceMap(input) {
+  const raw = unwrapReiVal(input);
+  if (!Array.isArray(raw)) {
+    if (raw?.reiType === "MDim") {
+      return raw.neighbors.map((n, i) => ({
+        pair: [raw.center, n],
+        index: i,
+        strength: 1 - Math.abs(raw.center - n) / Math.max(Math.abs(raw.center), Math.abs(n), 1)
+      }));
+    }
+    return [];
+  }
+  const results = [];
+  for (let i = 0; i < raw.length; i++) {
+    for (let j = i + 1; j < raw.length; j++) {
+      const res = computeResonance(raw[i], raw[j]);
+      results.push({ pair: [i, j], ...res });
+    }
+  }
+  return results;
+}
+function resonanceChain(input) {
+  const raw = unwrapReiVal(input);
+  if (!raw || raw.reiType !== "MDim") {
+    return { reiType: "ResonanceChain", chain: [], depth: 0 };
+  }
+  const chain = [];
+  const visited = /* @__PURE__ */ new Set();
+  function trace(value, depth) {
+    if (visited.has(value) || depth > 5) return;
+    visited.add(value);
+    chain.push({ value, depth });
+    for (const n of raw.neighbors) {
+      if (!visited.has(n)) {
+        const proximity = 1 - Math.abs(value - n) / Math.max(Math.abs(value), Math.abs(n), 1);
+        if (proximity > 0.3) trace(n, depth + 1);
+      }
+    }
+  }
+  trace(raw.center, 0);
+  return { reiType: "ResonanceChain", chain, depth: chain.length };
+}
+function projectAs(input, targetType) {
+  const raw = unwrapReiVal(input);
+  let md;
+  if (raw?.reiType === "MDim") {
+    md = raw;
+  } else if (Array.isArray(raw)) {
+    md = projectToMDim(raw, "first");
+  } else if (typeof raw === "number") {
+    const digits = String(Math.abs(Math.floor(raw))).split("").map(Number);
+    md = { reiType: "MDim", center: digits[0], neighbors: digits.slice(1), mode: "weighted" };
+  } else {
+    md = { reiType: "MDim", center: 0, neighbors: [], mode: "weighted" };
+  }
+  switch (targetType) {
+    case "graph": {
+      const edges = md.neighbors.map((n, i) => ({
+        from: md.center,
+        to: n,
+        weight: Math.abs(md.center - n)
+      }));
+      return {
+        reiType: "GraphProjection",
+        hub: md.center,
+        nodes: [md.center, ...md.neighbors],
+        edges,
+        degree: md.neighbors.length
+      };
+    }
+    case "series": {
+      const series = [md.center, ...md.neighbors];
+      const deltas = [];
+      for (let i = 1; i < series.length; i++) deltas.push(series[i] - series[i - 1]);
+      return {
+        reiType: "SeriesProjection",
+        values: series,
+        deltas,
+        trend: deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length > 0 ? "up" : "down" : "flat",
+        length: series.length
+      };
+    }
+    case "matrix": {
+      const size = md.neighbors.length + 1;
+      const row = [md.center, ...md.neighbors];
+      return {
+        reiType: "MatrixProjection",
+        row,
+        size,
+        diagonal: md.center,
+        trace: md.center
+        // 1行分のtrace
+      };
+    }
+    case "tree": {
+      const children = md.neighbors.map((n, i) => ({
+        value: n,
+        depth: 1,
+        index: i,
+        leaf: true
+      }));
+      return {
+        reiType: "TreeProjection",
+        root: md.center,
+        children,
+        height: md.neighbors.length > 0 ? 1 : 0,
+        leaves: md.neighbors.length
+      };
+    }
+    default:
+      throw new Error(`\u672A\u77E5\u306E\u5C04\u5F71\u578B: ${targetType}`);
+  }
+}
+function composeProjections(input) {
+  const raw = unwrapReiVal(input);
+  if (!Array.isArray(raw)) {
+    if (raw?.reiType === "MDim") {
+      const allProj = projectAll(raw);
+      const values = allProj.map((p) => computeMDim(p));
+      const center = values.reduce((a, b) => a + b, 0) / values.length;
+      return { reiType: "MDim", center, neighbors: values, mode: "weighted" };
+    }
+    return raw;
+  }
+  const projected = raw.map((item) => {
+    if (item?.reiType === "MDim") return item;
+    return projectToMDim(typeof item === "number" ? [item] : item, "first");
+  });
+  const centers = projected.map((p) => p.center);
+  const avgCenter = centers.reduce((a, b) => a + b, 0) / centers.length;
+  return { reiType: "MDim", center: avgCenter, neighbors: centers, mode: "weighted" };
+}
+function checkRepresentable(input) {
+  const raw = unwrapReiVal(input);
+  const result = { reiType: "RepresentableResult", representable: true, reason: "", lossless: true };
+  if (raw === null || raw === void 0) {
+    result.representable = true;
+    result.reason = "null \u2192 \u{1D544}{0;}";
+    result.lossless = true;
+  } else if (typeof raw === "number") {
+    result.representable = true;
+    result.reason = "number \u2192 \u{1D544}{n;}";
+    result.lossless = true;
+  } else if (typeof raw === "string") {
+    result.representable = true;
+    result.reason = "string \u2192 \u{1D544}{charCode(center); charCodes(rest)}";
+    result.lossless = true;
+  } else if (typeof raw === "boolean") {
+    result.representable = true;
+    result.reason = "boolean \u2192 \u{1D544}{0|1;}";
+    result.lossless = true;
+  } else if (Array.isArray(raw)) {
+    result.representable = true;
+    result.reason = `array[${raw.length}] \u2192 \u{1D544}{first; rest}`;
+    result.lossless = true;
+  } else if (raw?.reiType === "MDim") {
+    result.representable = true;
+    result.reason = "already \u{1D544}";
+    result.lossless = true;
+  } else if (raw?.reiType === "Space") {
+    result.representable = true;
+    result.reason = "Space \u2192 nested \u{1D544} (U3 hierarchical)";
+    result.lossless = true;
+  } else if (raw?.reiType) {
+    result.representable = true;
+    result.reason = `${raw.reiType} \u2192 \u{1D544} via structural projection`;
+    result.lossless = false;
+  } else if (typeof raw === "object") {
+    result.representable = true;
+    result.reason = "object \u2192 \u{1D544}{keys; values}";
+    result.lossless = false;
+  } else {
+    result.representable = false;
+    result.reason = `unknown type: ${typeof raw}`;
+    result.lossless = false;
+  }
+  return result;
+}
+function deriveMode(md, baseModes, weights) {
+  if (!md || md.reiType !== "MDim") throw new Error("derive_mode: \u{1D544}\u578B\u304C\u5FC5\u8981\u3067\u3059");
+  const results = baseModes.map((m) => computeMDim({ ...md, mode: m }));
+  let derived = 0;
+  let totalWeight = 0;
+  for (let i = 0; i < results.length; i++) {
+    const w = weights[i] ?? 1;
+    derived += results[i] * w;
+    totalWeight += w;
+  }
+  derived = totalWeight > 0 ? derived / totalWeight : 0;
+  return {
+    reiType: "DerivedModeResult",
+    value: derived,
+    baseModes,
+    weights,
+    formula: baseModes.map((m, i) => `${weights[i] ?? 1}\xD7${m}`).join(" + ")
+  };
+}
+function getModeSpace(md) {
+  if (!md || md.reiType !== "MDim") {
+    return { reiType: "ModeSpace", modes: ALL_COMPUTE_MODES.length, values: [], coverage: 0 };
+  }
+  const values = ALL_COMPUTE_MODES.map((mode) => ({
+    mode,
+    value: computeMDim({ ...md, mode })
+  }));
+  const distances = [];
+  for (let i = 0; i < values.length; i++) {
+    distances[i] = [];
+    for (let j = 0; j < values.length; j++) {
+      distances[i][j] = Math.abs(values[i].value - values[j].value);
+    }
+  }
+  const allVals = values.map((v) => v.value);
+  const mean = allVals.reduce((a, b) => a + b, 0) / allVals.length;
+  const variance = allVals.reduce((a, v) => a + (v - mean) ** 2, 0) / allVals.length;
+  return {
+    reiType: "ModeSpace",
+    modes: ALL_COMPUTE_MODES.length,
+    values,
+    variance,
+    diversity: Math.sqrt(variance),
+    coverage: 1
+    // 全モード利用可能
+  };
+}
+function measureDepth(input) {
+  const raw = unwrapReiVal(input);
+  if (!raw || raw.reiType !== "MDim") return 0;
+  let maxDepth = 0;
+  if (raw.center !== null && typeof raw.center === "object" && raw.center.reiType === "MDim") {
+    maxDepth = Math.max(maxDepth, 1 + measureDepth(raw.center));
+  }
+  if (raw.neighbors) {
+    for (const n of raw.neighbors) {
+      if (n !== null && typeof n === "object" && n.reiType === "MDim") {
+        maxDepth = Math.max(maxDepth, 1 + measureDepth(n));
+      }
+    }
+  }
+  return maxDepth;
+}
+function nestMDim(input, levels = 1) {
+  const raw = unwrapReiVal(input);
+  if (!raw || raw.reiType !== "MDim") {
+    const md = { reiType: "MDim", center: typeof raw === "number" ? raw : 0, neighbors: [], mode: "weighted" };
+    return levels <= 1 ? md : nestMDim(md, levels - 1);
+  }
+  if (levels <= 0) return raw;
+  const wrapped = {
+    reiType: "MDim",
+    center: raw,
+    neighbors: [],
+    mode: "weighted"
+  };
+  return levels <= 1 ? wrapped : nestMDim(wrapped, levels - 1);
+}
+function recursiveCompute(input) {
+  const raw = unwrapReiVal(input);
+  if (typeof raw === "number") return raw;
+  if (!raw || raw.reiType !== "MDim") return 0;
+  const centerVal = raw.center?.reiType === "MDim" ? recursiveCompute(raw.center) : typeof raw.center === "number" ? raw.center : 0;
+  const neighborVals = (raw.neighbors || []).map(
+    (n) => n?.reiType === "MDim" ? recursiveCompute(n) : typeof n === "number" ? n : 0
+  );
+  return computeMDim({
+    reiType: "MDim",
+    center: centerVal,
+    neighbors: neighborVals,
+    mode: raw.mode || "weighted"
+  });
+}
+function structuralSimilarity(a, b) {
+  const aRaw = unwrapReiVal(a);
+  const bRaw = unwrapReiVal(b);
+  const aDim = aRaw?.neighbors?.length ?? 0;
+  const bDim = bRaw?.neighbors?.length ?? 0;
+  const dimSim = aDim === 0 && bDim === 0 ? 1 : 1 - Math.abs(aDim - bDim) / Math.max(aDim, bDim, 1);
+  const aCenter = typeof aRaw === "number" ? aRaw : aRaw?.center ?? 0;
+  const bCenter = typeof bRaw === "number" ? bRaw : bRaw?.center ?? 0;
+  const aRatios = (aRaw?.neighbors ?? []).map((n) => aCenter !== 0 ? n / aCenter : n);
+  const bRatios = (bRaw?.neighbors ?? []).map((n) => bCenter !== 0 ? n / bCenter : n);
+  let ratioSim = 0;
+  if (aRatios.length > 0 && bRatios.length > 0) {
+    const minLen = Math.min(aRatios.length, bRatios.length);
+    let sumDiff = 0;
+    for (let i = 0; i < minLen; i++) {
+      sumDiff += Math.abs(aRatios[i] - bRatios[i]);
+    }
+    ratioSim = 1 / (1 + sumDiff / minLen);
+  } else if (aRatios.length === 0 && bRatios.length === 0) {
+    ratioSim = 1;
+  }
+  const modeSim = (aRaw?.mode ?? "weighted") === (bRaw?.mode ?? "weighted") ? 1 : 0.5;
+  const similarity = dimSim * 0.4 + ratioSim * 0.4 + modeSim * 0.2;
+  return {
+    reiType: "SimilarityResult",
+    similarity,
+    dimSimilarity: dimSim,
+    ratioSimilarity: ratioSim,
+    modeSimilarity: modeSim,
+    isomorphic: similarity > 0.9
+  };
+}
+function bridgeMDim(a, b) {
+  const sim = structuralSimilarity(a, b);
+  const aRaw = unwrapReiVal(a);
+  const bRaw = unwrapReiVal(b);
+  const aCenter = typeof aRaw === "number" ? aRaw : aRaw?.center ?? 0;
+  const bCenter = typeof bRaw === "number" ? bRaw : bRaw?.center ?? 0;
+  const scaleFactor = aCenter !== 0 ? bCenter / aCenter : 1;
+  return {
+    reiType: "BridgeResult",
+    similarity: sim.similarity,
+    scaleFactor,
+    mapping: {
+      centerA: aCenter,
+      centerB: bCenter,
+      dimA: aRaw?.neighbors?.length ?? 0,
+      dimB: bRaw?.neighbors?.length ?? 0
+    },
+    transferable: sim.similarity > 0.5
+  };
+}
+function encodeMDim(input) {
+  const raw = unwrapReiVal(input);
+  if (raw?.reiType === "MDim") return raw;
+  if (typeof raw === "number") {
+    return { reiType: "MDim", center: raw, neighbors: [], mode: "weighted" };
+  }
+  if (typeof raw === "string") {
+    const codes = Array.from(raw).map((c) => c.charCodeAt(0));
+    if (codes.length === 0) return { reiType: "MDim", center: 0, neighbors: [], mode: "weighted" };
+    return { reiType: "MDim", center: codes[0], neighbors: codes.slice(1), mode: "weighted" };
+  }
+  if (typeof raw === "boolean") {
+    return { reiType: "MDim", center: raw ? 1 : 0, neighbors: [], mode: "weighted" };
+  }
+  if (raw === null || raw === void 0) {
+    return { reiType: "MDim", center: 0, neighbors: [], mode: "weighted" };
+  }
+  if (Array.isArray(raw)) {
+    const nums = raw.map((v) => typeof v === "number" ? v : 0);
+    return { reiType: "MDim", center: nums[0] ?? 0, neighbors: nums.slice(1), mode: "weighted" };
+  }
+  if (typeof raw === "object") {
+    const values = Object.values(raw).filter((v) => typeof v === "number");
+    return { reiType: "MDim", center: values[0] ?? 0, neighbors: values.slice(1), mode: "weighted" };
+  }
+  return { reiType: "MDim", center: 0, neighbors: [], mode: "weighted" };
+}
+function decodeMDim(input, targetType) {
+  const raw = unwrapReiVal(input);
+  const md = raw?.reiType === "MDim" ? raw : encodeMDim(raw);
+  switch (targetType) {
+    case "number":
+      return computeMDim(md);
+    case "array":
+      return [md.center, ...md.neighbors];
+    case "string":
+      return String.fromCharCode(md.center, ...md.neighbors);
+    case "object":
+      const obj = { center: md.center };
+      md.neighbors.forEach((n, i) => {
+        obj[`n${i}`] = n;
+      });
+      return obj;
+    default:
+      return [md.center, ...md.neighbors];
+  }
+}
+function mapSolutions(md, transformName, param = 1) {
+  const solutions = computeAll(md);
+  return solutions.map((sol) => {
+    let transformed;
+    switch (transformName) {
+      case "scale":
+        transformed = sol.value * param;
+        break;
+      case "shift":
+        transformed = sol.value + param;
+        break;
+      case "normalize": {
+        const maxVal = Math.max(...solutions.map((s) => Math.abs(s.value)), 1);
+        transformed = sol.value / maxVal;
+        break;
+      }
+      case "rank_normalize": {
+        const sorted = [...solutions].sort((a, b) => a.value - b.value);
+        const rank = sorted.findIndex((s) => s.mode === sol.mode);
+        transformed = (rank + 1) / solutions.length;
+        break;
+      }
+      default:
+        transformed = sol.value;
+    }
+    return { ...sol, original: sol.value, value: transformed, transform: transformName };
+  });
+}
+function computeConsensus(md) {
+  const solutions = computeAll(md);
+  const values = solutions.map((s) => s.value);
+  const sorted = [...values].sort((a, b) => a - b);
+  const median = sorted.length % 2 === 0 ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2 : sorted[Math.floor(sorted.length / 2)];
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((a, v) => a + (v - mean) ** 2, 0) / values.length;
+  const stddev = Math.sqrt(variance);
+  const agreement = 1 / (1 + stddev / (Math.abs(mean) || 1));
+  return {
+    reiType: "ConsensusResult",
+    median,
+    mean,
+    stddev,
+    agreement,
+    solutions: solutions.length,
+    range: { min: sorted[0], max: sorted[sorted.length - 1] }
+  };
+}
+function selectBest(md, criteria = "median_closest") {
+  const solutions = computeAll(md);
+  const values = solutions.map((s) => s.value);
+  switch (criteria) {
+    case "max":
+      return solutions.reduce((best, s) => s.value > best.value ? s : best);
+    case "min":
+      return solutions.reduce((best, s) => s.value < best.value ? s : best);
+    case "median_closest":
+    default: {
+      const sorted = [...values].sort((a, b) => a - b);
+      const median = sorted.length % 2 === 0 ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2 : sorted[Math.floor(sorted.length / 2)];
+      return solutions.reduce(
+        (best, s) => Math.abs(s.value - median) < Math.abs(best.value - median) ? s : best
+      );
+    }
+  }
+}
+function rankSolutions(md, criteria = "value") {
+  const solutions = computeAll(md);
+  const sorted = [...solutions].sort((a, b) => {
+    switch (criteria) {
+      case "value":
+        return b.value - a.value;
+      // 降順
+      case "abs":
+        return Math.abs(b.value) - Math.abs(a.value);
+      default:
+        return b.value - a.value;
+    }
+  });
+  return sorted.map((s, i) => ({ ...s, rank: i + 1 }));
+}
+function solutionCompleteness(md) {
+  const solutions = computeAll(md);
+  const values = solutions.map((s) => s.value);
+  const uniqueValues = new Set(values.map((v) => Math.round(v * 1e6) / 1e6));
+  const uniqueRatio = uniqueValues.size / values.length;
+  const sorted = [...values].sort((a, b) => a - b);
+  const range = sorted[sorted.length - 1] - sorted[0];
+  const bins = 4;
+  const binWidth = range / bins || 1;
+  const histogram = new Array(bins).fill(0);
+  for (const v of values) {
+    const bin = Math.min(Math.floor((v - sorted[0]) / binWidth), bins - 1);
+    histogram[bin]++;
+  }
+  const total = values.length;
+  let entropy = 0;
+  for (const count of histogram) {
+    if (count > 0) {
+      const p = count / total;
+      entropy -= p * Math.log2(p);
+    }
+  }
+  const maxEntropy = Math.log2(bins);
+  const uniformity = maxEntropy > 0 ? entropy / maxEntropy : 1;
+  return {
+    reiType: "CompletenessResult",
+    totalModes: solutions.length,
+    uniqueSolutions: uniqueValues.size,
+    uniqueRatio,
+    range,
+    uniformity,
+    completeness: uniqueRatio * 0.5 + uniformity * 0.5,
+    isComplete: uniqueRatio > 0.5 && uniformity > 0.3
+  };
+}
+function quadNot(v) {
+  switch (v) {
+    case "top":
+      return "bottom";
+    case "bottom":
+      return "top";
+    case "topPi":
+      return "bottomPi";
+    case "bottomPi":
+      return "topPi";
+    default:
+      return v;
+  }
+}
+function quadAnd(a, b) {
+  if (a === "bottom" || b === "bottom") return "bottom";
+  if (a === "top" && b === "top") return "top";
+  return "bottomPi";
+}
+function quadOr(a, b) {
+  if (a === "top" || b === "top") return "top";
+  if (a === "bottom" && b === "bottom") return "bottom";
+  return "topPi";
+}
+var PHASE_ORDER = ["void", "dot", "line", "surface", "solid", "omega"];
+function createGenesis() {
+  return { reiType: "State", state: "void", omega: 0, history: ["void"] };
+}
+function genesisForward(g) {
+  const idx = PHASE_ORDER.indexOf(g.state);
+  if (idx < PHASE_ORDER.length - 1) {
+    g.state = PHASE_ORDER[idx + 1];
+    g.history.push(g.state);
+    if (g.state === "omega") g.omega = 1;
+  }
+}
+var Evaluator = class {
+  constructor(parent) {
+    this.env = new Environment(parent ?? null);
+    this.registerBuiltins();
+  }
+  registerBuiltins() {
+    this.env.define("e", Math.E);
+    this.env.define("PI", Math.PI);
+    this.env.define("genesis", {
+      reiType: "Function",
+      name: "genesis",
+      params: [],
+      body: null,
+      closure: this.env
+    });
+    const mathFns = ["abs", "sqrt", "sin", "cos", "log", "exp", "floor", "ceil", "round", "min", "max", "len", "print"];
+    for (const name of mathFns) {
+      this.env.define(name, {
+        reiType: "Function",
+        name,
+        params: ["x"],
+        body: null,
+        closure: this.env
+      });
+    }
+  }
+  eval(ast) {
+    switch (ast.type) {
+      case "Program":
+        return this.evalProgram(ast);
+      case "NumLit":
+        return ast.value;
+      case "StrLit":
+        return ast.value;
+      case "BoolLit":
+        return ast.value;
+      case "NullLit":
+        return null;
+      case "ExtLit":
+        return parseExtLit(ast.raw);
+      case "ConstLit":
+        return this.evalConstLit(ast);
+      case "QuadLit":
+        return { reiType: "Quad", value: ast.value };
+      case "MDimLit":
+        return this.evalMDimLit(ast);
+      case "ArrayLit":
+        return ast.elements.map((e) => this.eval(e));
+      case "Ident":
+        return this.env.get(ast.name);
+      case "LetStmt":
+        return this.evalLetStmt(ast);
+      case "MutStmt":
+        return this.evalMutStmt(ast);
+      case "CompressDef":
+        return this.evalCompressDef(ast);
+      case "BinOp":
+        return this.evalBinOp(ast);
+      case "UnaryOp":
+        return this.evalUnaryOp(ast);
+      case "Pipe":
+        return this.evalPipe(ast);
+      case "FnCall":
+        return this.evalFnCall(ast);
+      case "MemberAccess":
+        return this.evalMemberAccess(ast);
+      case "IndexAccess":
+        return this.evalIndexAccess(ast);
+      case "Extend":
+        return this.evalExtend(ast);
+      case "Reduce":
+        return this.evalReduce(ast);
+      case "ConvergeOp":
+        return this.evalConverge(ast);
+      case "DivergeOp":
+        return this.evalDiverge(ast);
+      case "ReflectOp":
+        return this.evalReflect(ast);
+      case "IfExpr":
+        return this.evalIfExpr(ast);
+      case "MatchExpr":
+        return this.evalMatchExpr(ast);
+      // ── v0.3 ──
+      case "SpaceLit":
+        return this.evalSpaceLit(ast);
+      default:
+        throw new Error(`\u672A\u5B9F\u88C5\u306E\u30CE\u30FC\u30C9\u578B: ${ast.type}`);
+    }
+  }
+  evalProgram(ast) {
+    let result = null;
+    for (const stmt of ast.body) {
+      result = this.eval(stmt);
+    }
+    return result;
+  }
+  evalConstLit(ast) {
+    switch (ast.value) {
+      case "\u30FB":
+        return createGenesis();
+      case "\u2205":
+        return null;
+      case "i":
+        return { reiType: "Ext", base: NaN, order: 0, subscripts: "", valStar: () => NaN };
+      case "\u03A6":
+        return "\u03A6";
+      case "\u03A8":
+        return "\u03A8";
+      case "\u03A9":
+        return "\u03A9";
+      default:
+        return null;
+    }
+  }
+  evalMDimLit(ast) {
+    const center = this.toNumber(this.eval(ast.center));
+    const neighbors = ast.neighbors.map((n) => this.toNumber(this.eval(n)));
+    const weights = ast.weight ? [this.toNumber(this.eval(ast.weight))] : void 0;
+    const mode = ast.mode || "weighted";
+    return { reiType: "MDim", center, neighbors, mode, weights };
+  }
+  // ── v0.3: Space literal evaluation ──
+  evalSpaceLit(ast) {
+    const space = createSpace(ast.topology || "flat");
+    for (const layerDef of ast.layers) {
+      const layerIndex = typeof layerDef.index === "object" ? this.toNumber(this.eval(layerDef.index)) : layerDef.index;
+      for (const nodeExpr of layerDef.nodes) {
+        const val = this.eval(nodeExpr);
+        if (this.isMDim(val)) {
+          addNodeToLayer(space, layerIndex, val.center, val.neighbors, val.mode, val.weights);
+        } else if (typeof val === "number") {
+          addNodeToLayer(space, layerIndex, val, []);
+        }
+      }
+    }
+    return space;
+  }
+  evalLetStmt(ast) {
+    const val = this.eval(ast.init);
+    this.env.define(ast.name, val, false);
+    return val;
+  }
+  evalMutStmt(ast) {
+    const val = this.eval(ast.init);
+    this.env.define(ast.name, val, true);
+    return val;
+  }
+  evalCompressDef(ast) {
+    const fn = {
+      reiType: "Function",
+      name: ast.name,
+      params: ast.params,
+      body: ast.body,
+      closure: this.env
+    };
+    this.env.define(ast.name, fn);
+    return fn;
+  }
+  evalBinOp(ast) {
+    const left = this.eval(ast.left);
+    const right = this.eval(ast.right);
+    if (this.isQuad(left) && this.isQuad(right)) {
+      switch (ast.op) {
+        case "\u2227":
+          return { reiType: "Quad", value: quadAnd(left.value, right.value) };
+        case "\u2228":
+          return { reiType: "Quad", value: quadOr(left.value, right.value) };
+      }
+    }
+    const l = this.toNumber(left);
+    const r = this.toNumber(right);
+    switch (ast.op) {
+      case "+":
+        return l + r;
+      case "-":
+        return l - r;
+      case "*":
+        return l * r;
+      case "/":
+        return r !== 0 ? l / r : NaN;
+      case "\u2295":
+        return l + r;
+      // ⊕
+      case "\u2297":
+        return l * r;
+      // ⊗
+      case "\xB7":
+        return l * r;
+      // ·
+      case "==":
+        return l === r;
+      case "!=":
+        return l !== r;
+      case ">":
+        return l > r;
+      case "<":
+        return l < r;
+      case ">=":
+        return l >= r;
+      case "<=":
+        return l <= r;
+      case ">\u03BA":
+        return l > r;
+      // >κ
+      case "<\u03BA":
+        return l < r;
+      // <κ
+      case "=\u03BA":
+        return l === r;
+      // =κ
+      case "\u2227":
+        return l !== 0 && r !== 0;
+      // ∧
+      case "\u2228":
+        return l !== 0 || r !== 0;
+      // ∨
+      default:
+        throw new Error(`\u672A\u77E5\u306E\u6F14\u7B97\u5B50: ${ast.op}`);
+    }
+  }
+  evalUnaryOp(ast) {
+    const operand = this.eval(ast.operand);
+    switch (ast.op) {
+      case "-":
+        return -this.toNumber(operand);
+      case "\xAC":
+        if (this.isQuad(operand)) return { reiType: "Quad", value: quadNot(operand.value) };
+        return !operand;
+      default:
+        throw new Error(`\u672A\u77E5\u306E\u5358\u9805\u6F14\u7B97\u5B50: ${ast.op}`);
+    }
+  }
+  evalPipe(ast) {
+    const rawInput = this.eval(ast.input);
+    const cmd = ast.command;
+    if (cmd.type === "PipeCmd") {
+      if (cmd.cmd === "sigma") {
+        return this.execPipeCmd(rawInput, cmd);
+      }
+      const result = this.execPipeCmd(rawInput, cmd);
+      const prevMeta = getSigmaOf(rawInput);
+      return wrapWithSigma(result, rawInput, prevMeta.pipeCount > 0 ? prevMeta : void 0);
+    }
+    throw new Error("\u7121\u52B9\u306A\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9");
+  }
+  execPipeCmd(input, cmd) {
+    const { cmd: cmdName, mode, args: argNodes } = cmd;
+    const args = argNodes.map((a) => this.eval(a));
+    const sigmaMetadata = getSigmaOf(input);
+    const rawInput = unwrapReiVal(input);
+    if (cmdName === "sigma") {
+      if (this.isSpace(rawInput)) return getSpaceSigma(rawInput);
+      if (this.isDNode(rawInput)) {
+        const dn = rawInput;
+        return {
+          reiType: "SigmaResult",
+          flow: getSigmaFlow(dn),
+          memory: [...getSigmaMemory(dn), ...sigmaMetadata.memory],
+          layer: dn.layerIndex,
+          will: getSigmaWill(dn),
+          field: { center: dn.center, neighbors: [...dn.neighbors], layer: dn.layerIndex, index: dn.nodeIndex },
+          relation: []
+        };
+      }
+      return buildSigmaResult(rawInput, sigmaMetadata);
+    }
+    if (this.isSpace(rawInput)) {
+      const sp = rawInput;
+      switch (cmdName) {
+        case "step": {
+          const targetLayer = args.length > 0 ? this.toNumber(args[0]) : void 0;
+          stepSpace(sp, targetLayer);
+          return sp;
+        }
+        case "diffuse": {
+          let criteria = { type: "converged" };
+          let targetLayer;
+          let contractionMethod = "weighted";
+          if (args.length >= 1) {
+            const arg0 = args[0];
+            if (typeof arg0 === "number") {
+              criteria = { type: "steps", max: arg0 };
+            } else if (typeof arg0 === "string") {
+              switch (arg0) {
+                case "converged":
+                  criteria = { type: "converged" };
+                  break;
+                case "fixed":
+                  criteria = { type: "fixed" };
+                  break;
+                default:
+                  const eps = parseFloat(arg0);
+                  if (!isNaN(eps)) criteria = { type: "epsilon", threshold: eps };
+              }
+            }
+          }
+          if (args.length >= 2 && typeof args[1] === "number") targetLayer = args[1];
+          if (args.length >= 3 && typeof args[2] === "string") contractionMethod = args[2];
+          return diffuseSpace(sp, criteria, targetLayer, contractionMethod);
+        }
+        case "node": {
+          const layerIdx = args.length >= 1 ? this.toNumber(args[0]) : 0;
+          const nodeIdx = args.length >= 2 ? this.toNumber(args[1]) : 0;
+          const layer = sp.layers.get(layerIdx);
+          if (layer && layer.nodes[nodeIdx]) return layer.nodes[nodeIdx];
+          throw new Error(`\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093: \u5C64${layerIdx}, index ${nodeIdx}`);
+        }
+        case "sigma":
+          return getSpaceSigma(sp);
+        case "resonances": {
+          const threshold = args.length >= 1 ? this.toNumber(args[0]) : 0.5;
+          return findResonances(sp, threshold);
+        }
+        case "freeze": {
+          const layerIdx = this.toNumber(args[0] ?? 0);
+          const layer = sp.layers.get(layerIdx);
+          if (layer) layer.frozen = true;
+          return sp;
+        }
+        case "thaw": {
+          const layerIdx = this.toNumber(args[0] ?? 0);
+          const layer = sp.layers.get(layerIdx);
+          if (layer) layer.frozen = false;
+          return sp;
+        }
+        case "spawn": {
+          const val = args[0];
+          const layerIdx = args.length >= 2 ? this.toNumber(args[1]) : 0;
+          if (this.isMDim(val)) {
+            addNodeToLayer(sp, layerIdx, val.center, val.neighbors, val.mode, val.weights);
+          }
+          return sp;
+        }
+        case "result": {
+          const layerIdx = args.length >= 1 ? this.toNumber(args[0]) : void 0;
+          const results = [];
+          for (const [lIdx, layer] of sp.layers) {
+            if (layerIdx !== void 0 && lIdx !== layerIdx) continue;
+            for (const n of layer.nodes) results.push(computeNodeValue(n));
+          }
+          return results.length === 1 ? results[0] : results;
+        }
+      }
+    }
+    if (this.isDNode(rawInput)) {
+      const dn = rawInput;
+      switch (cmdName) {
+        case "sigma": {
+          return buildSigmaResult(dn, sigmaMetadata);
+        }
+        case "compute":
+          return computeNodeValue(dn);
+        case "center":
+          return dn.center;
+        case "neighbors":
+          return dn.neighbors;
+        case "dim":
+          return dn.neighbors.length;
+        case "stage":
+          return dn.stage;
+        case "step": {
+          stepNode(dn);
+          return dn;
+        }
+        case "extract": {
+          return { reiType: "MDim", center: dn.center, neighbors: dn.neighbors, mode: dn.mode, weights: dn.weights };
+        }
+      }
+    }
+    if (this.isObj(rawInput) && rawInput.reiType === "SigmaResult") {
+      switch (cmdName) {
+        case "flow":
+          return rawInput.flow;
+        case "memory":
+          return rawInput.memory;
+        case "layer":
+        case "\u5C64":
+          return rawInput.layer;
+        case "will":
+          return rawInput.will;
+        case "field":
+          return rawInput.field;
+        case "relation":
+          return rawInput.relation ?? [];
+      }
+    }
+    if (cmdName === "project") {
+      const centerSpec = args.length > 0 ? args[0] : ":first";
+      return projectToMDim(rawInput, centerSpec);
+    }
+    if (cmdName === "reproject") {
+      if (this.isMDim(rawInput) && args.length > 0) {
+        const newCenter = args[0];
+        const allElements = [rawInput.center, ...rawInput.neighbors];
+        const idx = typeof newCenter === "number" ? allElements.indexOf(newCenter) : 0;
+        if (idx < 0) throw new Error(`reproject: \u4E2D\u5FC3\u5024 ${newCenter} \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093`);
+        const center = allElements[idx];
+        const neighbors = allElements.filter((_, i) => i !== idx);
+        return { reiType: "MDim", center, neighbors, mode: rawInput.mode };
+      }
+      return projectToMDim(rawInput, args[0] ?? ":first");
+    }
+    if (cmdName === "modes") {
+      return [...ALL_COMPUTE_MODES];
+    }
+    if (cmdName === "blend") {
+      if (!this.isMDim(rawInput)) throw new Error("blend: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");
+      let blendedResult = 0;
+      let totalWeight = 0;
+      for (let i = 0; i < args.length - 1; i += 2) {
+        const modeName = String(args[i]);
+        const w = typeof args[i + 1] === "number" ? args[i + 1] : 0;
+        const result = computeMDim({ ...rawInput, mode: modeName });
+        blendedResult += w * result;
+        totalWeight += w;
+      }
+      return totalWeight > 0 ? blendedResult / totalWeight : computeMDim(rawInput);
+    }
+    if (cmdName === "project_all") {
+      return projectAll(rawInput);
+    }
+    if (cmdName === "compute_all") {
+      if (this.isMDim(rawInput)) return computeAll(rawInput);
+      if (Array.isArray(rawInput)) {
+        const projected = projectToMDim(rawInput, "first");
+        return computeAll(projected);
+      }
+      return [];
+    }
+    if (cmdName === "compare") {
+      if (!this.isMDim(rawInput)) throw new Error("compare: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");
+      const mode1 = args.length >= 1 ? String(args[0]) : "weighted";
+      const mode2 = args.length >= 2 ? String(args[1]) : "geometric";
+      return compareModes(rawInput, mode1, mode2);
+    }
+    if (cmdName === "perspectives") {
+      return perspectives(rawInput);
+    }
+    if (cmdName === "flatten_nested") {
+      if (this.isMDim(rawInput)) return computeNestedMDim(rawInput);
+      return rawInput;
+    }
+    if (cmdName === "respond") {
+      const stimulus = args.length >= 1 ? this.toNumber(args[0]) : 0;
+      const method = args.length >= 2 ? String(args[1]) : "absorb";
+      return respondToStimulus(rawInput, stimulus, method);
+    }
+    if (cmdName === "sensitivity") {
+      return computeSensitivity(rawInput);
+    }
+    if (cmdName === "awareness") {
+      return computeAwareness(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "awakened") {
+      return computeAwareness(rawInput, sigmaMetadata) >= AWAKENING_THRESHOLD;
+    }
+    if (cmdName === "transform") {
+      const transformName = args.length >= 1 ? String(args[0]) : "scale";
+      const param = args.length >= 2 ? this.toNumber(args[1]) : 1;
+      return applyTransform(rawInput, transformName, param);
+    }
+    if (cmdName === "mode_equiv") {
+      if (!this.isMDim(rawInput)) throw new Error("mode_equiv: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");
+      const m1 = args.length >= 1 ? String(args[0]) : "weighted";
+      const m2 = args.length >= 2 ? String(args[1]) : "geometric";
+      return checkModeEquivalence(rawInput, m1, m2);
+    }
+    if (cmdName === "resonate") {
+      if (args.length < 1) throw new Error("resonate: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");
+      return computeResonance(rawInput, args[0]);
+    }
+    if (cmdName === "resonance_field") {
+      return getResonanceField(rawInput, sigmaMetadata);
+    }
+    if (cmdName === "resonance_map") {
+      return resonanceMap(rawInput);
+    }
+    if (cmdName === "resonance_chain") {
+      return resonanceChain(rawInput);
+    }
+    if (cmdName === "project_as") {
+      const targetType = args.length >= 1 ? String(args[0]) : "graph";
+      return projectAs(rawInput, targetType);
+    }
+    if (cmdName === "compose_projections") {
+      return composeProjections(rawInput);
+    }
+    if (cmdName === "representable") {
+      return checkRepresentable(rawInput);
+    }
+    if (cmdName === "derive_mode") {
+      if (!this.isMDim(rawInput)) throw new Error("derive_mode: \u{1D544}\u578B\u304C\u5FC5\u8981\u3067\u3059");
+      const modes = args.filter((a) => typeof a === "string");
+      const weights = args.filter((a) => typeof a === "number");
+      if (modes.length === 0) modes.push("weighted", "geometric");
+      if (weights.length === 0) weights.push(0.5, 0.5);
+      return deriveMode(rawInput, modes, weights);
+    }
+    if (cmdName === "mode_space") {
+      return getModeSpace(rawInput);
+    }
+    if (cmdName === "depth") {
+      return measureDepth(rawInput);
+    }
+    if (cmdName === "nest") {
+      const levels = args.length >= 1 ? this.toNumber(args[0]) : 1;
+      return nestMDim(rawInput, levels);
+    }
+    if (cmdName === "recursive_compute") {
+      return recursiveCompute(rawInput);
+    }
+    if (cmdName === "bridge") {
+      if (args.length < 1) throw new Error("bridge: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");
+      return bridgeMDim(rawInput, args[0]);
+    }
+    if (cmdName === "structural_similarity") {
+      if (args.length < 1) throw new Error("structural_similarity: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");
+      return structuralSimilarity(rawInput, args[0]);
+    }
+    if (cmdName === "encode") {
+      return encodeMDim(rawInput);
+    }
+    if (cmdName === "decode") {
+      const targetType = args.length >= 1 ? String(args[0]) : "array";
+      return decodeMDim(rawInput, targetType);
+    }
+    if (cmdName === "map_solutions") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          const projected = projectToMDim(rawInput, "first");
+          return mapSolutions(projected, args.length >= 1 ? String(args[0]) : "scale", args.length >= 2 ? this.toNumber(args[1]) : 1);
+        }
+        throw new Error("map_solutions: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059");
+      }
+      return mapSolutions(rawInput, args.length >= 1 ? String(args[0]) : "scale", args.length >= 2 ? this.toNumber(args[1]) : 1);
+    }
+    if (cmdName === "consensus") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return computeConsensus(projectToMDim(rawInput, "first"));
+        }
+        throw new Error("consensus: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059");
+      }
+      return computeConsensus(rawInput);
+    }
+    if (cmdName === "best") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return selectBest(projectToMDim(rawInput, "first"), args.length >= 1 ? String(args[0]) : "median_closest");
+        }
+        throw new Error("best: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059");
+      }
+      return selectBest(rawInput, args.length >= 1 ? String(args[0]) : "median_closest");
+    }
+    if (cmdName === "rank") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return rankSolutions(projectToMDim(rawInput, "first"), args.length >= 1 ? String(args[0]) : "value");
+        }
+        throw new Error("rank: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059");
+      }
+      return rankSolutions(rawInput, args.length >= 1 ? String(args[0]) : "value");
+    }
+    if (cmdName === "solution_completeness") {
+      if (!this.isMDim(rawInput)) {
+        if (Array.isArray(rawInput)) {
+          return solutionCompleteness(projectToMDim(rawInput, "first"));
+        }
+        throw new Error("solution_completeness: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059");
+      }
+      return solutionCompleteness(rawInput);
+    }
+    if (this.isMDim(rawInput)) {
+      const md = rawInput;
+      switch (cmdName) {
+        case "compute": {
+          const m = mode || md.mode;
+          return computeMDim({ ...md, mode: m });
+        }
+        case "center":
+          return md.center;
+        case "neighbors":
+          return md.neighbors;
+        case "dim":
+          return md.neighbors.length;
+        case "normalize": {
+          const sum = md.neighbors.reduce((a, b) => a + Math.abs(b), 0) || 1;
+          return { reiType: "MDim", center: md.center, neighbors: md.neighbors.map((n) => n / sum), mode: md.mode };
+        }
+        case "flatten":
+          return computeMDim(md);
+        case "map": {
+          if (args.length > 0 && this.isFunction(args[0])) {
+            const fn = args[0];
+            const newNeighbors = md.neighbors.map((n) => this.toNumber(this.callFunction(fn, [n])));
+            return { ...md, neighbors: newNeighbors };
+          }
+          return md;
+        }
+      }
+    }
+    if (this.isExt(rawInput)) {
+      const ext = rawInput;
+      switch (cmdName) {
+        case "order":
+          return ext.order;
+        case "base":
+          return ext.base;
+        case "valStar":
+        case "val":
+          return ext.valStar();
+        case "subscripts":
+          return ext.subscripts;
+      }
+    }
+    if (this.isGenesis(rawInput)) {
+      const g = rawInput;
+      switch (cmdName) {
+        case "forward":
+          genesisForward(g);
+          return g;
+        case "phase":
+          return g.state;
+        case "history":
+          return g.history;
+        case "omega":
+          return g.omega;
+      }
+    }
+    if (Array.isArray(rawInput)) {
+      switch (cmdName) {
+        case "len":
+          return rawInput.length;
+        case "sum":
+          return rawInput.reduce((a, b) => a + this.toNumber(b), 0);
+        case "avg":
+          return rawInput.length === 0 ? 0 : rawInput.reduce((a, b) => a + this.toNumber(b), 0) / rawInput.length;
+        case "first":
+          return rawInput[0] ?? null;
+        case "last":
+          return rawInput[rawInput.length - 1] ?? null;
+        case "reverse":
+          return [...rawInput].reverse();
+        case "sort":
+          return [...rawInput].sort((a, b) => this.toNumber(a) - this.toNumber(b));
+        case "map": {
+          if (args.length > 0 && this.isFunction(args[0])) {
+            return rawInput.map((v) => this.callFunction(args[0], [v]));
+          }
+          return rawInput;
+        }
+        case "filter": {
+          if (args.length > 0 && this.isFunction(args[0])) {
+            return rawInput.filter((v) => !!this.callFunction(args[0], [v]));
+          }
+          return rawInput;
+        }
+        case "reduce": {
+          if (args.length >= 2 && this.isFunction(args[0])) {
+            return rawInput.reduce((acc, v) => this.callFunction(args[0], [acc, v]), args[1]);
+          }
+          return rawInput;
+        }
+      }
+    }
+    if (typeof rawInput === "number") {
+      switch (cmdName) {
+        case "abs":
+          return Math.abs(rawInput);
+        case "sqrt":
+          return Math.sqrt(rawInput);
+        case "round":
+          return Math.round(rawInput);
+        case "floor":
+          return Math.floor(rawInput);
+        case "ceil":
+          return Math.ceil(rawInput);
+        case "negate":
+          return -rawInput;
+      }
+    }
+    if (typeof rawInput === "string") {
+      switch (cmdName) {
+        case "len":
+          return rawInput.length;
+        case "upper":
+          return rawInput.toUpperCase();
+        case "lower":
+          return rawInput.toLowerCase();
+        case "trim":
+          return rawInput.trim();
+        case "split":
+          return rawInput.split(args[0] ?? "");
+        case "reverse":
+          return Array.from(rawInput).reverse().join("");
+      }
+    }
+    if (cmdName === "\u290A" || cmdName === "converge") {
+      if (this.isMDim(rawInput)) return computeMDim(rawInput);
+      return rawInput;
+    }
+    if (cmdName === "\u290B" || cmdName === "diverge") {
+      if (typeof rawInput === "number") {
+        return { reiType: "MDim", center: rawInput, neighbors: [rawInput, rawInput, rawInput, rawInput], mode: "weighted" };
+      }
+      return rawInput;
+    }
+    if (this.env.has(cmdName)) {
+      const fn = this.env.get(cmdName);
+      if (this.isFunction(fn)) return this.callFunction(fn, [rawInput, ...args]);
+    }
+    throw new Error(`\u672A\u77E5\u306E\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9: ${cmdName}`);
+  }
+  evalFnCall(ast) {
+    const callee = this.eval(ast.callee);
+    const args = ast.args.map((a) => this.eval(a));
+    if (ast.callee.type === "Ident" && ast.callee.name === "genesis") return createGenesis();
+    if (this.isFunction(callee)) return this.callFunction(callee, args);
+    throw new Error(`\u547C\u3073\u51FA\u3057\u4E0D\u53EF\u80FD: ${JSON.stringify(callee)}`);
+  }
+  callFunction(fn, args) {
+    if (fn.body === null || fn.body === void 0) return this.callBuiltin(fn.name, args);
+    const callEnv = new Environment(fn.closure);
+    for (let i = 0; i < fn.params.length; i++) {
+      callEnv.define(fn.params[i], args[i] ?? null);
+    }
+    const savedEnv = this.env;
+    this.env = callEnv;
+    const result = this.eval(fn.body);
+    this.env = savedEnv;
+    return result;
+  }
+  callBuiltin(name, args) {
+    if (name === "genesis") return createGenesis();
+    const a = args[0] !== void 0 ? this.toNumber(args[0]) : 0;
+    const b = args[1] !== void 0 ? this.toNumber(args[1]) : 0;
+    switch (name) {
+      case "abs":
+        return Math.abs(a);
+      case "sqrt":
+        return Math.sqrt(a);
+      case "sin":
+        return Math.sin(a);
+      case "cos":
+        return Math.cos(a);
+      case "log":
+        return Math.log(a);
+      case "exp":
+        return Math.exp(a);
+      case "floor":
+        return Math.floor(a);
+      case "ceil":
+        return Math.ceil(a);
+      case "round":
+        return Math.round(a);
+      case "min":
+        return Math.min(a, b);
+      case "max":
+        return Math.max(a, b);
+      case "len":
+        if (Array.isArray(args[0])) return args[0].length;
+        if (typeof args[0] === "string") return args[0].length;
+        return 0;
+      case "print":
+        return args[0] ?? null;
+      default:
+        throw new Error(`\u672A\u77E5\u306E\u7D44\u8FBC\u307F\u95A2\u6570: ${name}`);
+    }
+  }
+  evalMemberAccess(ast) {
+    const rawObj = this.eval(ast.object);
+    const obj = unwrapReiVal(rawObj);
+    if (ast.member === "__sigma__") {
+      return getSigmaOf(rawObj);
+    }
+    if (this.isObj(obj) && obj.reiType === "SigmaResult") {
+      switch (ast.member) {
+        case "flow":
+          return obj.flow;
+        case "memory":
+          return obj.memory;
+        case "layer":
+          return obj.layer;
+        case "will":
+          return obj.will;
+        case "field":
+          return obj.field;
+        case "relation":
+          return obj.relation ?? [];
+      }
+    }
+    if (this.isObj(obj) && obj.stage !== void 0 && obj.momentum !== void 0 && obj.directions !== void 0) {
+      switch (ast.member) {
+        case "stage":
+          return obj.stage;
+        case "directions":
+          return obj.directions;
+        case "momentum":
+          return obj.momentum;
+        case "velocity":
+          return obj.velocity;
+      }
+    }
+    if (this.isObj(obj) && obj.tendency !== void 0 && obj.strength !== void 0) {
+      switch (ast.member) {
+        case "tendency":
+          return obj.tendency;
+        case "strength":
+          return obj.strength;
+        case "history":
+          return obj.history;
+      }
+    }
+    if (this.isObj(obj) && obj.layers !== void 0 && obj.total_nodes !== void 0) {
+      switch (ast.member) {
+        case "layers":
+          return obj.layers;
+        case "total_nodes":
+          return obj.total_nodes;
+        case "active_nodes":
+          return obj.active_nodes;
+        case "topology":
+          return obj.topology;
+      }
+    }
+    if (this.isObj(obj) && obj.global_stage !== void 0 && obj.converged_nodes !== void 0) {
+      switch (ast.member) {
+        case "global_stage":
+          return obj.global_stage;
+        case "converged_nodes":
+          return obj.converged_nodes;
+        case "expanding_nodes":
+          return obj.expanding_nodes;
+      }
+    }
+    if (this.isDNode(obj)) {
+      const dn = obj;
+      switch (ast.member) {
+        case "center":
+          return dn.center;
+        case "neighbors":
+          return dn.neighbors;
+        case "stage":
+          return dn.stage;
+        case "momentum":
+          return dn.momentum;
+        case "mode":
+          return dn.mode;
+        case "dim":
+          return dn.neighbors.length;
+      }
+    }
+    if (this.isMDim(obj)) {
+      switch (ast.member) {
+        case "center":
+          return obj.center;
+        case "neighbors":
+          return obj.neighbors;
+        case "mode":
+          return obj.mode;
+        case "dim":
+          return obj.neighbors.length;
+      }
+    }
+    if (this.isExt(obj)) {
+      switch (ast.member) {
+        case "order":
+          return obj.order;
+        case "base":
+          return obj.base;
+        case "subscripts":
+          return obj.subscripts;
+        case "valStar":
+          return obj.valStar();
+      }
+    }
+    if (this.isGenesis(obj)) {
+      switch (ast.member) {
+        case "state":
+        case "phase":
+          return obj.state;
+        case "omega":
+          return obj.omega;
+        case "history":
+          return obj.history;
+      }
+    }
+    if (Array.isArray(obj)) {
+      switch (ast.member) {
+        case "length":
+          return obj.length;
+        case "first":
+          return obj[0] ?? null;
+        case "last":
+          return obj[obj.length - 1] ?? null;
+      }
+    }
+    throw new Error(`\u30E1\u30F3\u30D0\u30FC ${ast.member} \u306B\u30A2\u30AF\u30BB\u30B9\u3067\u304D\u307E\u305B\u3093`);
+  }
+  evalIndexAccess(ast) {
+    const obj = this.eval(ast.object);
+    const idx = this.toNumber(this.eval(ast.index));
+    if (Array.isArray(obj)) return obj[idx] ?? null;
+    if (typeof obj === "string") return obj[idx] ?? null;
+    if (this.isMDim(obj)) return obj.neighbors[idx] ?? null;
+    throw new Error("\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u30A2\u30AF\u30BB\u30B9\u4E0D\u53EF");
+  }
+  evalExtend(ast) {
+    const target = this.eval(ast.target);
+    if (this.isExt(target)) {
+      if (ast.subscript) return createExtended(target.base, target.subscripts + ast.subscript);
+      return createExtended(target.base, target.subscripts + "o");
+    }
+    throw new Error("\u62E1\u5F35\u306F\u62E1\u5F35\u6570\u306B\u306E\u307F\u9069\u7528\u53EF\u80FD");
+  }
+  evalReduce(ast) {
+    const target = this.eval(ast.target);
+    if (this.isExt(target)) {
+      if (target.order <= 1) return target.base;
+      return createExtended(target.base, target.subscripts.slice(0, -1));
+    }
+    throw new Error("\u7E2E\u7D04\u306F\u62E1\u5F35\u6570\u306B\u306E\u307F\u9069\u7528\u53EF\u80FD");
+  }
+  evalConverge(ast) {
+    const left = this.eval(ast.left);
+    const right = this.eval(ast.right);
+    if (this.isMDim(left) && this.isMDim(right)) {
+      return {
+        reiType: "MDim",
+        center: (left.center + right.center) / 2,
+        neighbors: [...left.neighbors, ...right.neighbors],
+        mode: left.mode
+      };
+    }
+    return this.toNumber(left) + this.toNumber(right);
+  }
+  evalDiverge(ast) {
+    const left = this.eval(ast.left);
+    const right = this.eval(ast.right);
+    if (this.isMDim(left)) {
+      this.toNumber(right);
+      const half = Math.floor(left.neighbors.length / 2);
+      return [
+        { reiType: "MDim", center: left.center, neighbors: left.neighbors.slice(0, half), mode: left.mode },
+        { reiType: "MDim", center: left.center, neighbors: left.neighbors.slice(half), mode: left.mode }
+      ];
+    }
+    return this.toNumber(left) - this.toNumber(right);
+  }
+  evalReflect(ast) {
+    const left = this.eval(ast.left);
+    this.eval(ast.right);
+    if (this.isMDim(left)) {
+      return { reiType: "MDim", center: left.center, neighbors: [...left.neighbors].reverse(), mode: left.mode };
+    }
+    return this.toNumber(left);
+  }
+  evalIfExpr(ast) {
+    const cond = this.eval(ast.cond);
+    return this.isTruthy(cond) ? this.eval(ast.then) : this.eval(ast.else);
+  }
+  evalMatchExpr(ast) {
+    const target = this.eval(ast.target);
+    for (const { pattern, body } of ast.cases) {
+      const patVal = this.eval(pattern);
+      if (this.matches(target, patVal)) return this.eval(body);
+    }
+    throw new Error("\u30DE\u30C3\u30C1\u3059\u308B\u5206\u5C90\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093");
+  }
+  // --- Helpers ---
+  toNumber(val) {
+    if (val !== null && typeof val === "object" && val.reiType === "ReiVal") return this.toNumber(val.value);
+    if (typeof val === "number") return val;
+    if (typeof val === "boolean") return val ? 1 : 0;
+    if (val === null) return 0;
+    if (this.isExt(val)) return val.valStar();
+    if (this.isMDim(val)) return computeMDim(val);
+    if (typeof val === "string") return parseFloat(val) || 0;
+    return 0;
+  }
+  isTruthy(val) {
+    const v = unwrapReiVal(val);
+    if (v === null || v === false || v === 0) return false;
+    if (this.isQuad(v)) return v.value === "top" || v.value === "topPi";
+    return true;
+  }
+  matches(target, pattern) {
+    if (typeof target === typeof pattern && target === pattern) return true;
+    if (this.isQuad(target) && this.isQuad(pattern)) return target.value === pattern.value;
+    return false;
+  }
+  isObj(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && !Array.isArray(u);
+  }
+  isMDim(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && u.reiType === "MDim";
+  }
+  isExt(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && u.reiType === "Ext";
+  }
+  isGenesis(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && u.reiType === "State";
+  }
+  isFunction(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && u.reiType === "Function";
+  }
+  isQuad(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && u.reiType === "Quad";
+  }
+  // ── v0.3 ──
+  isSpace(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && u.reiType === "Space";
+  }
+  isDNode(v) {
+    const u = unwrapReiVal(v);
+    return u !== null && typeof u === "object" && u.reiType === "DNode";
+  }
+  // ── Tier 1 ──
+  isReiVal(v) {
+    return v !== null && typeof v === "object" && v.reiType === "ReiVal";
+  }
+  /** 値からσメタデータを取得（Tier 1） */
+  getSigmaMetadata(v) {
+    return getSigmaOf(v);
+  }
+  /** ReiValを透過的にアンラップ */
+  unwrap(v) {
+    return unwrapReiVal(v);
+  }
+};
+
+// src/index.ts
+var _evaluator = new Evaluator();
+function rei(code) {
+  const lexer = new Lexer(code);
+  const tokens = lexer.tokenize();
+  const parser = new Parser(tokens);
+  const ast = parser.parseProgram();
+  return _evaluator.eval(ast);
+}
+rei.reset = function reset() {
+  _evaluator = new Evaluator();
+};
+rei.evaluator = function evaluator() {
+  return _evaluator;
+};
+rei.parse = function parse(code) {
+  const lexer = new Lexer(code);
+  const tokens = lexer.tokenize();
+  const parser = new Parser(tokens);
+  return parser.parseProgram();
+};
+rei.tokenize = function tokenize(code) {
+  const lexer = new Lexer(code);
+  return lexer.tokenize();
+};
+
+
+
+window.rei = rei;
+window.Evaluator = Evaluator;
+window.Lexer = Lexer;
+window.Parser = Parser;
+})();
+</script>
+<script>
+// Engine already loaded above
+onReiReady();
+
+function onReiReady() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }, 600);
+}
+
+// === Helper Functions ===
+function safeRei(code) {
+  try {
+    const result = window.rei(code);
+    return { ok: true, value: result };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function numFmt(n) {
+  if (typeof n !== 'number') return String(n);
+  if (!isFinite(n)) return '∞';
+  if (Math.abs(n) > 1e6) return n.toExponential(2);
+  if (Math.abs(n) < 0.01 && n !== 0) return n.toExponential(2);
+  return n.toFixed(n === Math.floor(n) ? 0 : 2);
+}
+
+const MODE_COLORS = {
+  weighted: 'var(--mode-weighted)',
+  multiplicative: 'var(--mode-multi)',
+  harmonic: 'var(--mode-harmonic)',
+  exponential: 'var(--mode-exp)',
+  geometric: 'var(--mode-geo)',
+  median: 'var(--mode-median)',
+  minkowski: 'var(--mode-mink)',
+  entropy: 'var(--mode-entropy)',
+};
+
+const MODE_SHORT = {
+  weighted: 'WGT',
+  multiplicative: 'MUL',
+  harmonic: 'HAR',
+  exponential: 'EXP',
+  geometric: 'GEO',
+  median: 'MED',
+  minkowski: 'MNK',
+  entropy: 'ENT',
+};
+
+// === Demo 1: Multi-Mode Stability ===
+function runDemo1() {
+  const out = document.getElementById('output1');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const codeA = document.getElementById('code1a').value.trim();
+  const codeB = document.getElementById('code1b').value.trim();
+
+  window.rei.reset();
+  const rA = safeRei(codeA);
+  window.rei.reset();
+  const rB = safeRei(codeB);
+
+  if (!rA.ok || !rB.ok) {
+    out.innerHTML = `<span class="err">エラー: ${rA.error || rB.error}</span>`;
+    return;
+  }
+
+  const valsA = rA.value;
+  const valsB = rB.value;
+
+  // Build comparative bar charts
+  function buildChart(vals, label) {
+    // Normalize: use log scale for display if range is huge
+    const numbers = vals.map(v => typeof v.value === 'number' && isFinite(v.value) ? v.value : 0);
+    const maxAbs = Math.max(...numbers.map(Math.abs), 1);
+    const useLog = maxAbs > 1000;
+
+    const displayVals = useLog ? numbers.map(v => v > 0 ? Math.log10(v + 1) : 0) : numbers;
+    const maxDisplay = Math.max(...displayVals, 1);
+
+    let html = `<div style="margin-bottom:8px;font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">${label}${useLog ? ' (log₁₀ scale)' : ''}</div>`;
+    html += '<div class="bar-chart">';
+    vals.forEach((v, i) => {
+      const h = Math.max(2, (displayVals[i] / maxDisplay) * 130);
+      const color = MODE_COLORS[v.mode] || 'var(--accent)';
+      html += `<div class="bar-col">
+        <div class="bar-val">${numFmt(v.value)}</div>
+        <div class="bar" style="height:${h}px;background:${color}"></div>
+        <div class="bar-label">${MODE_SHORT[v.mode] || v.mode}</div>
+      </div>`;
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // Compute stability metrics
+  function stability(vals) {
+    const nums = vals.map(v => v.value).filter(v => isFinite(v));
+    const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+    const variance = nums.reduce((s, v) => s + (v - mean) ** 2, 0) / nums.length;
+    const cv = mean !== 0 ? Math.sqrt(variance) / Math.abs(mean) : Infinity;
+    return { mean, variance, cv };
+  }
+
+  const sA = stability(valsA);
+  const sB = stability(valsB);
+
+  let html = '<div class="compare-row">';
+  html += `<div class="compare-col">${buildChart(valsA, '安定なデータ')}</div>`;
+  html += `<div class="compare-col">${buildChart(valsB, '不安定なデータ')}</div>`;
+  html += '</div>';
+
+  // Stability verdict
+  html += '<div style="margin-top:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--font-mono); font-size:0.82rem;">';
+  html += '<span class="label">安定性判定</span>';
+  html += `<div style="margin-top:4px">安定データ — 変動係数: <span class="${sA.cv < 2 ? 'ok' : 'err'}">${numFmt(sA.cv)}</span> → <span class="${sA.cv < 2 ? 'ok' : 'err'}">${sA.cv < 2 ? '✓ 安定' : '✗ 不安定'}</span></div>`;
+  html += `<div>不安定データ — 変動係数: <span class="${sB.cv < 2 ? 'ok' : 'err'}">${numFmt(sB.cv)}</span> → <span class="${sB.cv < 2 ? 'ok' : 'err'}">${sB.cv < 2 ? '✓ 安定' : '✗ 不安定'}</span></div>`;
+  html += '<div style="color:var(--text-dim); font-size:0.72rem; margin-top:8px">※ 変動係数（CV）= 標準偏差 / 平均。8つのモードの結果がばらつくほどデータは不安定</div>';
+  html += '</div>';
+
+  out.innerHTML = html;
+}
+
+// === Demo 2: σ Provenance ===
+function runDemo2() {
+  const out = document.getElementById('output2');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const code = document.getElementById('code2').value.trim();
+  window.rei.reset();
+  const r = safeRei(code);
+  if (!r.ok) { out.innerHTML = `<span class="err">${r.error}</span>`; return; }
+
+  const sigma = r.value;
+  if (!sigma || sigma.reiType !== 'SigmaResult') {
+    out.innerHTML = `<span class="val">${JSON.stringify(r.value, null, 2)}</span>`;
+    return;
+  }
+
+  // Build timeline visualization
+  let html = '<span class="label">σ 来歴タイムライン</span>';
+  html += '<div class="timeline">';
+
+  // Starting value (from memory[0])
+  const memory = sigma.memory || [];
+  const will = sigma.will || {};
+
+  memory.forEach((m, i) => {
+    const displayVal = typeof m === 'object' ?
+      (m.reiType === 'MDim' ? `𝕄{${m.center}; ${m.neighbors.join(', ')}}` : JSON.stringify(m)) :
+      numFmt(m);
+    html += `<div class="timeline-node">
+      <div class="timeline-val">${displayVal}</div>
+      <div class="timeline-op">memory[${i}]</div>
+    </div>`;
+    if (i < memory.length - 1) {
+      html += '<div class="timeline-arrow">→</div>';
+    }
+  });
+
+  // Final result
+  html += '<div class="timeline-arrow">→</div>';
+  html += `<div class="timeline-node">
+    <div class="timeline-val" style="border-color:var(--accent); color:var(--accent)">${numFmt(sigma.field?.center ?? '?')}</div>
+    <div class="timeline-op" style="color:var(--accent)">最終値</div>
+  </div>`;
+  html += '</div>';
+
+  // Will / Tendency
+  html += '<div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">';
+
+  // Tendency
+  const tendencyIcon = will.tendency === 'expand' ? '↗' : will.tendency === 'contract' ? '↘' : '→';
+  const tendencyColor = will.tendency === 'expand' ? 'var(--green)' : will.tendency === 'contract' ? 'var(--red)' : 'var(--text-dim)';
+  html += `<div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px; text-align:center;">
+    <div style="font-size:1.5rem; color:${tendencyColor}">${tendencyIcon}</div>
+    <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-top:4px;">τ 傾向: ${will.tendency || 'rest'}</div>
+  </div>`;
+
+  // Strength
+  html += `<div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px; text-align:center;">
+    <div style="font-size:1.5rem; color:var(--accent)">${numFmt(will.strength || 0)}</div>
+    <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-top:4px;">意志の強度</div>
+  </div>`;
+
+  // Flow
+  const flow = sigma.flow || {};
+  html += `<div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px; text-align:center;">
+    <div style="font-size:1.5rem; color:var(--blue)">${flow.direction || 'rest'}</div>
+    <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-top:4px;">流れの方向</div>
+  </div>`;
+
+  html += '</div>';
+
+  // History
+  if (will.history && will.history.length > 0) {
+    html += `<div style="margin-top:12px; font-family:var(--font-mono); font-size:0.78rem; color:var(--text-dim);">
+      意志の変遷: ${will.history.map(h => {
+        const c = h === 'expand' ? 'var(--green)' : h === 'contract' ? 'var(--red)' : 'var(--text-dim)';
+        return `<span style="color:${c}">${h}</span>`;
+      }).join(' → ')}
+    </div>`;
+  }
+
+  out.innerHTML = html;
+}
+
+// === Demo 3: Resonance ===
+function runDemo3() {
+  const out = document.getElementById('output3');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const lines = document.getElementById('code3').value.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+  let html = '';
+
+  lines.forEach((line, idx) => {
+    window.rei.reset();
+    const r = safeRei(line.trim());
+    if (!r.ok) {
+      html += `<div style="margin-bottom:12px"><span class="err">${line.trim()}: ${r.error}</span></div>`;
+      return;
+    }
+
+    const v = r.value;
+    if (v && v.reiType === 'ResonanceResult') {
+      const strength = v.strength;
+      const barWidth = Math.max(5, strength * 100);
+      const color = strength > 0.7 ? 'var(--green)' : strength > 0.4 ? 'var(--accent)' : 'var(--red)';
+
+      html += `<div style="margin-bottom:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">`;
+      html += `<div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim); margin-bottom:8px;">${line.trim()}</div>`;
+      html += `<div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+        <div style="font-family:var(--font-mono); font-size:0.82rem; color:${color}; min-width:80px;">共鳴度: ${(strength * 100).toFixed(1)}%</div>
+        <div style="flex:1; height:16px; background:var(--bg-card); border-radius:8px; overflow:hidden;">
+          <div style="width:${barWidth}%; height:100%; background:${color}; border-radius:8px; transition:width 0.5s;"></div>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:0.72rem; color:${v.resonates ? 'var(--green)' : 'var(--red)'};">${v.resonates ? '共鳴 ✓' : '不共鳴 ✗'}</div>
+      </div>`;
+      html += `<div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">
+        次元一致: ${(v.dimMatch * 100).toFixed(0)}% · 値近接: ${(v.valueProximity * 100).toFixed(0)}% · パターン類似: ${((v.patternSimilarity || 0) * 100).toFixed(0)}%
+      </div>`;
+      html += '</div>';
+    } else if (v && v.reiType === 'BridgeResult') {
+      html += `<div style="margin-bottom:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">`;
+      html += `<div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim); margin-bottom:8px;">${line.trim()}</div>`;
+      html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem; color:var(--accent);">×${v.scaleFactor}</div>
+          <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">スケール</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem; color:var(--accent);">${(v.similarity * 100).toFixed(0)}%</div>
+          <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">構造類似度</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem; color:${v.transferable ? 'var(--green)' : 'var(--red)'};">${v.transferable ? '✓' : '✗'}</div>
+          <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">転移可能</div>
+        </div>
+      </div>`;
+      html += '</div>';
+    } else {
+      html += `<div style="margin-bottom:8px"><span class="val">${JSON.stringify(v, null, 2)}</span></div>`;
+    }
+  });
+
+  out.innerHTML = html;
+}
+
+// === Demo 4: Awakening ===
+function runDemo4() {
+  const out = document.getElementById('output4');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const lines = document.getElementById('code4').value.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+  let html = '';
+
+  lines.forEach((line, idx) => {
+    window.rei.reset();
+    const r = safeRei(line.trim());
+    if (!r.ok) {
+      html += `<div style="margin-bottom:12px"><span class="err">${r.error}</span></div>`;
+      return;
+    }
+
+    const v = r.value;
+    const awareness = typeof v === 'object' ? (v.value ?? v) : v;
+    const pct = typeof awareness === 'number' ? awareness * 100 : 0;
+    const isAwakened = pct >= 50;
+    const label = idx === 0 ? '未計算の値' : '計算を経験した値';
+
+    html += `<div style="margin-bottom:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">`;
+    html += `<div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-bottom:4px;">${label}</div>`;
+    html += `<div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--accent-dim); margin-bottom:8px;">${line.trim()}</div>`;
+    html += '<div class="awakening-meter">';
+    html += `<div class="meter-track"><div class="meter-fill ${isAwakened ? 'awakened' : ''}" style="width:${pct}%"></div></div>`;
+    html += `<div class="meter-label" style="color:${isAwakened ? 'var(--accent)' : 'var(--text-dim)'}">${pct.toFixed(0)}%</div>`;
+    html += '</div>';
+    html += `<div style="font-family:var(--font-mono); font-size:0.72rem; color:${isAwakened ? 'var(--accent)' : 'var(--text-dim)'}; margin-top:4px;">
+      ${isAwakened ? '覚醒 — この値は自分を知っている' : '未覚醒 — まだ十分な計算経験がない'}
+    </div>`;
+    html += '</div>';
+  });
+
+  // Progression chart
+  html += '<div style="margin-top:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">';
+  html += '<span class="label">覚醒の進行</span>';
+  html += '<div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-bottom:8px;">パイプを通過するたびに覚醒度がどう変化するか</div>';
+
+  const steps = [];
+  for (let i = 0; i <= 7; i++) {
+    window.rei.reset();
+    const pipes = '|> abs '.repeat(i) + '|> awareness';
+    const code = `𝕄{5; 1,2,3,4,5,6,7,8} ${pipes}`;
+    const r = safeRei(code);
+    if (r.ok) {
+      const val = typeof r.value === 'object' ? (r.value.value ?? 0) : r.value;
+      steps.push({ pipes: i, awareness: typeof val === 'number' ? val : 0 });
+    }
+  }
+
+  if (steps.length > 0) {
+    const maxA = Math.max(...steps.map(s => s.awareness), 0.01);
+    html += '<div class="bar-chart" style="height:100px;">';
+    steps.forEach(s => {
+      const h = Math.max(2, (s.awareness / Math.max(maxA, 1)) * 80);
+      const color = s.awareness >= 0.5 ? 'var(--accent)' : 'var(--accent-dim)';
+      html += `<div class="bar-col">
+        <div class="bar-val">${(s.awareness * 100).toFixed(0)}%</div>
+        <div class="bar" style="height:${h}px;background:${color}"></div>
+        <div class="bar-label" style="writing-mode:horizontal-tb; height:auto;">${s.pipes}パイプ</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  out.innerHTML = html;
+}
+
+// === Demo 5: Free Playground ===
+function runDemo5() {
+  const out = document.getElementById('output5');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const code = document.getElementById('code5').value.trim();
+  const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+
+  let html = '';
+  lines.forEach(line => {
+    window.rei.reset();
+    const r = safeRei(line.trim());
+    html += `<div style="margin-bottom:8px;">`;
+    html += `<div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);">❯ ${line.trim()}</div>`;
+    if (r.ok) {
+      const formatted = typeof r.value === 'object' ? JSON.stringify(r.value, null, 2) : String(r.value);
+      html += `<div style="font-family:var(--font-mono); font-size:0.82rem; color:var(--accent); white-space:pre-wrap; margin-top:2px;">${formatted}</div>`;
+    } else {
+      html += `<div style="font-family:var(--font-mono); font-size:0.82rem; color:var(--red); margin-top:2px;">${r.error}</div>`;
+    }
+    html += '</div>';
+  });
+
+  out.innerHTML = html;
+}
+
+function resetDemo5() {
+  if (window.rei) window.rei.reset();
+  document.getElementById('code5').value = `// 例: データの全モード合意形成\n𝕄{100; 30, 70, 50, 90, 10} |> consensus`;
+  document.getElementById('output5').innerHTML = '<span class="dim">リセットしました</span>';
+}
+</script>
+</body>
+</html>

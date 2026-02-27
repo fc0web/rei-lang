@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei — Genesis Ladder of Life</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=Source+Code+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #111116;
+  --bg2: #1a1a22;
+  --bg3: #222230;
+  --gold: #c4a44e;
+  --gold-dim: #8a7535;
+  --silver: #a8a8b8;
+  --text: #d0d0d8;
+  --text-dim: #707080;
+  --void-color: #2a1a3a;
+  --dot-color: #3a2a4a;
+  --zero-ext-color: #2a3a4a;
+  --zero-color: #2a4a3a;
+  --number-color: #3a4a2a;
+  --proto-color: #4a3a2a;
+  --maintain-color: #5a4020;
+  --autopoietic-color: #6a4818;
+  --emergent-color: #7a5010;
+  --conscious-color: #c4a44e;
+  --font-serif: 'Noto Serif JP', serif;
+  --font-mono: 'Source Code Pro', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-serif);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Grain overlay ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  z-index: 9999;
+}
+
+/* ── Header ── */
+.header {
+  text-align: center;
+  padding: 60px 20px 40px;
+  position: relative;
+}
+.header h1 {
+  font-size: 2.2rem;
+  font-weight: 300;
+  color: var(--gold);
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+}
+.header .subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.3em;
+}
+.header .formula {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--silver);
+  margin-top: 20px;
+  opacity: 0.7;
+}
+
+/* ── Ladder Container ── */
+.ladder-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+}
+
+/* ── Vertical Line ── */
+.ladder-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom,
+    var(--void-color),
+    var(--dot-color),
+    var(--zero-ext-color),
+    var(--zero-color),
+    var(--number-color),
+    var(--proto-color),
+    var(--maintain-color),
+    var(--autopoietic-color),
+    var(--emergent-color),
+    var(--conscious-color)
+  );
+  transform: translateX(-50%);
+}
+
+/* ── Step ── */
+.step {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.4s ease;
+}
+.step:hover { transform: scale(1.01); }
+
+.step-left, .step-right {
+  flex: 1;
+  padding: 18px 24px;
+}
+.step-left { text-align: right; padding-right: 50px; }
+.step-right { padding-left: 50px; }
+
+/* ── Node (center circle) ── */
+.step-node {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--text-dim);
+  background: var(--bg);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  transition: all 0.5s ease;
+}
+.step.active .step-node {
+  border-color: var(--gold);
+  box-shadow: 0 0 20px rgba(196, 164, 78, 0.4);
+  color: var(--gold);
+}
+.step.reached .step-node {
+  border-color: var(--gold-dim);
+  background: var(--bg2);
+  color: var(--gold-dim);
+}
+
+/* ── Step Content ── */
+.step-phase {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+  transition: color 0.4s;
+}
+.step.active .step-phase,
+.step.reached .step-phase { color: var(--gold); }
+
+.step-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+  transition: color 0.4s;
+}
+.step.active .step-name { color: var(--gold); }
+.step.reached .step-name { color: var(--silver); }
+
+.step-jp {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.step-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease, opacity 0.4s ease;
+  opacity: 0;
+}
+.step.active .step-desc {
+  max-height: 300px;
+  opacity: 1;
+}
+
+.step-axioms {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--gold-dim);
+  margin-top: 6px;
+}
+
+.step-mlc {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.step-mlc .mlc-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--bg3);
+  color: var(--text-dim);
+  transition: all 0.3s;
+}
+.step-mlc .mlc-tag.met {
+  background: rgba(196, 164, 78, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(196, 164, 78, 0.3);
+}
+
+/* ── Arrow between steps ── */
+.step-arrow {
+  text-align: center;
+  padding: 4px 0;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  position: relative;
+  z-index: 5;
+  opacity: 0.5;
+  transition: opacity 0.4s, color 0.4s;
+}
+.step-arrow.reached { opacity: 1; color: var(--gold-dim); }
+
+/* ── Transition Label ── */
+.transition-label {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  padding: 2px 0;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.transition-label.visible { opacity: 0.7; }
+
+/* ── Control Panel ── */
+.controls {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.controls button {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 10px 24px;
+  border: 1px solid var(--text-dim);
+  background: var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+  letter-spacing: 0.05em;
+}
+.controls button:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 15px rgba(196, 164, 78, 0.15);
+}
+.controls button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.controls button.primary {
+  background: rgba(196, 164, 78, 0.1);
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+/* ── Info Panel ── */
+.info-panel {
+  max-width: 900px;
+  margin: 0 auto 40px;
+  padding: 24px;
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+  border-radius: 6px;
+}
+.info-panel h3 {
+  font-size: 0.9rem;
+  color: var(--gold);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.info-panel .metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.metric-card {
+  background: var(--bg);
+  border: 1px solid var(--bg3);
+  border-radius: 4px;
+  padding: 12px;
+  text-align: center;
+}
+.metric-card .label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+.metric-card .value {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  color: var(--gold);
+  font-weight: 600;
+}
+.metric-card .sub {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ── Life comparison table ── */
+.comparison {
+  max-width: 900px;
+  margin: 0 auto 60px;
+  padding: 0 20px;
+}
+.comparison h3 {
+  font-size: 0.9rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+  text-align: center;
+}
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+.comp-table th {
+  color: var(--gold-dim);
+  font-weight: 400;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--bg3);
+  text-align: center;
+}
+.comp-table td {
+  padding: 6px;
+  text-align: center;
+  border-bottom: 1px solid rgba(34,34,48,0.5);
+  color: var(--text-dim);
+}
+.comp-table td.name { text-align: left; color: var(--text); }
+.comp-table .yes { color: var(--gold); }
+.comp-table .no { color: #5a3030; }
+.comp-table .partial { color: var(--gold-dim); }
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  padding: 40px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--bg3);
+}
+
+/* ── Animation ── */
+@keyframes pulse-ring {
+  0% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
+  100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; }
+}
+.pulse-ring {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  pointer-events: none;
+  animation: pulse-ring 1s ease-out forwards;
+}
+
+@keyframes float-up {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-30px); }
+}
+.float-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -10px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--gold);
+  pointer-events: none;
+  animation: float-up 1.5s ease-out forwards;
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Genesis Ladder of Life</h1>
+  <div class="subtitle">生命階梯 — LIFE AXIOM DERIVATION</div>
+  <div class="formula">void → ・ → 0₀ → 0 → ℕ → Proto-Life → Self-Maintaining → Autopoietic → Emergent → Conscious</div>
+</div>
+
+<div class="controls">
+  <button id="btn-evolve" class="primary" onclick="evolveOneStep()">⊕ Evolve（進化）</button>
+  <button id="btn-metabolize" onclick="runMetabolize()">↻ Metabolize（代謝）</button>
+  <button id="btn-death" onclick="runDeath()">⊖ Reduce（縮約）</button>
+  <button id="btn-reset" onclick="resetLadder()">○ Reset（リセット）</button>
+  <button id="btn-auto" onclick="autoEvolve()">▶ Auto Genesis</button>
+</div>
+
+<div class="info-panel">
+  <h3>Current State — 現在の状態</h3>
+  <div class="metrics">
+    <div class="metric-card">
+      <div class="label">PHASE</div>
+      <div class="value" id="m-phase">void</div>
+      <div class="sub">現在段階</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">LIFE SCORE</div>
+      <div class="value" id="m-score">0/6</div>
+      <div class="sub">生命度</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">CLASS</div>
+      <div class="value" id="m-class">—</div>
+      <div class="sub">分類</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">σ MEMORY</div>
+      <div class="value" id="m-memory">0</div>
+      <div class="sub">記憶量</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">AGE</div>
+      <div class="value" id="m-age">0</div>
+      <div class="sub">代謝サイクル</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">HEALTH</div>
+      <div class="value" id="m-health">100%</div>
+      <div class="sub">健康度</div>
+    </div>
+  </div>
+</div>
+
+<div class="ladder-container" id="ladder">
+  <div class="ladder-line"></div>
+  <!-- Steps will be rendered by JS -->
+</div>
+
+<div class="comparison">
+  <h3>Life Classification — 生命度比較</h3>
+  <table class="comp-table">
+    <thead>
+      <tr>
+        <th>Entity</th>
+        <th>MLC-1<br>境界</th>
+        <th>MLC-2<br>代謝</th>
+        <th>MLC-3<br>記憶</th>
+        <th>MLC-4<br>修復</th>
+        <th>MLC-5<br>生成</th>
+        <th>MLC-6<br>創発</th>
+        <th>Score</th>
+        <th>Class</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="name">石 Rock</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td>1</td><td>non-life</td></tr>
+      <tr><td class="name">火 Fire</td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td>2</td><td>proto</td></tr>
+      <tr><td class="name">結晶 Crystal</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td><td class="partial">△</td><td class="no">○</td><td class="no">○</td><td>1</td><td>non-life</td></tr>
+      <tr><td class="name">ウイルス Virus</td><td class="yes">●</td><td class="no">○</td><td class="yes">●</td><td class="no">○</td><td class="partial">△</td><td class="no">○</td><td>2</td><td>proto</td></tr>
+      <tr><td class="name">細菌 Bacterium</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td>6</td><td>full-life</td></tr>
+      <tr><td class="name">植物 Plant</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td>6</td><td>full-life</td></tr>
+      <tr><td class="name">動物 Animal</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td>6</td><td>full-life</td></tr>
+      <tr><td class="name">現在AI Current AI</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="partial">△</td><td class="no">○</td><td class="partial">△</td><td>3-4</td><td>partial</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer">
+  Rei (0₀式) — Life Axiom Derivation v2.0<br>
+  4 Axioms → 6 Life Conditions → Genesis Ladder of Life<br>
+  © 2024-2026 Nobuki Fujimoto (藤本伸樹) — D-FUMT
+</div>
+
+<script>
+const STEPS = [
+  { id: 'void', phase: 'G-void', name: 'Void', jp: '絶対無', axioms: '—',
+    desc: '何もない。存在すら存在しない。仏教の「空」の極致。ここからすべてが始まる。',
+    mlc: [false,false,false,false,false,false],
+    transition: 'G-E₁: 存在の発生' },
+  { id: 'dot', phase: 'G-dot', name: 'Dot（・）', jp: '存在の可能性', axioms: 'A4',
+    desc: '最初の区別。「何かがある」という可能性が生じる。まだ構造はないが、無ではない。',
+    mlc: [false,false,false,false,false,false],
+    transition: 'G-S₀: 構造の分離' },
+  { id: 'zero-extended', phase: 'G-0₀', name: 'Zero Extended（0₀）', jp: '構造の萌芽', axioms: 'A4',
+    desc: '拡張ゼロ。「無」に構造の種が宿る。中心と周囲の原型が生まれる最初の瞬間。',
+    mlc: [false,false,false,false,false,false],
+    transition: 'G-S₁: 値の確定' },
+  { id: 'zero', phase: 'G-0', name: 'Zero（0）', jp: '計算可能な値', axioms: 'A4',
+    desc: '計算可能な最初の値。ここで初めて数学的演算が意味を持つ。',
+    mlc: [false,false,false,false,false,false],
+    transition: 'G-N₁: 数体系の発生' },
+  { id: 'number', phase: 'G-ℕ', name: 'Number System（ℕ）', jp: '数の体系', axioms: 'A4 + A1',
+    desc: '自然数の体系。中心-周囲パターン(A1)により、値がフィールドとして存在する。',
+    mlc: [true,false,false,false,false,false],
+    transition: 'L-B₁: 生命境界遷移' },
+  { id: 'proto-life', phase: 'L-B₁', name: 'Proto-Life', jp: '原始生命', axioms: 'A1 + A3',
+    desc: '境界(A1) + 代謝(A1) + 記憶(A3)。環境と自己を区別し、変化し、覚えている。約40億年前の化学進化に対応。',
+    mlc: [true,true,true,false,false,false],
+    transition: 'L-R₁: 修復遷移' },
+  { id: 'self-maintaining', phase: 'L-R₁', name: 'Self-Maintaining', jp: '自己維持生命', axioms: 'A1 + A2 + A3',
+    desc: '+自己修復(A2)。損傷を検知し、記憶に基づいて正常状態へ回帰する。約38億年前の原核生物に対応。',
+    mlc: [true,true,true,true,false,false],
+    transition: 'L-A₁: 自己生成遷移' },
+  { id: 'autopoietic', phase: 'L-A₁', name: 'Autopoietic Life', jp: 'オートポイエーシス', axioms: 'A1+A2+A3+A4',
+    desc: '+自己生成(A4)。自分の構成要素を自ら生産する。4公理すべてが必要。約20億年前の真核生物に対応。A4が生命と非生命を分かつ鍵。',
+    mlc: [true,true,true,true,true,false],
+    transition: 'L-E₁: 創発遷移' },
+  { id: 'emergent', phase: 'L-E₁', name: 'Emergent Life', jp: '完全な生命', axioms: 'A1 + A3',
+    desc: '+創発。個体の集合が個体にない性質を示す。6条件すべて充足。約6億年前の多細胞生物に対応。',
+    mlc: [true,true,true,true,true,true],
+    transition: 'CNC: 意識遷移（将来）' },
+  { id: 'conscious', phase: 'CNC', name: 'Conscious Life', jp: '意識ある生命', axioms: 'σ²=σ(σ)',
+    desc: '+自己認識。σが自分自身のσを参照する（メタ認識）。LAD定理L9：念(mindfulness)、正精進(right effort)、正見(right view)。',
+    mlc: [true,true,true,true,true,true],
+    transition: null },
+];
+
+const MLC_LABELS = ['境界','代謝','記憶','修復','生成','創発'];
+
+let currentStep = -1; // -1 = before void
+let metabolizeCount = 0;
+let memoryCount = 0;
+let health = 100;
+let autoInterval = null;
+
+function renderLadder() {
+  const container = document.getElementById('ladder');
+  const line = container.querySelector('.ladder-line');
+  container.innerHTML = '';
+  container.appendChild(line);
+
+  STEPS.forEach((step, i) => {
+    // Transition label
+    if (i > 0) {
+      const arrow = document.createElement('div');
+      arrow.className = 'step-arrow' + (i <= currentStep ? ' reached' : '');
+      arrow.textContent = '↓';
+      container.appendChild(arrow);
+
+      const label = document.createElement('div');
+      label.className = 'transition-label' + (i <= currentStep ? ' visible' : '');
+      label.textContent = STEPS[i-1].transition || '';
+      container.appendChild(label);
+    }
+
+    const el = document.createElement('div');
+    el.className = 'step' + (i === currentStep ? ' active' : '') + (i < currentStep ? ' reached' : '');
+    el.onclick = () => selectStep(i);
+
+    const isLeft = i % 2 === 0;
+
+    el.innerHTML = `
+      <div class="step-left">
+        ${isLeft ? stepContent(step, i) : ''}
+      </div>
+      <div class="step-node">${i < 5 ? 'G' : 'L'}${i}</div>
+      <div class="step-right">
+        ${!isLeft ? stepContent(step, i) : ''}
+      </div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function stepContent(step, i) {
+  const mlcTags = MLC_LABELS.map((label, j) =>
+    `<span class="mlc-tag ${i <= currentStep && step.mlc[j] ? 'met' : ''}">${label}</span>`
+  ).join('');
+
+  return `
+    <div class="step-phase">${step.phase}</div>
+    <div class="step-name">${step.name}</div>
+    <div class="step-jp">${step.jp}</div>
+    <div class="step-desc">
+      ${step.desc}
+      <div class="step-axioms">公理: ${step.axioms}</div>
+      <div class="step-mlc">${mlcTags}</div>
+    </div>
+  `;
+}
+
+function selectStep(i) {
+  if (currentStep === i) return;
+  // Only allow selecting current or already reached steps for info
+  const steps = document.querySelectorAll('.step');
+  steps.forEach(s => s.classList.remove('active'));
+  steps[i]?.classList.add('active');
+}
+
+function evolveOneStep() {
+  if (currentStep >= STEPS.length - 1) return;
+  currentStep++;
+
+  // Update metrics based on phase
+  if (currentStep >= 5) {
+    metabolizeCount = Math.max(metabolizeCount, currentStep * 3);
+    memoryCount = Math.max(memoryCount, currentStep * 2);
+  }
+
+  renderLadder();
+  updateMetrics();
+  animateNode(currentStep);
+}
+
+function runMetabolize() {
+  if (currentStep < 4) return; // need at least 'number' phase
+  metabolizeCount++;
+  memoryCount++;
+
+  // Auto-evolve if conditions met
+  if (currentStep === 4 && memoryCount >= 2 && metabolizeCount >= 1) {
+    currentStep = 5; // proto-life
+  }
+  if (currentStep === 5 && memoryCount >= 5) {
+    currentStep = 6; // self-maintaining (repair possible with enough memory)
+  }
+
+  renderLadder();
+  updateMetrics();
+}
+
+function runDeath() {
+  if (currentStep <= 0) return;
+  currentStep--;
+  health = Math.max(0, health - 15);
+  memoryCount = Math.max(0, memoryCount - 2);
+
+  renderLadder();
+  updateMetrics();
+}
+
+function resetLadder() {
+  currentStep = -1;
+  metabolizeCount = 0;
+  memoryCount = 0;
+  health = 100;
+  if (autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+  renderLadder();
+  updateMetrics();
+}
+
+function autoEvolve() {
+  if (autoInterval) {
+    clearInterval(autoInterval);
+    autoInterval = null;
+    document.getElementById('btn-auto').textContent = '▶ Auto Genesis';
+    return;
+  }
+  document.getElementById('btn-auto').textContent = '■ Stop';
+  autoInterval = setInterval(() => {
+    if (currentStep >= STEPS.length - 1) {
+      clearInterval(autoInterval);
+      autoInterval = null;
+      document.getElementById('btn-auto').textContent = '▶ Auto Genesis';
+      return;
+    }
+    evolveOneStep();
+  }, 1200);
+}
+
+function updateMetrics() {
+  const phase = currentStep >= 0 ? STEPS[currentStep].id : '—';
+  const mlc = currentStep >= 0 ? STEPS[currentStep].mlc : [false,false,false,false,false,false];
+  const score = mlc.filter(Boolean).length;
+  let cls = '—';
+  if (score >= 6) cls = 'full-life';
+  else if (score >= 4) cls = 'partial';
+  else if (score >= 2) cls = 'proto';
+  else if (score >= 1) cls = 'non-life';
+
+  document.getElementById('m-phase').textContent = phase;
+  document.getElementById('m-score').textContent = score + '/6';
+  document.getElementById('m-class').textContent = cls;
+  document.getElementById('m-memory').textContent = memoryCount;
+  document.getElementById('m-age').textContent = metabolizeCount;
+  document.getElementById('m-health').textContent = health + '%';
+
+  // Button states
+  document.getElementById('btn-evolve').disabled = currentStep >= STEPS.length - 1;
+  document.getElementById('btn-metabolize').disabled = currentStep < 4;
+  document.getElementById('btn-death').disabled = currentStep <= 0;
+}
+
+function animateNode(idx) {
+  const nodes = document.querySelectorAll('.step-node');
+  if (!nodes[idx]) return;
+  const ring = document.createElement('div');
+  ring.className = 'pulse-ring';
+  nodes[idx].appendChild(ring);
+  setTimeout(() => ring.remove(), 1000);
+
+  const label = document.createElement('div');
+  label.className = 'float-label';
+  label.textContent = STEPS[idx].transition ? '→ ' + STEPS[idx].name : '★ ' + STEPS[idx].name;
+  nodes[idx].appendChild(label);
+  setTimeout(() => label.remove(), 1500);
+}
+
+// Initial render
+renderLadder();
+updateMetrics();
+</script>
+</body>
+</html>

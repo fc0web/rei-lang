@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei 5計算パターン — フラクタル・波紋・脈動・共鳴・浸透</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', sans-serif;
+  background: #0a0a1a;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+header {
+  text-align: center;
+  padding: 30px 20px 15px;
+  background: linear-gradient(135deg, #0d1117, #161b22);
+  border-bottom: 1px solid #30363d;
+}
+header h1 {
+  font-size: 1.6em;
+  background: linear-gradient(90deg, #58a6ff, #bc8cff, #f78166);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header p { color: #8b949e; margin-top: 8px; font-size: 0.9em; }
+
+.tab-bar {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 15px 10px;
+  background: #0d1117;
+  border-bottom: 1px solid #21262d;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 10px 18px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: all 0.2s;
+  background: #161b22;
+}
+.tab:hover { border-color: #58a6ff; }
+.tab.active { background: #1f6feb; border-color: #58a6ff; color: #fff; }
+
+.panel { display: none; padding: 20px; max-width: 900px; margin: 0 auto; }
+.panel.active { display: block; }
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-group label { font-size: 0.8em; color: #8b949e; }
+.control-group input[type="range"] { width: 100%; accent-color: #58a6ff; }
+.control-group .value-display { font-size: 0.75em; color: #58a6ff; text-align: right; }
+
+button.run {
+  display: block;
+  margin: 15px auto;
+  padding: 10px 30px;
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button.run:hover { background: #2ea043; }
+
+canvas {
+  display: block;
+  margin: 10px auto;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+}
+
+.info-box {
+  margin-top: 15px;
+  padding: 12px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  font-size: 0.82em;
+  line-height: 1.6;
+}
+.info-box .axiom-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-right: 4px;
+}
+.a1 { background: #1f3d5c; color: #58a6ff; }
+.a2 { background: #3d1f5c; color: #bc8cff; }
+.a3 { background: #5c3d1f; color: #f78166; }
+.a4 { background: #1f5c3d; color: #56d364; }
+
+footer {
+  text-align: center;
+  padding: 20px;
+  color: #484f58;
+  font-size: 0.75em;
+  border-top: 1px solid #21262d;
+  margin-top: 30px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Rei 5計算パターン</h1>
+  <p>フラクタル・波紋・脈動・共鳴・浸透 — 4公理から導出される動的計算</p>
+</header>
+
+<div class="tab-bar">
+  <div class="tab active" data-tab="fractal">🌀 フラクタル</div>
+  <div class="tab" data-tab="ripple">💧 波紋</div>
+  <div class="tab" data-tab="pulse">💓 脈動</div>
+  <div class="tab" data-tab="resonance">🔔 共鳴</div>
+  <div class="tab" data-tab="permeation">💧 浸透</div>
+</div>
+
+<!-- フラクタル -->
+<div class="panel active" id="panel-fractal">
+  <div class="controls">
+    <div class="control-group">
+      <label>深度 (depth)</label>
+      <input type="range" id="f-depth" min="1" max="8" value="5">
+      <div class="value-display" id="f-depth-v">5</div>
+    </div>
+    <div class="control-group">
+      <label>分岐数 (branches)</label>
+      <input type="range" id="f-branches" min="2" max="4" value="3">
+      <div class="value-display" id="f-branches-v">3</div>
+    </div>
+    <div class="control-group">
+      <label>スケール</label>
+      <input type="range" id="f-scale" min="20" max="80" value="45">
+      <div class="value-display" id="f-scale-v">0.45</div>
+    </div>
+    <div class="control-group">
+      <label>角度オフセット</label>
+      <input type="range" id="f-angle" min="0" max="360" value="120">
+      <div class="value-display" id="f-angle-v">120°</div>
+    </div>
+  </div>
+  <button class="run" onclick="drawFractal()">▶ 生成</button>
+  <canvas id="canvas-fractal" width="800" height="500"></canvas>
+  <div class="info-box">
+    <span class="axiom-tag a2">A2: 拡張-縮約</span>
+    自己相似的再帰 — 各深度で同じ構造が縮小して再現される。
+    フラクタル次元: <span id="f-dim">—</span>
+  </div>
+</div>
+
+<!-- 波紋 -->
+<div class="panel" id="panel-ripple">
+  <div class="controls">
+    <div class="control-group">
+      <label>ノード数</label>
+      <input type="range" id="r-nodes" min="10" max="60" value="30">
+      <div class="value-display" id="r-nodes-v">30</div>
+    </div>
+    <div class="control-group">
+      <label>振幅</label>
+      <input type="range" id="r-amp" min="10" max="200" value="100">
+      <div class="value-display" id="r-amp-v">100</div>
+    </div>
+    <div class="control-group">
+      <label>伝播強度 β</label>
+      <input type="range" id="r-prop" min="5" max="95" value="30">
+      <div class="value-display" id="r-prop-v">0.30</div>
+    </div>
+    <div class="control-group">
+      <label>減衰 γ</label>
+      <input type="range" id="r-decay" min="0" max="50" value="5">
+      <div class="value-display" id="r-decay-v">0.05</div>
+    </div>
+  </div>
+  <button class="run" onclick="startRipple()">▶ 波紋を放つ</button>
+  <canvas id="canvas-ripple" width="800" height="400"></canvas>
+  <div class="info-box">
+    <span class="axiom-tag a1">A1: 中心-周囲</span>
+    <span class="axiom-tag a3">A3: σ蓄積</span>
+    中心からの変化が周囲へ同心円的に伝播し減衰する。各ノードの通過履歴をσに記録。
+  </div>
+</div>
+
+<!-- 脈動 -->
+<div class="panel" id="panel-pulse">
+  <div class="controls">
+    <div class="control-group">
+      <label>基準値</label>
+      <input type="range" id="p-center" min="10" max="100" value="50">
+      <div class="value-display" id="p-center-v">50</div>
+    </div>
+    <div class="control-group">
+      <label>振幅</label>
+      <input type="range" id="p-amp" min="1" max="50" value="20">
+      <div class="value-display" id="p-amp-v">20</div>
+    </div>
+    <div class="control-group">
+      <label>周期</label>
+      <input type="range" id="p-period" min="10" max="100" value="40">
+      <div class="value-display" id="p-period-v">40</div>
+    </div>
+    <div class="control-group">
+      <label>ドリフト ε</label>
+      <input type="range" id="p-drift" min="0" max="50" value="10">
+      <div class="value-display" id="p-drift-v">0.10</div>
+    </div>
+  </div>
+  <button class="run" onclick="startPulse()">▶ 脈動開始</button>
+  <canvas id="canvas-pulse" width="800" height="400"></canvas>
+  <div class="info-box">
+    <span class="axiom-tag a2">A2: 拡張-縮約</span>
+    <span class="axiom-tag a3">A3: σ蓄積</span>
+    拡張↔縮約の周期的交替。サイクルごとにσ蓄積でベースラインがドリフトする。
+  </div>
+</div>
+
+<!-- 共鳴 -->
+<div class="panel" id="panel-resonance">
+  <div class="controls">
+    <div class="control-group">
+      <label>振動子数</label>
+      <input type="range" id="res-count" min="2" max="12" value="5">
+      <div class="value-display" id="res-count-v">5</div>
+    </div>
+    <div class="control-group">
+      <label>結合強度 K</label>
+      <input type="range" id="res-coupling" min="0" max="100" value="40">
+      <div class="value-display" id="res-coupling-v">0.40</div>
+    </div>
+    <div class="control-group">
+      <label>周波数ばらつき</label>
+      <input type="range" id="res-spread" min="0" max="100" value="30">
+      <div class="value-display" id="res-spread-v">0.30</div>
+    </div>
+    <div class="control-group">
+      <label>学習率 α</label>
+      <input type="range" id="res-learn" min="0" max="50" value="10">
+      <div class="value-display" id="res-learn-v">0.010</div>
+    </div>
+  </div>
+  <button class="run" onclick="startResonance()">▶ 共鳴シミュレーション</button>
+  <canvas id="canvas-resonance" width="800" height="400"></canvas>
+  <div class="info-box">
+    <span class="axiom-tag a1">A1: 中心-周囲</span>
+    <span class="axiom-tag a3">A3: σ蓄積</span>
+    蔵本モデルベースの位相同期。コヒーレンスが閾値を超えると共鳴（増幅）が発生。
+    学習率αにより、共鳴経験が結合強度を増強する。
+  </div>
+</div>
+
+<!-- 浸透 -->
+<div class="panel" id="panel-permeation">
+  <div class="controls">
+    <div class="control-group">
+      <label>層数</label>
+      <input type="range" id="per-layers" min="3" max="15" value="8">
+      <div class="value-display" id="per-layers-v">8</div>
+    </div>
+    <div class="control-group">
+      <label>透過率 P₀</label>
+      <input type="range" id="per-perm" min="5" max="80" value="30">
+      <div class="value-display" id="per-perm-v">0.30</div>
+    </div>
+    <div class="control-group">
+      <label>層抵抗 R</label>
+      <input type="range" id="per-resist" min="0" max="50" value="5">
+      <div class="value-display" id="per-resist-v">0.05</div>
+    </div>
+    <div class="control-group">
+      <label>適応率 η</label>
+      <input type="range" id="per-adapt" min="0" max="50" value="5">
+      <div class="value-display" id="per-adapt-v">0.005</div>
+    </div>
+  </div>
+  <button class="run" onclick="startPermeation()">▶ 浸透開始</button>
+  <canvas id="canvas-permeation" width="800" height="400"></canvas>
+  <div class="info-box">
+    <span class="axiom-tag a1">A1: 中心-周囲</span>
+    <span class="axiom-tag a2">A2: 拡張-縮約</span>
+    <span class="axiom-tag a3">A3: σ蓄積</span>
+    値が層構造を越えて拡散。浸透履歴により透過率が適応的に変化（慣れ）。
+  </div>
+</div>
+
+<footer>
+  Rei (0₀式) — D-FUMT / Five Computation Patterns v1.0 © 2026 Nobuki Fujimoto
+</footer>
+
+<script>
+// ============================================================
+// Tab switching
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Slider value display
+document.querySelectorAll('input[type="range"]').forEach(input => {
+  const update = () => {
+    const el = document.getElementById(input.id + '-v');
+    if (!el) return;
+    const id = input.id;
+    if (id.includes('scale') || id.includes('prop') || id.includes('decay') ||
+        id.includes('drift') || id.includes('coupling') || id.includes('spread') ||
+        id.includes('perm') || id.includes('resist') || id.includes('adapt')) {
+      el.textContent = (input.value / 100).toFixed(2);
+    } else if (id.includes('learn')) {
+      el.textContent = (input.value / 1000).toFixed(3);
+    } else if (id.includes('angle')) {
+      el.textContent = input.value + '°';
+    } else {
+      el.textContent = input.value;
+    }
+  };
+  input.addEventListener('input', update);
+  update();
+});
+
+// ============================================================
+// 1. Fractal
+// ============================================================
+function drawFractal() {
+  const depth = +document.getElementById('f-depth').value;
+  const branches = +document.getElementById('f-branches').value;
+  const scale = +document.getElementById('f-scale').value / 100;
+  const angleOffset = +document.getElementById('f-angle').value * Math.PI / 180;
+
+  const canvas = document.getElementById('canvas-fractal');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const colors = ['#58a6ff','#bc8cff','#f78166','#56d364','#f0883e','#db61a2','#79c0ff','#d2a8ff'];
+
+  function drawBranch(x, y, len, angle, d) {
+    if (d <= 0 || len < 1) return;
+    const x2 = x + Math.cos(angle) * len;
+    const y2 = y + Math.sin(angle) * len;
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = colors[d % colors.length];
+    ctx.lineWidth = Math.max(1, d * 0.8);
+    ctx.globalAlpha = 0.5 + 0.5 * (d / depth);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    for (let i = 0; i < branches; i++) {
+      const a = angle + angleOffset * (i - (branches - 1) / 2) / (branches - 1 || 1);
+      drawBranch(x2, y2, len * scale, a, d - 1);
+    }
+  }
+
+  drawBranch(canvas.width / 2, canvas.height - 30, 120, -Math.PI / 2, depth);
+  
+  const dim = Math.log(branches) / Math.log(1 / scale);
+  document.getElementById('f-dim').textContent = dim.toFixed(3);
+}
+
+// ============================================================
+// 2. Ripple
+// ============================================================
+let rippleAnim = null;
+function startRipple() {
+  if (rippleAnim) cancelAnimationFrame(rippleAnim);
+  
+  const n = +document.getElementById('r-nodes').value;
+  const amp = +document.getElementById('r-amp').value;
+  const beta = +document.getElementById('r-prop').value / 100;
+  const gamma = +document.getElementById('r-decay').value / 100;
+
+  const canvas = document.getElementById('canvas-ripple');
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const radius = 160;
+
+  // 2D grid
+  const gridSize = Math.ceil(Math.sqrt(n));
+  let values = new Array(gridSize * gridSize).fill(0);
+  const center = Math.floor(gridSize / 2) * gridSize + Math.floor(gridSize / 2);
+  values[center] = amp;
+
+  function getNeighbors(idx) {
+    const r = Math.floor(idx / gridSize), c = idx % gridSize;
+    const nb = [];
+    if (r > 0) nb.push((r-1)*gridSize+c);
+    if (r < gridSize-1) nb.push((r+1)*gridSize+c);
+    if (c > 0) nb.push(r*gridSize+c-1);
+    if (c < gridSize-1) nb.push(r*gridSize+c+1);
+    return nb;
+  }
+
+  let step = 0;
+  function animate() {
+    // Update
+    const nv = values.map((v, i) => {
+      const nb = getNeighbors(i);
+      let inf = 0;
+      nb.forEach(j => inf += values[j] - v);
+      return v + beta * inf / (nb.length||1) - gamma * v;
+    });
+    values = nv;
+
+    // Draw
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cellW = canvas.width / gridSize;
+    const cellH = canvas.height / gridSize;
+    const maxVal = Math.max(1, ...values.map(Math.abs));
+
+    for (let i = 0; i < values.length; i++) {
+      const r = Math.floor(i / gridSize), c = i % gridSize;
+      const intensity = values[i] / maxVal;
+      const blue = Math.max(0, Math.min(255, 128 + intensity * 127));
+      const red = Math.max(0, Math.min(255, 30 + Math.abs(intensity) * 100));
+      ctx.fillStyle = `rgb(${red},${Math.floor(30+Math.abs(intensity)*50)},${Math.floor(blue)})`;
+      ctx.fillRect(c * cellW, r * cellH, cellW - 1, cellH - 1);
+    }
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px monospace';
+    ctx.fillText(`step: ${step}`, 10, 20);
+
+    step++;
+    if (step < 200) rippleAnim = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ============================================================
+// 3. Pulse
+// ============================================================
+let pulseAnim = null;
+function startPulse() {
+  if (pulseAnim) cancelAnimationFrame(pulseAnim);
+  
+  const center = +document.getElementById('p-center').value;
+  const amp = +document.getElementById('p-amp').value;
+  const period = +document.getElementById('p-period').value;
+  const drift = +document.getElementById('p-drift').value / 100;
+
+  const canvas = document.getElementById('canvas-pulse');
+  const ctx = canvas.getContext('2d');
+
+  const history = [];
+  const baselineHistory = [];
+  let v = center;
+  let baseline = center;
+  let t = 0;
+  const maxPoints = 400;
+
+  function animate() {
+    const phase = Math.sin(2 * Math.PI * t / period);
+    if (phase >= 0) {
+      v = v + amp * phase * 0.1;
+    } else {
+      v = v * (1 - Math.abs(phase) * 0.05) + baseline * Math.abs(phase) * 0.05;
+    }
+    
+    // Drift every period
+    if (t > 0 && t % period === 0) {
+      const recentMean = history.slice(-period).reduce((a,b)=>a+b,0)/period;
+      baseline += drift * (recentMean - baseline);
+    }
+
+    history.push(v);
+    baselineHistory.push(baseline);
+    if (history.length > maxPoints) { history.shift(); baselineHistory.shift(); }
+
+    // Draw
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const h = canvas.height;
+    const w = canvas.width;
+    
+    const allVals = [...history, ...baselineHistory];
+    const minV = Math.min(...allVals) - 5;
+    const maxV = Math.max(...allVals) + 5;
+    const toY = v => h - ((v - minV) / (maxV - minV)) * (h - 40) - 20;
+
+    // Baseline
+    ctx.beginPath();
+    ctx.strokeStyle = '#f7816644';
+    ctx.lineWidth = 2;
+    baselineHistory.forEach((b, i) => {
+      const x = (i / maxPoints) * w;
+      i === 0 ? ctx.moveTo(x, toY(b)) : ctx.lineTo(x, toY(b));
+    });
+    ctx.stroke();
+
+    // Expand/contract coloring
+    ctx.beginPath();
+    ctx.strokeStyle = '#58a6ff';
+    ctx.lineWidth = 2;
+    history.forEach((val, i) => {
+      const x = (i / maxPoints) * w;
+      i === 0 ? ctx.moveTo(x, toY(val)) : ctx.lineTo(x, toY(val));
+    });
+    ctx.stroke();
+
+    // Phase indicator
+    const phaseText = phase >= 0 ? '⊕ 拡張' : '⊖ 縮約';
+    const phaseColor = phase >= 0 ? '#56d364' : '#f78166';
+    ctx.fillStyle = phaseColor;
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(phaseText, 15, 25);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '12px monospace';
+    ctx.fillText(`baseline: ${baseline.toFixed(2)}  value: ${v.toFixed(2)}`, 15, h - 10);
+
+    t++;
+    if (t < 2000) pulseAnim = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ============================================================
+// 4. Resonance
+// ============================================================
+let resAnim = null;
+function startResonance() {
+  if (resAnim) cancelAnimationFrame(resAnim);
+  
+  const count = +document.getElementById('res-count').value;
+  const K = +document.getElementById('res-coupling').value / 100;
+  const spread = +document.getElementById('res-spread').value / 100;
+  const learnRate = +document.getElementById('res-learn').value / 1000;
+
+  const canvas = document.getElementById('canvas-resonance');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+
+  const oscillators = [];
+  for (let i = 0; i < count; i++) {
+    oscillators.push({
+      freq: 1 + (Math.random() - 0.5) * spread * 2,
+      phase: Math.random() * Math.PI * 2,
+      amp: 5 + Math.random() * 5,
+    });
+  }
+
+  let effectiveK = K;
+  let resonanceCount = 0;
+  const coherenceHistory = [];
+  let step = 0;
+  const colors = ['#58a6ff','#bc8cff','#f78166','#56d364','#f0883e','#db61a2',
+                  '#79c0ff','#d2a8ff','#ffa657','#7ee787','#ff7b72','#a5d6ff'];
+
+  function animate() {
+    // Update phases (Kuramoto)
+    const newPhases = oscillators.map((osc, i) => {
+      let interaction = 0;
+      oscillators.forEach((other, j) => {
+        if (i !== j) interaction += Math.sin(other.phase - osc.phase);
+      });
+      return osc.phase + osc.freq * 0.05 + effectiveK * interaction / count * 0.05;
+    });
+    oscillators.forEach((osc, i) => osc.phase = newPhases[i]);
+
+    // Coherence
+    let rr = 0, ri = 0;
+    oscillators.forEach(o => { rr += Math.cos(o.phase); ri += Math.sin(o.phase); });
+    const coherence = Math.sqrt(rr*rr + ri*ri) / count;
+    coherenceHistory.push(coherence);
+    if (coherenceHistory.length > 300) coherenceHistory.shift();
+
+    if (coherence > 0.8) {
+      resonanceCount++;
+      effectiveK = K + learnRate * resonanceCount;
+    }
+
+    // Draw
+    ctx.clearRect(0, 0, w, h);
+
+    // Top half: oscillator circles
+    const cx = w / 2, cy = 120, radius = 80;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    oscillators.forEach((osc, i) => {
+      const x = cx + Math.cos(osc.phase) * radius;
+      const y = cy + Math.sin(osc.phase) * radius;
+      ctx.beginPath();
+      ctx.arc(x, y, 4 + osc.amp * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+    });
+
+    // Coherence indicator
+    const barW = coherence * 200;
+    ctx.fillStyle = coherence > 0.8 ? '#56d364' : coherence > 0.5 ? '#f0883e' : '#f78166';
+    ctx.fillRect(cx - 100, cy + radius + 20, barW, 12);
+    ctx.strokeStyle = '#30363d';
+    ctx.strokeRect(cx - 100, cy + radius + 20, 200, 12);
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '11px monospace';
+    ctx.fillText(`coherence: ${coherence.toFixed(3)}  K_eff: ${effectiveK.toFixed(3)}`, cx - 100, cy + radius + 50);
+
+    // Bottom half: coherence history
+    const graphY = 260, graphH = 120;
+    ctx.strokeStyle = '#21262d';
+    ctx.beginPath(); ctx.moveTo(0, graphY + graphH); ctx.lineTo(w, graphY + graphH); ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#58a6ff';
+    ctx.lineWidth = 1.5;
+    coherenceHistory.forEach((c, i) => {
+      const x = (i / 300) * w;
+      const y = graphY + graphH - c * graphH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Threshold line
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#f7816644';
+    ctx.beginPath();
+    ctx.moveTo(0, graphY + graphH * 0.2);
+    ctx.lineTo(w, graphY + graphH * 0.2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (coherence > 0.8) {
+      ctx.fillStyle = '#56d364';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('🔔 共鳴中！', 15, graphY + 20);
+    }
+
+    step++;
+    if (step < 3000) resAnim = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ============================================================
+// 5. Permeation
+// ============================================================
+let perAnim = null;
+function startPermeation() {
+  if (perAnim) cancelAnimationFrame(perAnim);
+  
+  const layerCount = +document.getElementById('per-layers').value;
+  const P0 = +document.getElementById('per-perm').value / 100;
+  const R = +document.getElementById('per-resist').value / 100;
+  const eta = +document.getElementById('per-adapt').value / 1000;
+
+  const canvas = document.getElementById('canvas-permeation');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+
+  let values = new Array(layerCount).fill(0);
+  values[0] = 100;
+  let currentP = P0;
+  let totalFlux = 0;
+  let step = 0;
+  const history = [values.slice()];
+  const beta = 0.5;
+
+  function animate() {
+    const nv = values.map((v, layer) => {
+      let diff = 0;
+      if (layer > 0) {
+        const pUp = currentP * Math.exp(-beta);
+        diff += pUp * (values[layer - 1] - v);
+      }
+      if (layer < layerCount - 1) {
+        const pDown = currentP * Math.exp(-beta);
+        diff += pDown * (values[layer + 1] - v);
+      }
+      return v + diff - R * v;
+    });
+
+    const flux = nv.reduce((s, v, i) => s + Math.abs(v - values[i]), 0);
+    totalFlux += flux;
+    step++;
+    currentP = Math.min(0.95, P0 + eta * totalFlux / step);
+    
+    values = nv;
+    history.push(values.slice());
+    if (history.length > 200) history.shift();
+
+    // Draw
+    ctx.clearRect(0, 0, w, h);
+
+    // Layer bars (current state)
+    const barArea = w * 0.4;
+    const barStart = 20;
+    const layerH = (h - 60) / layerCount;
+    const maxVal = Math.max(1, ...values.map(Math.abs));
+
+    for (let i = 0; i < layerCount; i++) {
+      const barW = (values[i] / maxVal) * barArea;
+      const y = 30 + i * layerH;
+      
+      const intensity = values[i] / maxVal;
+      const r = Math.floor(20 + intensity * 80);
+      const g = Math.floor(60 + intensity * 100);
+      const b = Math.floor(150 + intensity * 105);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(barStart, y, Math.max(0, barW), layerH - 4);
+      
+      ctx.strokeStyle = '#30363d';
+      ctx.strokeRect(barStart, y, barArea, layerH - 4);
+      
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '11px monospace';
+      ctx.fillText(`L${i}: ${values[i].toFixed(2)}`, barStart + barArea + 10, y + layerH / 2 + 4);
+    }
+
+    // History heatmap (right side)
+    const hmX = w * 0.55, hmW = w * 0.4;
+    const hmY = 30, hmH = h - 60;
+    const dispHistory = history.slice(-100);
+    const cellW = hmW / dispHistory.length;
+    const cellH = hmH / layerCount;
+
+    for (let t = 0; t < dispHistory.length; t++) {
+      for (let l = 0; l < layerCount; l++) {
+        const val = dispHistory[t][l] / maxVal;
+        const b = Math.floor(50 + val * 205);
+        const g = Math.floor(20 + val * 80);
+        ctx.fillStyle = `rgb(${Math.floor(20+val*40)},${g},${b})`;
+        ctx.fillRect(hmX + t * cellW, hmY + l * cellH, cellW + 1, cellH);
+      }
+    }
+
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px monospace';
+    ctx.fillText(`step: ${step}  P: ${currentP.toFixed(4)}  flux: ${flux.toFixed(2)}`, 15, h - 8);
+    ctx.fillText('← 時間', hmX + hmW / 2 - 20, hmY + hmH + 15);
+
+    if (step < 500) perAnim = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// Initial draw
+drawFractal();
+</script>
+</body>
+</html>

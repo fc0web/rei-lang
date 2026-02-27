@@ -1,0 +1,31 @@
+{
+  "name": "rei-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP Server for Rei (0₀式) programming language project — enables LLMs to dynamically access only the code they need",
+  "type": "module",
+  "bin": {
+    "rei-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "rei",
+    "rei-lang",
+    "d-fumt"
+  ],
+  "author": "Nobuki Fujimoto",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

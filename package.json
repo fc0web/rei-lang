@@ -1,0 +1,94 @@
+{
+  "name": "rei-lang",
+  "version": "0.5.5",
+  "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. v0.5.5: 7-domain fully connected network — Math(A), Natural Science(B), Info Engineering(C), Humanities(D), Art(E), Music(F), Economics(G), Linguistics(H). 36-direction cross-domain bridges. 1533 tests.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "rei": "./bin/rei.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "spec",
+    "theory",
+    "PEACE_USE_CLAUSE.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run lint && npm run test && npm run build",
+    "repl": "node bin/rei.js"
+  },
+  "keywords": [
+    "rei",
+    "0₀式",
+    "れいしき",
+    "d-fumt",
+    "multi-dimensional-numbers",
+    "mathematical-computation",
+    "programming-language",
+    "zero-extension",
+    "center-periphery",
+    "compress",
+    "semantic-compression",
+    "rct",
+    "event-bus",
+    "autonomous-agent",
+    "mediator",
+    "multi-agent",
+    "agent-space",
+    "puzzle-game-unification",
+    "six-attributes",
+    "natural-science",
+    "n-body-simulation",
+    "etl-pipeline",
+    "llm-chain",
+    "text-analysis",
+    "causal-network",
+    "ethics-reasoning",
+    "multi-domain",
+    "cross-domain",
+    "art-generation",
+    "music-theory",
+    "economics-simulation",
+    "linguistics",
+    "seven-domains",
+    "peace-use",
+    "ethical-source",
+    "nobuki-fujimoto"
+  ],
+  "author": {
+    "name": "Nobuki Fujimoto"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fc0web/rei-lang"
+  },
+  "homepage": "https://github.com/fc0web/rei-lang#readme",
+  "bugs": {
+    "url": "https://github.com/fc0web/rei-lang/issues"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

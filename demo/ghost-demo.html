@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei — 幽霊の数式（Ghost Extension）デモ</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #2a2a3a;
+    --text: #c8c8d8;
+    --accent: #7b68ee;
+    --accent2: #4fd1c5;
+    --ghost: #9f7aea;
+    --dim: #666680;
+    --success: #48bb78;
+    --warning: #f6ad55;
+    --danger: #fc8181;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+  header {
+    text-align: center;
+    padding: 40px 20px 30px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 30px;
+  }
+  header h1 {
+    font-size: 2em;
+    color: var(--ghost);
+    text-shadow: 0 0 20px rgba(159,122,234,0.3);
+    margin-bottom: 8px;
+  }
+  header p { color: var(--dim); font-size: 0.95em; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .panel h2 {
+    color: var(--accent);
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .control-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .control-row label {
+    min-width: 100px;
+    color: var(--dim);
+    font-size: 0.85em;
+  }
+  select, input[type=number], input[type=text] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9em;
+    flex: 1;
+  }
+  select:focus, input:focus { border-color: var(--accent); outline: none; }
+
+  button {
+    background: var(--ghost);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1em;
+    transition: all 0.2s;
+    margin-top: 10px;
+  }
+  button:hover { background: #8b5cf6; transform: translateY(-1px); }
+
+  canvas {
+    width: 100%;
+    height: 300px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+
+  .result {
+    margin-top: 15px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 4px;
+    font-size: 0.85em;
+    line-height: 1.6;
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+  .phase-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+  }
+  .phase-materialized { background: rgba(72,187,120,0.2); color: var(--success); }
+  .phase-manifesting { background: rgba(246,173,85,0.2); color: var(--warning); }
+  .phase-summoning { background: rgba(123,104,238,0.2); color: var(--accent); }
+  .phase-paradox { background: rgba(252,129,129,0.2); color: var(--danger); }
+  .phase-dormant { background: rgba(102,102,128,0.2); color: var(--dim); }
+
+  .attr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .attr-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 0.8em;
+  }
+  .attr-card h4 { color: var(--accent2); font-size: 0.9em; margin-bottom: 4px; }
+
+  .ensemble-section { margin-top: 30px; }
+
+  footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--dim);
+    font-size: 0.8em;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>👻 幽霊の数式 — G = f(G)</h1>
+  <p>Rei 0₀式 Ghost Extension | 自己参照の不動点を召喚する</p>
+</header>
+
+<div class="grid">
+
+  <!-- 左パネル: 召喚コントロール -->
+  <div class="panel">
+    <h2>🔮 ゴースト召喚</h2>
+
+    <div class="control-row">
+      <label>関数 f(x):</label>
+      <select id="funcSelect">
+        <option value="cos">cos(x) → ドッティ数</option>
+        <option value="golden">1 + 1/x → 黄金比 φ</option>
+        <option value="sqrt2">(x + 2/x) / 2 → √2</option>
+        <option value="logistic">r·x·(1-x) → ロジスティック</option>
+        <option value="sin">sin(x)</option>
+        <option value="negation">-x → パラドックス</option>
+        <option value="custom">カスタム...</option>
+      </select>
+    </div>
+
+    <div class="control-row" id="customRow" style="display:none;">
+      <label>f(x) =</label>
+      <input type="text" id="customFunc" value="Math.cos(x)" placeholder="JavaScriptの式">
+    </div>
+
+    <div class="control-row" id="logisticRow" style="display:none;">
+      <label>r =</label>
+      <input type="number" id="rValue" value="3.2" step="0.1" min="0" max="4">
+    </div>
+
+    <div class="control-row">
+      <label>Seed:</label>
+      <input type="number" id="seed" value="1.0" step="0.1">
+    </div>
+
+    <div class="control-row">
+      <label>最大反復:</label>
+      <input type="number" id="maxIter" value="100" step="10" min="1" max="1000">
+    </div>
+
+    <button onclick="summonGhost()">👻 召喚</button>
+    <button onclick="summonClassics()" style="background:var(--accent2);">📚 古典5体</button>
+
+    <div class="result" id="resultText">
+      <span style="color:var(--dim)">← 関数を選択して「召喚」をクリック</span>
+    </div>
+  </div>
+
+  <!-- 右パネル: 可視化 -->
+  <div class="panel">
+    <h2>📊 反復軌道</h2>
+    <canvas id="trajectoryCanvas"></canvas>
+
+    <div class="attr-grid" id="attrGrid" style="display:none;">
+      <div class="attr-card">
+        <h4>場 (field)</h4>
+        <div id="attrField">—</div>
+      </div>
+      <div class="attr-card">
+        <h4>流れ (flow)</h4>
+        <div id="attrFlow">—</div>
+      </div>
+      <div class="attr-card">
+        <h4>記憶 (memory)</h4>
+        <div id="attrMemory">—</div>
+      </div>
+      <div class="attr-card">
+        <h4>層 (layer)</h4>
+        <div id="attrLayer">—</div>
+      </div>
+      <div class="attr-card">
+        <h4>関係 (relation)</h4>
+        <div id="attrRelation">—</div>
+      </div>
+      <div class="attr-card">
+        <h4>意志 (will)</h4>
+        <div id="attrWill">—</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- アンサンブルパネル -->
+<div class="panel ensemble-section" id="ensemblePanel" style="display:none;">
+  <h2>🌐 ゴーストアンサンブル（因陀羅網的相互作用）</h2>
+  <canvas id="ensembleCanvas"></canvas>
+  <div class="result" id="ensembleResult"></div>
+</div>
+
+<footer>
+  Rei 0₀式 — D-FUMT / Nobuki Fujimoto | 幽霊の数式: 自己参照不動点 G = f(G)
+</footer>
+
+</div>
+
+<script>
+// ============================================================
+// Ghost Engine (ブラウザ版 — ghost.ts の縮小版)
+// ============================================================
+
+function summonEngine(f, seed, opts = {}) {
+  const maxIter = opts.maxIterations || 100;
+  const epsilon = opts.epsilon || 1e-10;
+  const iterations = [];
+  let current = seed, prev = seed;
+  let phase = 'summoning', convergence = 'diverging';
+  let bestApprox = seed, bestDelta = Infinity;
+
+  for (let step = 0; step < maxIter; step++) {
+    let next;
+    try { next = f(current); } catch { phase = 'paradox'; convergence = 'chaotic'; break; }
+    if (!isFinite(next)) { phase = 'paradox'; convergence = 'diverging'; break; }
+
+    const delta = Math.abs(next - current);
+    const dir = delta < Math.abs(current - prev) ? 'contracting' :
+                delta > Math.abs(current - prev) ? 'expanding' : 'stable';
+    iterations.push({ step, input: current, output: next, delta, direction: dir });
+
+    if (delta < bestDelta) { bestDelta = delta; bestApprox = next; }
+
+    if (next === current) { phase = 'materialized'; convergence = 'exact'; current = next; break; }
+    if (delta < epsilon) { phase = 'materialized'; convergence = 'approximate'; current = next; break; }
+
+    // 振動検出
+    if (iterations.length >= 10) {
+      const recent = iterations.slice(-10).map(i => i.output);
+      for (let p = 2; p <= 5; p++) {
+        let osc = true;
+        for (let i = recent.length - 1; i >= p; i--) {
+          if (Math.abs(recent[i] - recent[i-p]) > 1e-6) { osc = false; break; }
+        }
+        if (osc) {
+          phase = 'manifesting'; convergence = 'oscillating';
+          bestApprox = recent.reduce((a,b) => a+b, 0) / recent.length;
+          break;
+        }
+      }
+    }
+
+    prev = current; current = next;
+  }
+
+  if (phase === 'summoning') {
+    phase = bestDelta < epsilon * 100 ? 'manifesting' : 'paradox';
+    convergence = bestDelta < epsilon * 100 ? 'approximate' : 'diverging';
+  }
+
+  const fixedPoint = (phase === 'materialized' || phase === 'manifesting') ? bestApprox : null;
+
+  // 自己相似度
+  let selfSim = 0;
+  if (iterations.length >= 4) {
+    const mid = Math.floor(iterations.length / 2);
+    const h1 = iterations.slice(0, mid).map(i => i.delta);
+    const h2 = iterations.slice(mid, mid + h1.length).map(i => i.delta);
+    const m1 = Math.max(...h1, 1e-15), m2 = Math.max(...h2, 1e-15);
+    const n1 = h1.map(v => v/m1), n2 = h2.map(v => v/m2);
+    const len = Math.min(n1.length, n2.length);
+    for (let i = 0; i < len; i++) selfSim += 1 - Math.abs(n1[i] - n2[i]);
+    selfSim /= len;
+  }
+
+  // 収束速度
+  let velocity = 0, vCount = 0;
+  for (let i = 1; i < iterations.length; i++) {
+    if (iterations[i-1].delta > 1e-15) {
+      velocity += iterations[i].delta / iterations[i-1].delta;
+      vCount++;
+    }
+  }
+  velocity = vCount > 0 ? velocity / vCount : 0;
+
+  const recent = iterations.slice(-5);
+  const contracting = recent.filter(i => i.direction === 'contracting').length;
+  const expanding = recent.filter(i => i.direction === 'expanding').length;
+  const flowDir = contracting > expanding * 2 ? 'inward' :
+                  expanding > contracting * 2 ? 'outward' : 'circular';
+
+  return {
+    reiType: 'Ghost', seed, fixedPoint, phase, convergence,
+    field: {
+      center: fixedPoint ?? bestApprox,
+      periphery: iterations.slice(-5).map(i => i.output),
+      depth: iterations.length,
+      selfSimilarity: selfSim,
+    },
+    flow: { direction: flowDir, velocity, momentum: 0,
+      phase: phase === 'materialized' ? 'arrived' : phase === 'manifesting' ? 'approaching' : 'retreating' },
+    memory: { iterations, totalSteps: iterations.length, bestApproximation: bestApprox, bestDelta },
+    layer: { depth: iterations.length, shellValues: iterations.map(i => i.output), fractalDimension: 0 },
+    relation: { entangled: [], resonanceFreq: 0, mirrorDepth: Math.floor(selfSim * iterations.length) },
+    will: {
+      tendency: phase === 'materialized' ? 'materialize' : phase === 'paradox' ? 'paradox' : 'haunt',
+      strength: phase === 'materialized' ? 1.0 : 1.0 - Math.min(bestDelta, 1.0),
+      purpose: `seed=${seed}`
+    },
+  };
+}
+
+// ============================================================
+// UI関数
+// ============================================================
+
+let currentGhost = null;
+let allGhosts = [];
+
+const funcMap = {
+  cos:       x => Math.cos(x),
+  golden:    x => 1 + 1/x,
+  sqrt2:     x => (x + 2/x) / 2,
+  sin:       x => Math.sin(x),
+  negation:  x => -x,
+};
+
+function getFunc() {
+  const sel = document.getElementById('funcSelect').value;
+  if (sel === 'logistic') {
+    const r = parseFloat(document.getElementById('rValue').value) || 3.2;
+    return x => r * x * (1 - x);
+  }
+  if (sel === 'custom') {
+    const expr = document.getElementById('customFunc').value;
+    return new Function('x', `return ${expr}`);
+  }
+  return funcMap[sel];
+}
+
+document.getElementById('funcSelect').addEventListener('change', function() {
+  document.getElementById('customRow').style.display = this.value === 'custom' ? 'flex' : 'none';
+  document.getElementById('logisticRow').style.display = this.value === 'logistic' ? 'flex' : 'none';
+});
+
+function summonGhost() {
+  const f = getFunc();
+  const seed = parseFloat(document.getElementById('seed').value) || 1.0;
+  const maxIter = parseInt(document.getElementById('maxIter').value) || 100;
+  currentGhost = summonEngine(f, seed, { maxIterations: maxIter });
+  allGhosts = [currentGhost];
+  displayResult(currentGhost);
+  drawTrajectory(currentGhost);
+  displayAttributes(currentGhost);
+  document.getElementById('ensemblePanel').style.display = 'none';
+}
+
+function summonClassics() {
+  const classics = [
+    { name: 'cos(x) → ドッティ数', f: Math.cos, seed: 1.0 },
+    { name: '1+1/x → 黄金比 φ', f: x => 1+1/x, seed: 1.0 },
+    { name: '(x+2/x)/2 → √2', f: x => (x+2/x)/2, seed: 1.0 },
+    { name: 'r·x·(1-x) r=2', f: x => 2*x*(1-x), seed: 0.3 },
+    { name: 'r·x·(1-x) r=3.5', f: x => 3.5*x*(1-x), seed: 0.5 },
+  ];
+  allGhosts = classics.map(c => {
+    const g = summonEngine(c.f, c.seed);
+    g.will.purpose = c.name;
+    return g;
+  });
+  currentGhost = allGhosts[0];
+  displayResult(currentGhost);
+  drawTrajectory(currentGhost);
+  displayAttributes(currentGhost);
+  displayEnsemble(allGhosts);
+}
+
+function phaseBadge(phase) {
+  return `<span class="phase-badge phase-${phase}">${phase}</span>`;
+}
+
+function displayResult(g) {
+  const el = document.getElementById('resultText');
+  el.innerHTML = `
+    <div><strong>Phase:</strong> ${phaseBadge(g.phase)}</div>
+    <div><strong>Convergence:</strong> ${g.convergence}</div>
+    <div><strong>Seed:</strong> ${g.seed}</div>
+    <div><strong>Fixed Point:</strong> ${g.fixedPoint !== null ? g.fixedPoint.toFixed(12) : '—'}</div>
+    <div><strong>Iterations:</strong> ${g.memory.totalSteps}</div>
+    <div><strong>Best δ:</strong> ${g.memory.bestDelta.toExponential(3)}</div>
+    <div><strong>Self-similarity:</strong> ${(g.field.selfSimilarity * 100).toFixed(1)}%</div>
+    <div><strong>Flow:</strong> ${g.flow.direction} (velocity=${g.flow.velocity.toFixed(4)})</div>
+    <div><strong>Will:</strong> ${g.will.tendency} (strength=${g.will.strength.toFixed(2)})</div>
+  `;
+}
+
+function displayAttributes(g) {
+  document.getElementById('attrGrid').style.display = 'grid';
+  document.getElementById('attrField').textContent =
+    `center: ${g.field.center.toFixed(6)}\ndepth: ${g.field.depth}\nselfSim: ${(g.field.selfSimilarity*100).toFixed(1)}%`;
+  document.getElementById('attrFlow').textContent =
+    `dir: ${g.flow.direction}\nvel: ${g.flow.velocity.toFixed(4)}\nphase: ${g.flow.phase}`;
+  document.getElementById('attrMemory').textContent =
+    `steps: ${g.memory.totalSteps}\nbestδ: ${g.memory.bestDelta.toExponential(2)}`;
+  document.getElementById('attrLayer').textContent =
+    `depth: ${g.layer.depth}\nshells: ${g.layer.shellValues.length}`;
+  document.getElementById('attrRelation').textContent =
+    `mirror: ${g.relation.mirrorDepth}\nfreq: ${g.relation.resonanceFreq}`;
+  document.getElementById('attrWill').textContent =
+    `tend: ${g.will.tendency}\nstr: ${g.will.strength.toFixed(2)}`;
+}
+
+// ============================================================
+// 描画
+// ============================================================
+
+function drawTrajectory(g) {
+  const canvas = document.getElementById('trajectoryCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  const iters = g.memory.iterations;
+  if (iters.length < 2) return;
+
+  const values = iters.map(i => i.output);
+  const allVals = [g.seed, ...values];
+  const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+  const range = maxV - minV || 1;
+  const pad = 30;
+
+  const toX = (i) => pad + (i / (allVals.length - 1)) * (W - 2*pad);
+  const toY = (v) => H - pad - ((v - minV) / range) * (H - 2*pad);
+
+  // グリッド
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 5; i++) {
+    const y = pad + i * (H - 2*pad) / 4;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W-pad, y); ctx.stroke();
+  }
+
+  // 不動点ライン
+  if (g.fixedPoint !== null) {
+    const fpY = toY(g.fixedPoint);
+    ctx.strokeStyle = 'rgba(159,122,234,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.moveTo(pad, fpY); ctx.lineTo(W-pad, fpY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(159,122,234,0.8)';
+    ctx.font = '11px monospace';
+    ctx.fillText(`G = ${g.fixedPoint.toFixed(6)}`, W - pad - 120, fpY - 5);
+  }
+
+  // 軌道（グラデーション）
+  ctx.lineWidth = 2;
+  for (let i = 1; i < allVals.length; i++) {
+    const t = i / (allVals.length - 1);
+    const r = Math.round(159 * (1 - t) + 72 * t);
+    const gr = Math.round(122 * (1 - t) + 187 * t);
+    const b = Math.round(234 * (1 - t) + 120 * t);
+    ctx.strokeStyle = `rgba(${r},${gr},${b},0.8)`;
+    ctx.beginPath();
+    ctx.moveTo(toX(i-1), toY(allVals[i-1]));
+    ctx.lineTo(toX(i), toY(allVals[i]));
+    ctx.stroke();
+  }
+
+  // ドット
+  for (let i = 0; i < allVals.length; i++) {
+    const t = i / (allVals.length - 1);
+    ctx.fillStyle = i === 0 ? '#f6ad55' :
+                    i === allVals.length - 1 ? '#48bb78' :
+                    `rgba(159,122,234,${0.3 + 0.7*t})`;
+    ctx.beginPath();
+    ctx.arc(toX(i), toY(allVals[i]), i === 0 || i === allVals.length-1 ? 5 : 2, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // ラベル
+  ctx.font = '10px monospace';
+  ctx.fillStyle = '#f6ad55';
+  ctx.fillText(`seed=${g.seed}`, toX(0) + 8, toY(allVals[0]) - 8);
+  if (allVals.length > 1) {
+    ctx.fillStyle = '#48bb78';
+    const lastIdx = allVals.length - 1;
+    ctx.fillText(`→ ${allVals[lastIdx].toFixed(6)}`, toX(lastIdx) - 80, toY(allVals[lastIdx]) - 8);
+  }
+
+  // 軸ラベル
+  ctx.fillStyle = '#666680';
+  ctx.font = '10px monospace';
+  ctx.fillText('step →', W/2 - 20, H - 5);
+  ctx.fillText(minV.toFixed(3), 0, H - pad + 15);
+  ctx.fillText(maxV.toFixed(3), 0, pad - 5);
+}
+
+function displayEnsemble(ghosts) {
+  const panel = document.getElementById('ensemblePanel');
+  panel.style.display = 'block';
+
+  // 共鳴計算
+  const resonances = [];
+  for (let i = 0; i < ghosts.length; i++) {
+    for (let j = i+1; j < ghosts.length; j++) {
+      const a = ghosts[i].fixedPoint ?? ghosts[i].memory.bestApproximation;
+      const b = ghosts[j].fixedPoint ?? ghosts[j].memory.bestApproximation;
+      const maxAbs = Math.max(Math.abs(a), Math.abs(b), 1);
+      const sim = 1 - Math.min(Math.abs(a-b)/maxAbs, 1);
+      if (sim > 0.1) {
+        resonances.push({
+          i, j, similarity: sim,
+          type: sim > 0.95 ? 'mirror' : sim > 0.5 ? 'harmonic' : 'shadow'
+        });
+      }
+    }
+  }
+
+  const resultEl = document.getElementById('ensembleResult');
+  let html = '<strong>ゴースト一覧:</strong><br>';
+  ghosts.forEach((g, i) => {
+    html += `  ${i}: ${g.will.purpose} → ${phaseBadge(g.phase)} `;
+    html += g.fixedPoint !== null ? `G=${g.fixedPoint.toFixed(8)}` : '(未収束)';
+    html += '<br>';
+  });
+
+  if (resonances.length > 0) {
+    html += '<br><strong>共鳴:</strong><br>';
+    resonances.forEach(r => {
+      html += `  ${r.i}↔${r.j}: ${r.type} (${(r.similarity*100).toFixed(1)}%)<br>`;
+    });
+  }
+
+  const valid = ghosts.filter(g => g.fixedPoint !== null);
+  if (valid.length > 0) {
+    const collective = valid.reduce((s,g) => s + g.fixedPoint, 0) / valid.length;
+    html += `<br><strong>集団不動点:</strong> ${collective.toFixed(8)}`;
+  }
+
+  resultEl.innerHTML = html;
+
+  // アンサンブル描画
+  drawEnsemble(ghosts, resonances);
+}
+
+function drawEnsemble(ghosts, resonances) {
+  const canvas = document.getElementById('ensembleCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  const n = ghosts.length;
+  const cx = W/2, cy = H/2;
+  const radius = Math.min(W, H) * 0.35;
+
+  // ゴースト位置を円形に配置
+  const positions = ghosts.map((_, i) => ({
+    x: cx + radius * Math.cos(2 * Math.PI * i / n - Math.PI/2),
+    y: cy + radius * Math.sin(2 * Math.PI * i / n - Math.PI/2),
+  }));
+
+  // 共鳴線を描画
+  resonances.forEach(r => {
+    const a = positions[r.i], b = positions[r.j];
+    ctx.strokeStyle = r.type === 'mirror' ? 'rgba(72,187,120,0.5)' :
+                      r.type === 'harmonic' ? 'rgba(123,104,238,0.4)' :
+                      'rgba(102,102,128,0.3)';
+    ctx.lineWidth = r.similarity * 3;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+
+    // 類似度ラベル
+    ctx.fillStyle = 'rgba(200,200,220,0.5)';
+    ctx.font = '9px monospace';
+    ctx.fillText(`${(r.similarity*100).toFixed(0)}%`, (a.x+b.x)/2, (a.y+b.y)/2 - 5);
+  });
+
+  // ゴーストノード
+  ghosts.forEach((g, i) => {
+    const p = positions[i];
+    const phaseColor = g.phase === 'materialized' ? '#48bb78' :
+                       g.phase === 'manifesting' ? '#f6ad55' :
+                       g.phase === 'paradox' ? '#fc8181' : '#9f7aea';
+
+    // グロー
+    const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 25);
+    grd.addColorStop(0, phaseColor + '40');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 25, 0, Math.PI*2); ctx.fill();
+
+    // ノード
+    ctx.fillStyle = phaseColor;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill();
+
+    // ラベル
+    ctx.fillStyle = '#c8c8d8';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    const fp = g.fixedPoint !== null ? g.fixedPoint.toFixed(4) : '?';
+    ctx.fillText(`G=${fp}`, p.x, p.y + 22);
+    ctx.fillText(g.will.purpose.substring(0, 20), p.x, p.y - 18);
+  });
+
+  ctx.textAlign = 'left';
+}
+
+// 初期描画
+window.addEventListener('resize', () => {
+  if (currentGhost) drawTrajectory(currentGhost);
+  if (allGhosts.length > 1) displayEnsemble(allGhosts);
+});
+</script>
+</body>
+</html>

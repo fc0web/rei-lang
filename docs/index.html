@@ -1,0 +1,986 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei (0₀式) — Cross-Domain Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=Source+Code+Pro:wght@400;600&family=Cormorant+Garamond:ital,wght@0,300;0,500;0,700;1,300&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --text: #c8c8d4;
+    --text-dim: #6a6a7e;
+    --accent: #b8a080;
+    --accent-glow: #d4b896;
+    --science: #5e8fa8;
+    --art: #c47a6a;
+    --music: #7aa87a;
+    --economics: #a8a05e;
+    --linguistics: #8a6aaa;
+    --info: #5ea8a0;
+    --humanities: #a86a8a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cormorant Garamond', 'Noto Serif JP', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 3rem 2rem 1rem;
+    position: relative;
+  }
+
+  header::before {
+    content: '零';
+    position: absolute;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8rem;
+    color: rgba(184, 160, 128, 0.03);
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 700;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    position: relative;
+    z-index: 1;
+  }
+  h1 span { font-weight: 700; }
+
+  .subtitle {
+    font-size: 1rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+    letter-spacing: 0.3em;
+    font-family: 'Source Code Pro', monospace;
+    font-weight: 400;
+    position: relative;
+    z-index: 1;
+  }
+
+  .tagline {
+    font-size: 1.15rem;
+    color: var(--text);
+    margin-top: 1.5rem;
+    font-style: italic;
+    font-weight: 300;
+    opacity: 0.7;
+  }
+
+  /* Domain flow section */
+  .flow-section {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+  }
+
+  .flow-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .flow-label {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-dim);
+    transition: all 0.4s;
+  }
+
+  .flow-label.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px rgba(184, 160, 128, 0.1);
+  }
+
+  .flow-arrow {
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    opacity: 0.3;
+  }
+
+  /* Main canvas area */
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .demo-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.6rem; }
+  }
+
+  .domain-panel {
+    background: var(--surface);
+    padding: 1.5rem;
+    position: relative;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .domain-tag {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .domain-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .domain-canvas-wrap {
+    flex: 1;
+    position: relative;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .domain-stats {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-top: 0.75rem;
+    line-height: 1.8;
+  }
+
+  .domain-stats .val {
+    color: var(--accent);
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    padding: 0 1.5rem;
+  }
+
+  button {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.6rem 1.5rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: 2px;
+  }
+
+  button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 16px rgba(184, 160, 128, 0.08);
+  }
+
+  button.active {
+    background: rgba(184, 160, 128, 0.08);
+    border-color: var(--accent);
+    color: var(--accent-glow);
+  }
+
+  /* Bridge visualization */
+  .bridge-section {
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+    padding: 0 1.5rem;
+  }
+
+  .bridge-title {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .bridge-canvas-wrap {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    height: 260px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Code preview */
+  .code-section {
+    max-width: 1200px;
+    margin: 0 auto 3rem;
+    padding: 0 1.5rem;
+  }
+
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.78rem;
+    line-height: 1.9;
+    color: var(--text-dim);
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .code-block .kw { color: var(--accent); }
+  .code-block .fn { color: var(--science); }
+  .code-block .cm { color: #4a4a5e; font-style: italic; }
+  .code-block .st { color: var(--music); }
+  .code-block .op { color: var(--art); }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(184, 160, 128, 0.3);
+    transition: border-color 0.3s;
+  }
+  footer a:hover { border-color: var(--accent); }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up {
+    animation: fadeUp 0.8s ease-out forwards;
+    opacity: 0;
+  }
+  .fade-up:nth-child(2) { animation-delay: 0.15s; }
+  .fade-up:nth-child(3) { animation-delay: 0.3s; }
+
+  /* Sound indicator */
+  .sound-note {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    font-family: 'Source Code Pro', monospace;
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 class="fade-up"><span>Rei</span> (0₀式)</h1>
+  <div class="subtitle fade-up">7-Domain Cross-Domain Computation · v0.5.5 · 1533 tests</div>
+  <div class="tagline fade-up">Values that know themselves — across every domain</div>
+</header>
+
+<div class="flow-header fade-up">
+  <span class="flow-label active" id="fl-science">B: Natural Science</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-label" id="fl-art">E: Art</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-label" id="fl-music">F: Music</span>
+</div>
+
+<div class="sound-note">🔊 Click "Start" for live audio · Drag to interact</div>
+
+<div class="controls">
+  <button id="btn-start" class="active">▶ Start</button>
+  <button id="btn-pause">⏸ Pause</button>
+  <button id="btn-reset">↻ Reset</button>
+  <button id="btn-mode" data-mode="gravity">Mode: Gravity</button>
+</div>
+
+<div class="flow-section">
+  <div class="demo-grid">
+    <!-- Science Panel -->
+    <div class="domain-panel fade-up">
+      <div class="domain-tag">
+        <span class="domain-dot" style="background:var(--science)"></span>
+        B: Natural Science — Particle Simulation
+      </div>
+      <div class="domain-canvas-wrap">
+        <canvas id="c-science"></canvas>
+      </div>
+      <div class="domain-stats">
+        particles: <span class="val" id="s-count">0</span> · 
+        energy: <span class="val" id="s-energy">0</span> · 
+        entropy: <span class="val" id="s-entropy">0</span>
+      </div>
+    </div>
+
+    <!-- Art Panel -->
+    <div class="domain-panel fade-up">
+      <div class="domain-tag">
+        <span class="domain-dot" style="background:var(--art)"></span>
+        E: Art — Pattern Generation
+      </div>
+      <div class="domain-canvas-wrap">
+        <canvas id="c-art"></canvas>
+      </div>
+      <div class="domain-stats">
+        pixels: <span class="val" id="a-pixels">0</span> · 
+        hue: <span class="val" id="a-hue">0°</span> · 
+        complexity: <span class="val" id="a-complex">0</span>
+      </div>
+    </div>
+
+    <!-- Music Panel -->
+    <div class="domain-panel fade-up">
+      <div class="domain-tag">
+        <span class="domain-dot" style="background:var(--music)"></span>
+        F: Music — Melodic Output
+      </div>
+      <div class="domain-canvas-wrap">
+        <canvas id="c-music"></canvas>
+      </div>
+      <div class="domain-stats">
+        notes: <span class="val" id="m-notes">0</span> · 
+        scale: <span class="val" id="m-scale">—</span> · 
+        tempo: <span class="val" id="m-tempo">0</span> bpm
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bridge Network -->
+<div class="bridge-section">
+  <div class="bridge-title">36-Direction Domain Bridge Network</div>
+  <div class="bridge-canvas-wrap">
+    <canvas id="c-bridge"></canvas>
+  </div>
+</div>
+
+<!-- Code Preview -->
+<div class="code-section">
+  <div class="code-block">
+<span class="cm">// Rei: One pipe transforms between any two domains</span>
+<span class="kw">import</span> { <span class="fn">simulateParticles</span>, <span class="fn">simToArt</span>, <span class="fn">artToMusic</span> } <span class="kw">from</span> <span class="st">'rei-lang'</span>;
+
+<span class="cm">// B: Physics simulation → particles with energy</span>
+<span class="kw">const</span> sim = <span class="fn">simulateParticles</span>(30, 200);
+
+<span class="cm">// B → E: Simulation becomes visual art (one pipe)</span>
+<span class="kw">const</span> art = sim <span class="op">|></span> <span class="fn">simToArt</span>;
+
+<span class="cm">// E → F: Art becomes music (one pipe)</span>
+<span class="kw">const</span> melody = art <span class="op">|></span> <span class="fn">artToMusic</span>;
+
+<span class="cm">// Every transformation preserves σ — field, flow, memory, layer, relation, will</span>
+  </div>
+</div>
+
+<nav style="text-align:center;padding:1.5rem 2rem;border-top:1px solid #1e1e2e">
+  <span style="font-size:0.7rem;letter-spacing:0.2em;color:#6a6a7e;text-transform:uppercase">Demos</span><br>
+  <a href="demo-phase8.html" style="color:#c4956a;margin:0.5rem;font-size:0.95rem">Phase 8: Life System</a> ·
+  <a href="rei-sigma-demo.html" style="color:#b8a080;margin:0.5rem;font-size:0.95rem">σ Accumulation</a> ·
+  <a href="rei-engi-demo.html" style="color:#b8a080;margin:0.5rem;font-size:0.95rem">Engi (Dependent Origination)</a> ·
+  <a href="rei-playground.html" style="color:#b8a080;margin:0.5rem;font-size:0.95rem">Playground</a> ·
+  <a href="rei-problems.html" style="color:#b8a080;margin:0.5rem;font-size:0.95rem">25 Problems</a> ·
+  <a href="gft-pipeline-tracer.html" style="color:#b8a080;margin:0.5rem;font-size:0.95rem">GFT Pipeline</a>
+</nav>
+<footer>
+  <a href="https://github.com/fc0web/rei-lang">GitHub</a> · 
+  <a href="https://www.npmjs.com/package/rei-lang">npm</a> · 
+  Rei (0₀式) by Nobuki Fujimoto · Apache 2.0 + ☮ Peace Use
+</footer>
+
+<script>
+// ─── Utility ───
+const $ = id => document.getElementById(id);
+const TAU = Math.PI * 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ─── State ───
+let running = true;
+let particles = [];
+let noteHistory = [];
+let totalNotes = 0;
+let mouseX = -1, mouseY = -1;
+let mouseDown = false;
+let simMode = 'gravity'; // gravity | vortex | wave
+const MODES = ['gravity', 'vortex', 'wave'];
+let audioCtx = null;
+let frame = 0;
+
+// ─── Canvas Setup ───
+function initCanvas(id) {
+  const c = $(id);
+  const wrap = c.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const resize = () => {
+    const r = wrap.getBoundingClientRect();
+    c.width = r.width * dpr;
+    c.height = r.height * dpr;
+    c.style.width = r.width + 'px';
+    c.style.height = r.height + 'px';
+  };
+  resize();
+  window.addEventListener('resize', resize);
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { canvas: c, ctx, w: () => c.width / (window.devicePixelRatio || 1), h: () => c.height / (window.devicePixelRatio || 1) };
+}
+
+const sci = initCanvas('c-science');
+const art = initCanvas('c-art');
+const mus = initCanvas('c-music');
+const brg = initCanvas('c-bridge');
+
+// ─── Mouse interaction ───
+sci.canvas.addEventListener('mousemove', e => {
+  const r = sci.canvas.getBoundingClientRect();
+  mouseX = e.clientX - r.left;
+  mouseY = e.clientY - r.top;
+});
+sci.canvas.addEventListener('mousedown', () => mouseDown = true);
+sci.canvas.addEventListener('mouseup', () => mouseDown = false);
+sci.canvas.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; mouseDown = false; });
+sci.canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const r = sci.canvas.getBoundingClientRect();
+  const t = e.touches[0];
+  mouseX = t.clientX - r.left;
+  mouseY = t.clientY - r.top;
+  mouseDown = true;
+}, { passive: false });
+sci.canvas.addEventListener('touchend', () => mouseDown = false);
+
+// ─── Particles ───
+function createParticle(x, y) {
+  return {
+    x: x ?? Math.random() * sci.w(),
+    y: y ?? Math.random() * sci.h(),
+    vx: (Math.random() - 0.5) * 2,
+    vy: (Math.random() - 0.5) * 2,
+    mass: 0.5 + Math.random() * 1.5,
+    energy: Math.random(),
+    hue: Math.random() * 360,
+    life: 1
+  };
+}
+
+function initParticles(n = 30) {
+  particles = [];
+  for (let i = 0; i < n; i++) particles.push(createParticle());
+}
+
+function updateParticles() {
+  const w = sci.w(), h = sci.h();
+  const cx = w / 2, cy = h / 2;
+
+  for (const p of particles) {
+    // Mouse interaction
+    if (mouseX > 0 && mouseDown) {
+      const dx = mouseX - p.x, dy = mouseY - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      const force = Math.min(3, 50 / dist);
+      p.vx += (dx / dist) * force * 0.05;
+      p.vy += (dy / dist) * force * 0.05;
+    }
+
+    // Mode-specific forces
+    if (simMode === 'gravity') {
+      const dx = cx - p.x, dy = cy - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      p.vx += (dx / dist) * 0.03;
+      p.vy += (dy / dist) * 0.03;
+    } else if (simMode === 'vortex') {
+      const dx = cx - p.x, dy = cy - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      p.vx += (-dy / dist) * 0.08 + (dx / dist) * 0.01;
+      p.vy += (dx / dist) * 0.08 + (dy / dist) * 0.01;
+    } else if (simMode === 'wave') {
+      p.vy += Math.sin(p.x * 0.02 + frame * 0.03) * 0.15;
+      p.vx += Math.cos(p.y * 0.02 + frame * 0.02) * 0.08;
+    }
+
+    // Damping
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Bounce
+    if (p.x < 0) { p.x = 0; p.vx *= -0.7; }
+    if (p.x > w) { p.x = w; p.vx *= -0.7; }
+    if (p.y < 0) { p.y = 0; p.vy *= -0.7; }
+    if (p.y > h) { p.y = h; p.vy *= -0.7; }
+
+    p.energy = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    p.hue = (p.hue + p.energy * 0.5) % 360;
+  }
+
+  // Spawn on drag
+  if (mouseDown && mouseX > 0 && particles.length < 80) {
+    particles.push(createParticle(mouseX, mouseY));
+  }
+}
+
+// ─── Draw Science ───
+function drawScience() {
+  const { ctx } = sci;
+  const w = sci.w(), h = sci.h();
+  ctx.clearRect(0, 0, w, h);
+
+  // Trails
+  ctx.globalAlpha = 0.03;
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalAlpha = 1;
+
+  // Connections
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const a = particles[i], b = particles[j];
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 80) {
+        ctx.strokeStyle = `hsla(${(a.hue + b.hue) / 2}, 40%, 50%, ${(1 - dist / 80) * 0.3})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Particles
+  for (const p of particles) {
+    const r = p.mass * 2.5 + p.energy;
+    const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
+    glow.addColorStop(0, `hsla(${p.hue}, 50%, 60%, 0.6)`);
+    glow.addColorStop(1, `hsla(${p.hue}, 50%, 60%, 0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r * 3, 0, TAU);
+    ctx.fill();
+
+    ctx.fillStyle = `hsl(${p.hue}, 50%, 70%)`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, TAU);
+    ctx.fill();
+  }
+
+  // Stats
+  const totalE = particles.reduce((s, p) => s + p.energy, 0);
+  const avgE = particles.length ? (totalE / particles.length) : 0;
+  const positions = particles.map(p => Math.floor(p.x / 20) * 1000 + Math.floor(p.y / 20));
+  const unique = new Set(positions).size;
+  const entropy = particles.length ? (unique / particles.length).toFixed(2) : '0';
+
+  $('s-count').textContent = particles.length;
+  $('s-energy').textContent = avgE.toFixed(3);
+  $('s-entropy').textContent = entropy;
+}
+
+// ─── Draw Art (simToArt) ───
+function drawArt() {
+  const { ctx } = art;
+  const w = art.w(), h = art.h();
+
+  // Slowly fade
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.04)';
+  ctx.fillRect(0, 0, w, h);
+
+  const gridX = 24, gridY = 18;
+  const cellW = w / gridX, cellH = h / gridY;
+
+  for (const p of particles) {
+    const gx = Math.floor((p.x / sci.w()) * gridX);
+    const gy = Math.floor((p.y / sci.h()) * gridY);
+    if (gx < 0 || gx >= gridX || gy < 0 || gy >= gridY) continue;
+
+    const baseHue = (p.hue + 180) % 360; // complementary
+    const sat = 30 + p.energy * 40;
+    const light = 15 + p.energy * 25;
+    const alpha = 0.08 + p.energy * 0.12;
+
+    ctx.fillStyle = `hsla(${baseHue}, ${sat}%, ${light}%, ${alpha})`;
+
+    // Different shapes based on energy
+    const cx = gx * cellW + cellW / 2;
+    const cy = gy * cellH + cellH / 2;
+    const size = cellW * (0.3 + p.mass * 0.3);
+
+    if (p.energy > 1.5) {
+      // High energy: circles
+      ctx.beginPath();
+      ctx.arc(cx, cy, size, 0, TAU);
+      ctx.fill();
+    } else if (p.energy > 0.5) {
+      // Medium: soft rectangles
+      const half = size / 2;
+      ctx.beginPath();
+      ctx.roundRect(cx - half, cy - half, size, size, size * 0.2);
+      ctx.fill();
+    } else {
+      // Low: tiny dots
+      ctx.beginPath();
+      ctx.arc(cx, cy, size * 0.4, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // Stats
+  const avgHue = particles.length ? (particles.reduce((s, p) => s + p.hue, 0) / particles.length) : 0;
+  const complexity = Math.min(1, particles.reduce((s, p) => s + p.energy, 0) / 20).toFixed(2);
+  $('a-pixels').textContent = (gridX * gridY).toLocaleString();
+  $('a-hue').textContent = Math.round(avgHue) + '°';
+  $('a-complex').textContent = complexity;
+}
+
+// ─── Audio ───
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+const PENTATONIC = [0, 2, 4, 7, 9]; // C D E G A
+function playNote(freq, duration, gain) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  const now = audioCtx.currentTime;
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, now);
+  g.gain.setValueAtTime(gain * 0.08, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + duration);
+}
+
+let lastNoteFrame = 0;
+function triggerNotes() {
+  if (!audioCtx || frame - lastNoteFrame < 8) return;
+
+  // Pick top-energy particles
+  const sorted = [...particles].sort((a, b) => b.energy - a.energy);
+  const top = sorted.slice(0, 3);
+
+  for (const p of top) {
+    if (p.energy < 0.4) continue;
+    const octave = 3 + Math.floor(p.y / sci.h() * 3);
+    const noteIdx = Math.floor((p.x / sci.w()) * 5) % 5;
+    const semitone = PENTATONIC[noteIdx];
+    const freq = 261.63 * Math.pow(2, (semitone + (octave - 4) * 12) / 12);
+    const dur = 0.3 + p.mass * 0.3;
+    const vol = Math.min(1, p.energy * 0.6);
+    playNote(freq, dur, vol);
+
+    noteHistory.push({
+      note: ['C', 'D', 'E', 'G', 'A'][noteIdx] + octave,
+      freq, time: frame, energy: p.energy, x: p.x / sci.w()
+    });
+    totalNotes++;
+    lastNoteFrame = frame;
+  }
+
+  // Keep history manageable
+  if (noteHistory.length > 200) noteHistory = noteHistory.slice(-200);
+}
+
+// ─── Draw Music ───
+function drawMusic() {
+  const { ctx } = mus;
+  const w = mus.w(), h = mus.h();
+
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.06)';
+  ctx.fillRect(0, 0, w, h);
+
+  // Staff lines
+  ctx.strokeStyle = 'rgba(122, 168, 122, 0.08)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 5; i++) {
+    const y = h * 0.25 + i * (h * 0.12);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  // Notes visualization
+  const recent = noteHistory.slice(-60);
+  for (let i = 0; i < recent.length; i++) {
+    const n = recent[i];
+    const age = (frame - n.time) / 120;
+    if (age > 1) continue;
+
+    const x = (i / 60) * w;
+    const pitchY = h * 0.2 + (1 - n.freq / 2000) * h * 0.6;
+    const alpha = (1 - age) * 0.8;
+    const size = 3 + n.energy * 4;
+
+    // Note head
+    ctx.fillStyle = `hsla(140, 40%, 60%, ${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(x, pitchY, size * 1.3, size, -0.3, 0, TAU);
+    ctx.fill();
+
+    // Note stem
+    ctx.strokeStyle = `hsla(140, 30%, 50%, ${alpha * 0.6})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + size * 1.2, pitchY);
+    ctx.lineTo(x + size * 1.2, pitchY - 25);
+    ctx.stroke();
+  }
+
+  // Waveform at bottom
+  ctx.strokeStyle = 'rgba(122, 168, 122, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const t = x / w * TAU * 4 + frame * 0.02;
+    const avgEnergy = particles.length ? particles.reduce((s, p) => s + p.energy, 0) / particles.length : 0;
+    const y = h * 0.88 + Math.sin(t) * (8 + avgEnergy * 12);
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Current tempo based on energy
+  const avgE = particles.length ? particles.reduce((s, p) => s + p.energy, 0) / particles.length : 0;
+  const tempo = Math.round(60 + avgE * 80);
+  const scale = avgE > 1 ? 'Major' : avgE > 0.5 ? 'Pentatonic' : 'Minor';
+
+  $('m-notes').textContent = totalNotes;
+  $('m-scale').textContent = scale;
+  $('m-tempo').textContent = tempo;
+}
+
+// ─── Draw Bridge Network ───
+function drawBridgeNetwork() {
+  const { ctx } = brg;
+  const w = brg.w(), h = brg.h();
+  ctx.clearRect(0, 0, w, h);
+
+  const domains = [
+    { id: 'A', label: 'Math', color: '#b8a080', x: 0.5, y: 0.15 },
+    { id: 'B', label: 'NatSci', color: '#5e8fa8', x: 0.22, y: 0.35 },
+    { id: 'C', label: 'InfoEng', color: '#5ea8a0', x: 0.78, y: 0.35 },
+    { id: 'D', label: 'Human', color: '#a86a8a', x: 0.13, y: 0.7 },
+    { id: 'E', label: 'Art', color: '#c47a6a', x: 0.35, y: 0.8 },
+    { id: 'F', label: 'Music', color: '#7aa87a', x: 0.65, y: 0.8 },
+    { id: 'G', label: 'Econ', color: '#a8a05e', x: 0.87, y: 0.7 },
+    { id: 'H', label: 'Ling', color: '#8a6aaa', x: 0.5, y: 0.92 },
+  ];
+
+  const nodes = domains.map(d => ({ ...d, px: d.x * w, py: d.y * h }));
+
+  // Draw all connections (36 bridges)
+  const pulse = (Math.sin(frame * 0.03) + 1) / 2;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const dist = Math.sqrt((a.px - b.px) ** 2 + (a.py - b.py) ** 2);
+      const alpha = 0.06 + pulse * 0.04;
+      
+      ctx.strokeStyle = `rgba(184, 160, 128, ${alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(a.px, a.py);
+      ctx.lineTo(b.px, b.py);
+      ctx.stroke();
+
+      // Animated data packet
+      const t = ((frame * 0.005 + i * 0.13 + j * 0.07) % 1);
+      const px = lerp(a.px, b.px, t);
+      const py = lerp(a.py, b.py, t);
+      ctx.fillStyle = `rgba(184, 160, 128, ${0.3 + pulse * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // Active bridge highlight (Science → Art → Music)
+  const activeLinks = [[1, 4], [4, 5]]; // B→E, E→F
+  for (const [i, j] of activeLinks) {
+    const a = nodes[i], b = nodes[j];
+    ctx.strokeStyle = `rgba(212, 184, 150, ${0.2 + pulse * 0.3})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(a.px, a.py);
+    ctx.lineTo(b.px, b.py);
+    ctx.stroke();
+
+    // Brighter packet
+    const t = ((frame * 0.012 + i * 0.2) % 1);
+    const px = lerp(a.px, b.px, t);
+    const py = lerp(a.py, b.py, t);
+    ctx.fillStyle = `rgba(212, 184, 150, ${0.6 + pulse * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(px, py, 3, 0, TAU);
+    ctx.fill();
+  }
+
+  // Draw nodes
+  for (const n of nodes) {
+    // Glow
+    const glow = ctx.createRadialGradient(n.px, n.py, 0, n.px, n.py, 28);
+    glow.addColorStop(0, n.color + '30');
+    glow.addColorStop(1, n.color + '00');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(n.px, n.py, 28, 0, TAU);
+    ctx.fill();
+
+    // Node
+    ctx.fillStyle = n.color;
+    ctx.beginPath();
+    ctx.arc(n.px, n.py, 6, 0, TAU);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = n.color + '80';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(n.px, n.py, 10, 0, TAU);
+    ctx.stroke();
+
+    // Label
+    ctx.font = '600 10px "Source Code Pro", monospace';
+    ctx.fillStyle = n.color;
+    ctx.textAlign = 'center';
+    ctx.fillText(n.id + ': ' + n.label, n.px, n.py - 16);
+  }
+
+  // Title
+  ctx.font = '400 10px "Source Code Pro", monospace';
+  ctx.fillStyle = 'rgba(200,200,212,0.3)';
+  ctx.textAlign = 'right';
+  ctx.fillText('28 bidirectional bridges · 7 domains · fully connected', w - 12, 18);
+}
+
+// ─── Flow label animation ───
+function updateFlowLabels() {
+  const phase = Math.floor(frame / 60) % 3;
+  $('fl-science').classList.toggle('active', phase === 0 || phase === 1);
+  $('fl-art').classList.toggle('active', phase === 1 || phase === 2);
+  $('fl-music').classList.toggle('active', phase === 2 || phase === 0);
+}
+
+// ─── Main Loop ───
+function tick() {
+  if (running) {
+    updateParticles();
+    drawScience();
+    drawArt();
+    triggerNotes();
+    drawMusic();
+    frame++;
+  }
+  drawBridgeNetwork();
+  updateFlowLabels();
+  requestAnimationFrame(tick);
+}
+
+// ─── Controls ───
+$('btn-start').addEventListener('click', () => {
+  running = true;
+  initAudio();
+  $('btn-start').classList.add('active');
+  $('btn-pause').classList.remove('active');
+});
+
+$('btn-pause').addEventListener('click', () => {
+  running = false;
+  $('btn-pause').classList.add('active');
+  $('btn-start').classList.remove('active');
+});
+
+$('btn-reset').addEventListener('click', () => {
+  initParticles(30);
+  noteHistory = [];
+  totalNotes = 0;
+  frame = 0;
+  // Clear art canvas
+  const actx = art.ctx;
+  actx.clearRect(0, 0, art.w(), art.h());
+  const mctx = mus.ctx;
+  mctx.clearRect(0, 0, mus.w(), mus.h());
+});
+
+$('btn-mode').addEventListener('click', () => {
+  const btn = $('btn-mode');
+  const idx = (MODES.indexOf(simMode) + 1) % MODES.length;
+  simMode = MODES[idx];
+  btn.textContent = 'Mode: ' + simMode.charAt(0).toUpperCase() + simMode.slice(1);
+});
+
+// ─── Init ───
+initParticles(30);
+tick();
+</script>
+</body>
+</html>

@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei 縁起デモ — 制約伝播と意志の可視化</title>
+<meta name="description" content="数独の制約伝播を縁起（pratītyasamutpāda）として可視化し、ゲームの意志進化を体験するインタラクティブデモ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f12;--bg2:#16161c;--bg3:#1c1c25;--bg4:#25252f;
+  --fg:#c8c5be;--fg2:#9a978f;--fg3:#6b685f;
+  --accent:#b8a47e;--accent2:#8a7a5e;--accent3:#d4c5a0;
+  --code-bg:#12121a;--code-border:#2a2a35;
+  --success:#7eb88a;--error:#c87e7e;--info:#7e9eb8;
+  --row:#5e8ab8;--col:#5eb87e;--block:#b8a45e;
+  --radius:6px;
+}
+html{font-size:15px;-webkit-font-smoothing:antialiased}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:'Noto Sans JP','IBM Plex Mono',sans-serif;
+  min-height:100vh;
+}
+
+/* ── Header ── */
+header{
+  padding:1.2rem 2rem;
+  border-bottom:1px solid var(--bg4);
+  display:flex;align-items:center;gap:1.5rem;
+  background:linear-gradient(180deg,var(--bg2),var(--bg));
+}
+.logo{font-family:'Noto Serif JP',serif;font-size:1.4rem;color:var(--accent3);letter-spacing:0.05em}
+.logo span{color:var(--fg3);font-size:0.85rem;margin-left:0.5rem;font-family:'Noto Sans JP',sans-serif}
+nav{display:flex;gap:0}
+nav button{
+  background:none;border:none;color:var(--fg3);padding:0.6rem 1.2rem;
+  font-family:'Noto Sans JP',sans-serif;font-size:0.9rem;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all 0.3s;
+}
+nav button:hover{color:var(--fg)}
+nav button.active{color:var(--accent3);border-bottom-color:var(--accent)}
+
+/* ── Main ── */
+main{max-width:1100px;margin:0 auto;padding:2rem}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── Section titles ── */
+h2{
+  font-family:'Noto Serif JP',serif;font-size:1.3rem;color:var(--accent3);
+  margin-bottom:1rem;letter-spacing:0.08em;
+}
+h2::before{content:'';display:inline-block;width:3px;height:1em;background:var(--accent);margin-right:0.6rem;vertical-align:-2px}
+.subtitle{color:var(--fg3);font-size:0.85rem;margin-bottom:1.5rem;line-height:1.7}
+
+/* ── Sudoku Grid ── */
+.sudoku-wrap{
+  display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;
+}
+.sudoku-left{flex:0 0 auto}
+.sudoku-right{flex:1;min-width:300px}
+
+.grid-container{position:relative;display:inline-block}
+#engiCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:1}
+
+.sudoku-grid{
+  display:grid;grid-template-columns:repeat(4,64px);grid-template-rows:repeat(4,64px);
+  gap:0;border:2px solid var(--accent2);position:relative;z-index:2;
+  background:var(--bg3);
+}
+.sudoku-cell{
+  width:64px;height:64px;display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:600;
+  color:var(--fg);background:var(--bg2);
+  border:1px solid var(--bg4);cursor:pointer;
+  transition:all 0.3s;position:relative;
+}
+.sudoku-cell:hover{background:var(--bg3)}
+.sudoku-cell.fixed{color:var(--accent3);cursor:default}
+.sudoku-cell.confirmed{color:var(--success);animation:confirmPulse 0.6s ease}
+.sudoku-cell.selected{box-shadow:inset 0 0 0 2px var(--accent);background:var(--bg3)}
+.sudoku-cell.traced{background:rgba(94,138,184,0.15)}
+.sudoku-cell.influenced{background:rgba(184,164,94,0.15)}
+.sudoku-cell .candidates{
+  font-size:0.55rem;color:var(--fg3);position:absolute;
+  display:grid;grid-template-columns:repeat(2,1fr);
+  width:100%;height:100%;padding:4px;
+}
+.sudoku-cell .candidates span{display:flex;align-items:center;justify-content:center}
+/* Block borders */
+.sudoku-cell:nth-child(2n+1){border-left-width:1px}
+.sudoku-cell:nth-child(2n){border-right-color:var(--accent2);border-right-width:2px}
+.sudoku-cell:nth-child(-n+4){border-top-width:1px}
+.sudoku-cell:nth-child(n+3):nth-child(-n+4),
+.sudoku-cell:nth-child(n+7):nth-child(-n+8){border-top-color:transparent}
+.sudoku-grid > .sudoku-cell:nth-child(n+9){border-top:2px solid var(--accent2)}
+
+@keyframes confirmPulse{
+  0%{background:rgba(126,184,138,0.3)}
+  100%{background:var(--bg2)}
+}
+
+/* ── Controls ── */
+.controls{display:flex;gap:0.8rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.btn{
+  background:var(--bg3);border:1px solid var(--bg4);color:var(--fg2);
+  padding:0.5rem 1rem;border-radius:var(--radius);cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;font-size:0.85rem;transition:all 0.2s;
+}
+.btn:hover{border-color:var(--accent2);color:var(--fg)}
+.btn.primary{background:var(--accent2);color:var(--bg);border-color:var(--accent)}
+.btn.primary:hover{background:var(--accent)}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* ── Info panels ── */
+.info-panel{
+  background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);
+  padding:1rem 1.2rem;margin-bottom:1rem;
+}
+.info-panel h3{
+  font-size:0.8rem;color:var(--accent);text-transform:uppercase;
+  letter-spacing:0.1em;margin-bottom:0.6rem;
+}
+.info-panel .content{font-size:0.85rem;line-height:1.7;color:var(--fg2)}
+.info-panel .content strong{color:var(--fg)}
+
+.stat-row{display:flex;gap:1rem;flex-wrap:wrap}
+.stat{
+  background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--radius);
+  padding:0.6rem 1rem;flex:1;min-width:100px;
+}
+.stat .label{font-size:0.7rem;color:var(--fg3);text-transform:uppercase;letter-spacing:0.08em}
+.stat .value{font-size:1.3rem;font-weight:600;color:var(--accent3);font-family:'IBM Plex Mono',monospace}
+
+.legend{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--fg3)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* ── Trace detail ── */
+.trace-chain{
+  display:flex;flex-wrap:wrap;gap:0.3rem;align-items:center;margin-top:0.5rem;
+}
+.trace-node{
+  background:var(--bg3);border:1px solid var(--bg4);border-radius:3px;
+  padding:0.2rem 0.5rem;font-family:'IBM Plex Mono',monospace;font-size:0.8rem;
+  color:var(--info);
+}
+.trace-arrow{color:var(--fg3);font-size:0.7rem}
+
+/* ── Game section ── */
+.game-wrap{display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap}
+.game-left{flex:0 0 auto}
+.game-right{flex:1;min-width:300px}
+
+.ttt-grid{
+  display:grid;grid-template-columns:repeat(3,72px);grid-template-rows:repeat(3,72px);
+  gap:0;border:2px solid var(--accent2);background:var(--bg3);
+}
+.ttt-cell{
+  width:72px;height:72px;display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;font-weight:700;color:var(--fg);
+  background:var(--bg2);border:1px solid var(--bg4);cursor:pointer;
+  transition:all 0.2s;font-family:'IBM Plex Mono',monospace;
+}
+.ttt-cell:hover{background:var(--bg3)}
+.ttt-cell.x{color:var(--info)}
+.ttt-cell.o{color:var(--error)}
+
+.strategy-select{
+  display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;
+}
+.strategy-select label{
+  font-size:0.8rem;color:var(--fg3);display:flex;flex-direction:column;gap:0.3rem;
+}
+.strategy-select select{
+  background:var(--bg3);border:1px solid var(--bg4);color:var(--fg);
+  padding:0.4rem 0.6rem;border-radius:var(--radius);font-size:0.85rem;
+  font-family:'Noto Sans JP',sans-serif;
+}
+
+/* ── Will chart ── */
+#willChart{
+  background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);
+}
+
+.will-label{
+  display:inline-block;padding:0.15rem 0.5rem;border-radius:3px;
+  font-size:0.75rem;font-family:'IBM Plex Mono',monospace;
+  margin:0.2rem;
+}
+.will-label.expand{background:rgba(126,158,184,0.2);color:var(--info)}
+.will-label.harmonize{background:rgba(126,184,138,0.2);color:var(--success)}
+.will-label.contract{background:rgba(200,126,126,0.2);color:var(--error)}
+.will-label.rest{background:rgba(154,151,143,0.2);color:var(--fg2)}
+
+/* ── Footer ── */
+footer{
+  margin-top:3rem;padding:1.5rem 2rem;border-top:1px solid var(--bg4);
+  text-align:center;color:var(--fg3);font-size:0.8rem;
+}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+/* ── Responsive ── */
+@media(max-width:700px){
+  main{padding:1rem}
+  .sudoku-wrap,.game-wrap{flex-direction:column}
+  .sudoku-grid{grid-template-columns:repeat(4,56px);grid-template-rows:repeat(4,56px)}
+  .sudoku-cell{width:56px;height:56px;font-size:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">零 Rei<span>縁起デモ — Phase 4d</span></div>
+  <nav>
+    <button class="active" onclick="showTab('engi')">縁起グラフ</button>
+    <button onclick="showTab('will')">意志ダイナミクス</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB 1: 縁起グラフ (Engi Graph)                 -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-engi" class="tab-content active">
+  <h2>縁起グラフ — 制約伝播の可視化</h2>
+  <p class="subtitle">
+    数独の各セルは独立した存在ではなく、行・列・ブロックの制約で<strong>相互依存</strong>しています。<br>
+    仏教哲学の<strong>縁起（pratītyasamutpāda）</strong>— 「一切は因縁によって生じる」 — を、<br>
+    制約伝播の因果連鎖として体験してください。
+  </p>
+
+  <div class="controls">
+    <button class="btn primary" id="btnStep" onclick="puzzleStep()">▶ 1ステップ伝播</button>
+    <button class="btn" id="btnSolve" onclick="puzzleSolveAll()">⏩ 収束まで実行</button>
+    <button class="btn" onclick="puzzleReset()">↺ リセット</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--row)"></div>行の結合</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--col)"></div>列の結合</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--block)"></div>ブロックの結合</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>影響パス</div>
+  </div>
+
+  <div class="sudoku-wrap">
+    <div class="sudoku-left">
+      <div class="grid-container">
+        <canvas id="engiCanvas" width="256" height="256"></canvas>
+        <div class="sudoku-grid" id="sudokuGrid"></div>
+      </div>
+      <div style="margin-top:1rem">
+        <div class="stat-row">
+          <div class="stat"><div class="label">ラウンド</div><div class="value" id="statRound">0</div></div>
+          <div class="stat"><div class="label">消去</div><div class="value" id="statElim">0</div></div>
+          <div class="stat"><div class="label">確定</div><div class="value" id="statConfirm">0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sudoku-right">
+      <div class="info-panel" id="panelTrace">
+        <h3>関係追跡 (Trace)</h3>
+        <div class="content">セルをクリックすると、そのセルの縁起的依存チェーンが表示されます。</div>
+      </div>
+
+      <div class="info-panel" id="panelInfluence">
+        <h3>影響度 (Influence)</h3>
+        <div class="content">2つのセルをShift+クリックで選択すると、セル間の影響度が表示されます。</div>
+      </div>
+
+      <div class="info-panel" id="panelLog">
+        <h3>伝播ログ</h3>
+        <div class="content" id="logContent" style="max-height:200px;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:0.8rem">
+          <em>▶ ステップを実行してください</em>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB 2: 意志ダイナミクス (Will Dynamics)         -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-will" class="tab-content">
+  <h2>意志ダイナミクス — 対局と戦略進化</h2>
+  <p class="subtitle">
+    二者の<strong>意志（will）</strong>が対局を通じて変化していく様子を観察します。<br>
+    D-FUMTの意志属性: 傾向（tendency）× 強度（strength）× 内在性（intrinsic）が<br>
+    各ターンで<strong>進化（will_evolve）</strong>し、<strong>衝突（will_conflict）</strong>や<strong>調律（will_align）</strong>が生まれます。
+  </p>
+
+  <div class="strategy-select">
+    <label>
+      Player 1 (×) の戦略
+      <select id="p1Strategy">
+        <option value="competitive">competitive (攻撃的)</option>
+        <option value="cooperative">cooperative (協調的)</option>
+        <option value="reactive">reactive (受動的)</option>
+        <option value="contemplative">contemplative (熟考型)</option>
+      </select>
+    </label>
+    <label>
+      Player 2 (○) の戦略
+      <select id="p2Strategy">
+        <option value="cooperative" selected>cooperative (協調的)</option>
+        <option value="competitive">competitive (攻撃的)</option>
+        <option value="reactive">reactive (受動的)</option>
+        <option value="contemplative">contemplative (熟考型)</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="btnGameStep" onclick="gameStep()">▶ 1ターン</button>
+    <button class="btn" id="btnGameAll" onclick="gamePlayAll()">⏩ 最後まで</button>
+    <button class="btn" onclick="gameReset()">↺ リセット</button>
+  </div>
+
+  <div class="game-wrap">
+    <div class="game-left">
+      <div class="ttt-grid" id="tttGrid"></div>
+      <div style="margin-top:1rem">
+        <div class="stat-row">
+          <div class="stat"><div class="label">ターン</div><div class="value" id="statTurn">0</div></div>
+          <div class="stat"><div class="label">状態</div><div class="value" id="statStatus" style="font-size:0.9rem">対局中</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-right">
+      <canvas id="willChart" width="440" height="200"></canvas>
+
+      <div class="info-panel" style="margin-top:1rem" id="panelWillConflict">
+        <h3>意志衝突 (Will Conflict)</h3>
+        <div class="content" id="conflictContent">対局を進めると、二者の意志衝突が分析されます。</div>
+      </div>
+
+      <div class="info-panel" id="panelWillHistory">
+        <h3>意志進化ログ</h3>
+        <div class="content" id="willLogContent" style="max-height:200px;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:0.8rem">
+          <em>▶ ターンを進めてください</em>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <strong>Rei (0₀式/れいしき)</strong> — D-FUMT Computational Language<br>
+  考案者: 藤本伸樹 (Nobuki Fujimoto) |
+  <a href="https://github.com/fc0web/rei-lang" target="_blank">GitHub</a> |
+  <a href="https://www.npmjs.com/package/rei-lang" target="_blank">npm</a>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════
+// Rei 縁起デモ — 自己完結型シミュレーション
+// ══════════════════════════════════════════════
+
+// ── Tab switching ──
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  // Find the button that called this
+  document.querySelectorAll('nav button').forEach(b => {
+    if (b.getAttribute('onclick').includes(id)) b.classList.add('active');
+  });
+}
+
+// ══════════════════════════════════════════════
+// PART 1: 数独 — 縁起グラフ
+// ══════════════════════════════════════════════
+
+const INITIAL_GRID = [
+  [1, 0, 0, 0],
+  [0, 0, 0, 1],
+  [0, 1, 0, 0],
+  [0, 0, 1, 0],
+];
+
+let puzzle = {
+  cells: [],     // [{value, candidates, fixed, confirmed}]
+  round: 0,
+  totalElim: 0,
+  totalConfirm: 0,
+  log: [],
+  selected: null,
+  shiftSelected: null,
+  solved: false,
+};
+
+function initPuzzle() {
+  puzzle.cells = [];
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const v = INITIAL_GRID[r][c];
+      puzzle.cells.push({
+        row: r, col: c, value: v,
+        candidates: v === 0 ? [1, 2, 3, 4] : [],
+        fixed: v !== 0, confirmed: v !== 0,
+      });
+    }
+  }
+  puzzle.round = 0; puzzle.totalElim = 0; puzzle.totalConfirm = 0;
+  puzzle.log = []; puzzle.selected = null; puzzle.shiftSelected = null;
+  puzzle.solved = false;
+}
+
+// Constraint groups (row, col, block)
+function getConstraints() {
+  const groups = [];
+  for (let r = 0; r < 4; r++) {
+    groups.push({ type: 'row', label: `行${r}`, cells: [0,1,2,3].map(c => r * 4 + c) });
+  }
+  for (let c = 0; c < 4; c++) {
+    groups.push({ type: 'col', label: `列${c}`, cells: [0,1,2,3].map(r => r * 4 + c) });
+  }
+  for (let br = 0; br < 2; br++) {
+    for (let bc = 0; bc < 2; bc++) {
+      const cells = [];
+      for (let dr = 0; dr < 2; dr++) for (let dc = 0; dc < 2; dc++) {
+        cells.push((br*2+dr)*4 + (bc*2+dc));
+      }
+      groups.push({ type: 'block', label: `ブロック(${br},${bc})`, cells });
+    }
+  }
+  return groups;
+}
+
+// One step of constraint propagation
+function puzzleStep() {
+  if (puzzle.solved) return;
+  puzzle.round++;
+  let elimCount = 0, confirmCount = 0;
+  const logEntries = [];
+  const constraints = getConstraints();
+
+  for (let i = 0; i < 16; i++) {
+    const cell = puzzle.cells[i];
+    if (cell.value !== 0) continue;
+
+    // Collect confirmed values from shared constraints
+    const neighborValues = new Set();
+    for (const cg of constraints) {
+      if (!cg.cells.includes(i)) continue;
+      for (const j of cg.cells) {
+        if (j === i) continue;
+        if (puzzle.cells[j].value !== 0) neighborValues.add(puzzle.cells[j].value);
+      }
+    }
+
+    // Eliminate candidates
+    const before = [...cell.candidates];
+    cell.candidates = cell.candidates.filter(c => !neighborValues.has(c));
+    const eliminated = before.filter(c => !cell.candidates.includes(c));
+
+    if (eliminated.length > 0) {
+      elimCount += eliminated.length;
+      const r = cell.row, c = cell.col;
+      logEntries.push(`R${r+1}C${c+1}: 候補[${eliminated.join(',')}]消去 → 残[${cell.candidates.join(',')}]`);
+
+      // Confirm if only one candidate
+      if (cell.candidates.length === 1) {
+        cell.value = cell.candidates[0];
+        cell.candidates = [];
+        cell.confirmed = true;
+        confirmCount++;
+        logEntries.push(`  → R${r+1}C${c+1} = ${cell.value} 確定!`);
+      }
+    }
+  }
+
+  puzzle.totalElim += elimCount;
+  puzzle.totalConfirm += confirmCount;
+  puzzle.log.push(...logEntries);
+
+  if (elimCount === 0 || puzzle.cells.every(c => c.value !== 0)) {
+    puzzle.solved = true;
+    puzzle.log.push(`── 収束 (${puzzle.round}ラウンド) ──`);
+  }
+
+  renderPuzzle();
+  renderEngiCanvas();
+  updatePuzzleStats();
+}
+
+function puzzleSolveAll() {
+  const interval = setInterval(() => {
+    if (puzzle.solved) { clearInterval(interval); return; }
+    puzzleStep();
+  }, 400);
+}
+
+function puzzleReset() {
+  initPuzzle();
+  renderPuzzle();
+  renderEngiCanvas();
+  updatePuzzleStats();
+  document.getElementById('panelTrace').querySelector('.content').innerHTML =
+    'セルをクリックすると、そのセルの縁起的依存チェーンが表示されます。';
+  document.getElementById('panelInfluence').querySelector('.content').innerHTML =
+    '2つのセルをShift+クリックで選択すると、セル間の影響度が表示されます。';
+  document.getElementById('logContent').innerHTML = '<em>▶ ステップを実行してください</em>';
+}
+
+function renderPuzzle() {
+  const grid = document.getElementById('sudokuGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const cell = puzzle.cells[i];
+    const div = document.createElement('div');
+    div.className = 'sudoku-cell';
+    if (cell.fixed) div.classList.add('fixed');
+    if (cell.confirmed && !cell.fixed) div.classList.add('confirmed');
+    if (puzzle.selected === i) div.classList.add('selected');
+
+    if (cell.value !== 0) {
+      div.textContent = cell.value;
+    } else {
+      const cands = document.createElement('div');
+      cands.className = 'candidates';
+      for (const c of [1, 2, 3, 4]) {
+        const s = document.createElement('span');
+        s.textContent = cell.candidates.includes(c) ? c : '';
+        cands.appendChild(s);
+      }
+      div.appendChild(cands);
+    }
+
+    div.addEventListener('click', (e) => onCellClick(i, e.shiftKey));
+    grid.appendChild(div);
+  }
+}
+
+function onCellClick(idx, shift) {
+  if (shift) {
+    if (puzzle.selected !== null && puzzle.selected !== idx) {
+      puzzle.shiftSelected = idx;
+      showInfluence(puzzle.selected, idx);
+    }
+  } else {
+    puzzle.selected = idx;
+    puzzle.shiftSelected = null;
+    showTrace(idx);
+  }
+  renderPuzzle();
+  renderEngiCanvas();
+}
+
+// ── Trace ──
+function showTrace(idx) {
+  const cell = puzzle.cells[idx];
+  const constraints = getConstraints();
+  const connected = new Set();
+  const chains = [];
+
+  for (const cg of constraints) {
+    if (!cg.cells.includes(idx)) continue;
+    for (const j of cg.cells) {
+      if (j !== idx) {
+        connected.add(j);
+        if (puzzle.cells[j].value !== 0) {
+          chains.push({ from: idx, to: j, type: cg.type, value: puzzle.cells[j].value });
+        }
+      }
+    }
+  }
+
+  let html = `<strong>R${cell.row+1}C${cell.col+1}</strong> の依存チェーン (${connected.size}セルと接続)<br>`;
+  html += '<div class="trace-chain">';
+  html += `<span class="trace-node" style="background:rgba(184,164,94,0.2)">R${cell.row+1}C${cell.col+1}</span>`;
+  for (const ch of chains.slice(0, 8)) {
+    const to = puzzle.cells[ch.to];
+    const color = ch.type === 'row' ? 'var(--row)' : ch.type === 'col' ? 'var(--col)' : 'var(--block)';
+    html += `<span class="trace-arrow">→</span>`;
+    html += `<span class="trace-node" style="border-color:${color}">R${to.row+1}C${to.col+1}=${ch.value}</span>`;
+  }
+  html += '</div>';
+  html += `<br><span style="color:var(--fg3);font-size:0.8rem">縁起: このセルの値は、接続された${connected.size}セルの状態によって定まります。</span>`;
+
+  document.getElementById('panelTrace').querySelector('.content').innerHTML = html;
+
+  // Highlight traced cells
+  document.querySelectorAll('.sudoku-cell').forEach((el, i) => {
+    el.classList.toggle('traced', connected.has(i));
+  });
+}
+
+// ── Influence ──
+function showInfluence(fromIdx, toIdx) {
+  const fromCell = puzzle.cells[fromIdx];
+  const toCell = puzzle.cells[toIdx];
+  const constraints = getConstraints();
+
+  // BFS for path
+  const visited = new Set([fromIdx]);
+  const queue = [{ idx: fromIdx, path: [fromIdx], strength: 1.0 }];
+  let result = null;
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current.path.length > 6) continue;
+
+    for (const cg of constraints) {
+      if (!cg.cells.includes(current.idx)) continue;
+      for (const j of cg.cells) {
+        if (j === current.idx) continue;
+        if (j === toIdx) {
+          result = { path: [...current.path, j], strength: current.strength * 0.9, type: cg.type };
+          break;
+        }
+        if (!visited.has(j)) {
+          visited.add(j);
+          queue.push({ idx: j, path: [...current.path, j], strength: current.strength * 0.9 });
+        }
+      }
+      if (result) break;
+    }
+    if (result) break;
+  }
+
+  let html = `<strong>R${fromCell.row+1}C${fromCell.col+1}</strong> → <strong>R${toCell.row+1}C${toCell.col+1}</strong><br>`;
+  if (result) {
+    const score = result.strength.toFixed(3);
+    const hops = result.path.length - 1;
+    const direct = hops === 1;
+    html += `影響スコア: <strong style="color:var(--accent3)">${score}</strong> | `;
+    html += `ホップ数: <strong>${hops}</strong> | `;
+    html += `直接結合: ${direct ? '<span style="color:var(--success)">Yes</span>' : '<span style="color:var(--fg3)">No</span>'}<br>`;
+    html += '<div class="trace-chain">';
+    for (let k = 0; k < result.path.length; k++) {
+      const c = puzzle.cells[result.path[k]];
+      html += `<span class="trace-node">R${c.row+1}C${c.col+1}</span>`;
+      if (k < result.path.length - 1) html += '<span class="trace-arrow">→</span>';
+    }
+    html += '</div>';
+  } else {
+    html += '<span style="color:var(--fg3)">経路なし（影響スコア: 0）</span>';
+  }
+
+  document.getElementById('panelInfluence').querySelector('.content').innerHTML = html;
+
+  // Highlight influence path
+  document.querySelectorAll('.sudoku-cell').forEach((el, i) => {
+    el.classList.toggle('influenced', result ? result.path.includes(i) : false);
+  });
+}
+
+// ── Engi Canvas: draw constraint lines ──
+function renderEngiCanvas() {
+  const canvas = document.getElementById('engiCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Only draw when a cell is selected
+  if (puzzle.selected === null) return;
+
+  const idx = puzzle.selected;
+  const constraints = getConstraints();
+  const fromX = (puzzle.cells[idx].col + 0.5) * 64;
+  const fromY = (puzzle.cells[idx].row + 0.5) * 64;
+
+  ctx.lineWidth = 1.2;
+  ctx.globalAlpha = 0.4;
+
+  for (const cg of constraints) {
+    if (!cg.cells.includes(idx)) continue;
+    const color = cg.type === 'row' ? '#5e8ab8' : cg.type === 'col' ? '#5eb87e' : '#b8a45e';
+    ctx.strokeStyle = color;
+
+    for (const j of cg.cells) {
+      if (j === idx) continue;
+      const toX = (puzzle.cells[j].col + 0.5) * 64;
+      const toY = (puzzle.cells[j].row + 0.5) * 64;
+
+      ctx.beginPath();
+      // Slight curve for visual distinction
+      const midX = (fromX + toX) / 2 + (cg.type === 'block' ? 8 : 0);
+      const midY = (fromY + toY) / 2 + (cg.type === 'block' ? 8 : 0);
+      ctx.moveTo(fromX, fromY);
+      ctx.quadraticCurveTo(midX, midY, toX, toY);
+      ctx.stroke();
+    }
+  }
+
+  // Draw influence path if shift-selected
+  if (puzzle.shiftSelected !== null) {
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = '#d4c5a0';
+    ctx.lineWidth = 2.5;
+    // Just highlight the two endpoints
+    const toX = (puzzle.cells[puzzle.shiftSelected].col + 0.5) * 64;
+    const toY = (puzzle.cells[puzzle.shiftSelected].row + 0.5) * 64;
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+function updatePuzzleStats() {
+  document.getElementById('statRound').textContent = puzzle.round;
+  document.getElementById('statElim').textContent = puzzle.totalElim;
+  document.getElementById('statConfirm').textContent = puzzle.totalConfirm;
+
+  const logEl = document.getElementById('logContent');
+  if (puzzle.log.length > 0) {
+    logEl.innerHTML = puzzle.log.map(l =>
+      l.startsWith('  →') ? `<div style="color:var(--success)">${l}</div>`
+      : l.startsWith('──') ? `<div style="color:var(--accent);margin-top:0.5rem">${l}</div>`
+      : `<div>${l}</div>`
+    ).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  document.getElementById('btnStep').disabled = puzzle.solved;
+  document.getElementById('btnSolve').disabled = puzzle.solved;
+}
+
+// ══════════════════════════════════════════════
+// PART 2: ゲーム — 意志ダイナミクス
+// ══════════════════════════════════════════════
+
+const TENDENCY_MAP = {
+  competitive: 'expand',
+  cooperative: 'harmonize',
+  reactive: 'rest',
+  contemplative: 'harmonize',
+};
+const TENDENCY_COLORS = {
+  expand: '#7e9eb8',
+  harmonize: '#7eb88a',
+  contract: '#c87e7e',
+  rest: '#9a978f',
+  transcend: '#d4c5a0',
+};
+
+let game = {
+  board: Array(9).fill(0),
+  currentPlayer: 1,
+  turn: 0,
+  status: 'playing', // 'playing' | 'win' | 'draw'
+  winner: null,
+  willHistory: [], // [{turn, player, tendency, strength}]
+  wills: [
+    { tendency: 'expand', strength: 0.5 },
+    { tendency: 'harmonize', strength: 0.5 },
+  ],
+  strategies: ['competitive', 'cooperative'],
+};
+
+const WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6],
+];
+
+function initGame() {
+  const s1 = document.getElementById('p1Strategy').value;
+  const s2 = document.getElementById('p2Strategy').value;
+  game = {
+    board: Array(9).fill(0),
+    currentPlayer: 1,
+    turn: 0,
+    status: 'playing',
+    winner: null,
+    willHistory: [],
+    wills: [
+      { tendency: TENDENCY_MAP[s1] || 'rest', strength: 0.5 },
+      { tendency: TENDENCY_MAP[s2] || 'rest', strength: 0.5 },
+    ],
+    strategies: [s1, s2],
+  };
+  game.willHistory.push(
+    { turn: 0, player: 1, tendency: game.wills[0].tendency, strength: game.wills[0].strength },
+    { turn: 0, player: 2, tendency: game.wills[1].tendency, strength: game.wills[1].strength },
+  );
+}
+
+function checkWin(board) {
+  for (const [a, b, c] of WIN_LINES) {
+    if (board[a] !== 0 && board[a] === board[b] && board[b] === board[c]) return board[a];
+  }
+  return board.includes(0) ? null : -1; // -1 = draw
+}
+
+function getAIMove(player) {
+  const legal = game.board.map((v, i) => v === 0 ? i : -1).filter(i => i >= 0);
+  if (legal.length === 0) return -1;
+
+  const strat = game.strategies[player - 1];
+  const opp = player === 1 ? 2 : 1;
+
+  // Check for winning move
+  for (const m of legal) {
+    const test = [...game.board]; test[m] = player;
+    if (checkWin(test) === player) return m;
+  }
+  // Check for blocking move
+  for (const m of legal) {
+    const test = [...game.board]; test[m] = opp;
+    if (checkWin(test) === opp) return m;
+  }
+
+  if (strat === 'competitive' || strat === 'contemplative') {
+    // Center → corners → edges
+    const preferred = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+    for (const p of preferred) {
+      if (game.board[p] === 0) return p;
+    }
+  } else if (strat === 'reactive') {
+    // Random
+    return legal[Math.floor(Math.random() * legal.length)];
+  } else {
+    // cooperative: edges first (intentionally suboptimal)
+    const edgeFirst = [1, 3, 5, 7, 4, 0, 2, 6, 8];
+    for (const p of edgeFirst) {
+      if (game.board[p] === 0) return p;
+    }
+  }
+  return legal[0];
+}
+
+function evolveWill(playerIdx, moveScore) {
+  const will = game.wills[playerIdx];
+  const prevTendency = will.tendency;
+  let newStrength = Math.min(1, will.strength + 0.1);
+
+  // Simple evolution logic
+  if (moveScore > 0.5) {
+    will.tendency = 'expand';
+    newStrength = Math.min(1, will.strength + 0.15);
+  } else if (moveScore < -0.3) {
+    will.tendency = 'contract';
+  } else if (will.strength > 0.7) {
+    if (will.tendency === 'expand') will.tendency = 'transcend';
+    else if (will.tendency === 'rest') will.tendency = 'harmonize';
+  }
+  will.strength = newStrength;
+
+  return { previous: prevTendency, evolved: will.tendency, strength: newStrength };
+}
+
+function gameStep() {
+  if (game.status !== 'playing') return;
+  game.turn++;
+
+  const move = getAIMove(game.currentPlayer);
+  if (move < 0) return;
+
+  game.board[move] = game.currentPlayer;
+
+  // Simple score: win=1, block=0.5, normal=0
+  let moveScore = 0;
+  const testWin = [...game.board]; testWin[move] = game.currentPlayer;
+  if (checkWin(testWin) === game.currentPlayer) moveScore = 1;
+  else {
+    const opp = game.currentPlayer === 1 ? 2 : 1;
+    const testBlock = [...game.board]; testBlock[move] = opp;
+    if (checkWin(testBlock) === opp) moveScore = 0.3;
+  }
+
+  // Evolve will
+  const evolution = evolveWill(game.currentPlayer - 1, moveScore);
+  game.willHistory.push({
+    turn: game.turn,
+    player: game.currentPlayer,
+    tendency: evolution.evolved,
+    strength: evolution.strength,
+  });
+
+  // Check result
+  const result = checkWin(game.board);
+  if (result === -1) {
+    game.status = 'draw';
+  } else if (result) {
+    game.status = 'win';
+    game.winner = result;
+  }
+
+  game.currentPlayer = game.currentPlayer === 1 ? 2 : 1;
+
+  renderGame();
+  renderWillChart();
+  updateGameStats();
+  updateConflictPanel();
+}
+
+function gamePlayAll() {
+  const interval = setInterval(() => {
+    if (game.status !== 'playing') { clearInterval(interval); return; }
+    gameStep();
+  }, 500);
+}
+
+function gameReset() {
+  initGame();
+  renderGame();
+  renderWillChart();
+  updateGameStats();
+  document.getElementById('conflictContent').textContent = '対局を進めると、二者の意志衝突が分析されます。';
+  document.getElementById('willLogContent').innerHTML = '<em>▶ ターンを進めてください</em>';
+}
+
+function renderGame() {
+  const grid = document.getElementById('tttGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const div = document.createElement('div');
+    div.className = 'ttt-cell';
+    if (game.board[i] === 1) { div.textContent = '×'; div.classList.add('x'); }
+    else if (game.board[i] === 2) { div.textContent = '○'; div.classList.add('o'); }
+    grid.appendChild(div);
+  }
+}
+
+function renderWillChart() {
+  const canvas = document.getElementById('willChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid
+  ctx.strokeStyle = '#25252f';
+  ctx.lineWidth = 1;
+  for (let y = 0; y < H; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#6b685f';
+  ctx.font = '11px "IBM Plex Mono"';
+  ctx.fillText('strength', 5, 15);
+  ctx.fillText('1.0', 5, 32);
+  ctx.fillText('0.0', 5, H - 8);
+  ctx.fillText('turn →', W - 50, H - 8);
+
+  const maxTurn = Math.max(game.turn, 5);
+  const pad = { l: 40, r: 20, t: 25, b: 25 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+
+  // Draw lines for each player
+  for (const player of [1, 2]) {
+    const points = game.willHistory.filter(h => h.player === player);
+    if (points.length < 2) continue;
+
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < points.length; i++) {
+      const x = pad.l + (points[i].turn / maxTurn) * plotW;
+      const y = pad.t + (1 - points[i].strength) * plotH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = player === 1 ? '#7e9eb8' : '#c87e7e';
+    ctx.stroke();
+
+    // Draw tendency dots
+    for (const p of points) {
+      const x = pad.l + (p.turn / maxTurn) * plotW;
+      const y = pad.t + (1 - p.strength) * plotH;
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = TENDENCY_COLORS[p.tendency] || '#9a978f';
+      ctx.fill();
+    }
+  }
+
+  // Legend
+  ctx.font = '11px "Noto Sans JP"';
+  ctx.fillStyle = '#7e9eb8';
+  ctx.fillText('● P1 (×)', W - 150, 16);
+  ctx.fillStyle = '#c87e7e';
+  ctx.fillText('● P2 (○)', W - 70, 16);
+}
+
+function updateGameStats() {
+  document.getElementById('statTurn').textContent = game.turn;
+  const statusText = game.status === 'playing' ? '対局中'
+    : game.status === 'win' ? `Player ${game.winner} 勝利`
+    : '引き分け';
+  document.getElementById('statStatus').textContent = statusText;
+
+  document.getElementById('btnGameStep').disabled = game.status !== 'playing';
+  document.getElementById('btnGameAll').disabled = game.status !== 'playing';
+
+  // Will log
+  const logEl = document.getElementById('willLogContent');
+  if (game.willHistory.length > 2) {
+    const entries = game.willHistory.slice(2); // skip initial
+    logEl.innerHTML = entries.map(h => {
+      const color = TENDENCY_COLORS[h.tendency] || '#9a978f';
+      return `<div>Turn ${h.turn}: P${h.player} → <span style="color:${color}">${h.tendency}</span> (${h.strength.toFixed(2)})</div>`;
+    }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+
+function updateConflictPanel() {
+  const w1 = game.wills[0];
+  const w2 = game.wills[1];
+  const OPPOSING = [['expand','contract'],['rest','expand'],['harmonize','transcend']];
+  const isOpposing = OPPOSING.some(([a,b]) =>
+    (w1.tendency===a && w2.tendency===b) || (w1.tendency===b && w2.tendency===a)
+  );
+  const baseTension = isOpposing ? 0.8 : (w1.tendency === w2.tendency ? 0 : 0.3);
+  const tension = Math.min(1, baseTension * (w1.strength + w2.strength) / 2);
+
+  let html = `P1: <span class="will-label ${w1.tendency}">${w1.tendency} (${w1.strength.toFixed(2)})</span> `;
+  html += `vs P2: <span class="will-label ${w2.tendency}">${w2.tendency} (${w2.strength.toFixed(2)})</span><br>`;
+  html += `衝突度 (tension): <strong style="color:${tension > 0.5 ? 'var(--error)' : 'var(--success)'}">${tension.toFixed(3)}</strong>`;
+  html += tension > 0.5 ? ' — <span style="color:var(--error)">強い対立</span>' : ' — <span style="color:var(--success)">低い緊張</span>';
+
+  if (isOpposing) {
+    html += '<br><span style="color:var(--fg3);font-size:0.8rem">→ entangle（縁起的統合）を推奨</span>';
+  } else if (w1.tendency === w2.tendency) {
+    html += '<br><span style="color:var(--fg3);font-size:0.8rem">→ 同一傾向: 衝突なし</span>';
+  } else {
+    html += '<br><span style="color:var(--fg3);font-size:0.8rem">→ will_align（意志調律）で調和可能</span>';
+  }
+
+  document.getElementById('conflictContent').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════
+initPuzzle();
+renderPuzzle();
+renderEngiCanvas();
+updatePuzzleStats();
+
+initGame();
+renderGame();
+renderWillChart();
+</script>
+</body>
+</html>

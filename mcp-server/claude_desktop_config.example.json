@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "rei-project": {
+      "command": "node",
+      "args": ["C:\\Users\\user\\projects\\rei-lang\\tools\\mcp-server\\dist\\index.js"],
+      "env": {
+        "REI_PROJECT_ROOT": "C:\\Users\\user\\projects\\rei-lang"
+      }
+    }
+  }
+}

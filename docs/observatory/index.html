@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei 値観測所 — Value Observatory</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-mid: #12121c;
+  --bg-card: #1a1a28;
+  --bg-card-hover: #222236;
+  --border: #2a2a40;
+  --border-glow: #4a4a6a;
+  --text-primary: #c8c8d8;
+  --text-secondary: #8888a0;
+  --text-dim: #55556a;
+  --accent-gold: #c4a35a;
+  --accent-gold-dim: #8a7a3a;
+  --accent-blue: #5a8ab4;
+  --accent-cyan: #5ab4a8;
+  --accent-red: #b45a5a;
+  --accent-purple: #8a5ab4;
+  --accent-green: #5ab45a;
+  --font-serif: 'Noto Serif JP', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle background texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(90,138,180,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(196,163,90,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(90,180,168,0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+header {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem 0;
+}
+
+header h1 {
+  font-size: 2.2rem;
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+}
+
+header h1 span.kanji {
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+header .subtitle {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+header .description {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Section titles */
+.section-title {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--accent-gold-dim);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.3s;
+}
+.card:hover { border-color: var(--border-glow); }
+
+/* Input Panel */
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.input-group { margin-bottom: 1rem; }
+
+.input-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.1em;
+}
+
+.input-group input, .input-group select {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-group input:focus, .input-group select:focus {
+  border-color: var(--accent-gold-dim);
+}
+
+.code-preview {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-gold);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.05em;
+}
+
+/* Buttons */
+.btn-group {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.6rem 1.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  letter-spacing: 0.1em;
+}
+.btn:hover {
+  border-color: var(--accent-gold-dim);
+  color: var(--accent-gold);
+  background: rgba(196,163,90,0.05);
+}
+.btn.active {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: rgba(196,163,90,0.1);
+}
+.btn.primary {
+  border-color: var(--accent-gold-dim);
+  color: var(--accent-gold);
+  background: rgba(196,163,90,0.08);
+}
+.btn.primary:hover {
+  background: rgba(196,163,90,0.15);
+}
+
+/* 8-Mode Grid */
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+}
+
+.mode-cell {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.7rem;
+  text-align: center;
+  transition: all 0.4s;
+  position: relative;
+  overflow: hidden;
+}
+
+.mode-cell .mode-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.3rem;
+}
+
+.mode-cell .mode-value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: color 0.3s;
+}
+
+.mode-cell .mode-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-gold-dim);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s ease-out;
+}
+
+.mode-cell.selected {
+  border-color: var(--accent-gold);
+  background: rgba(196,163,90,0.08);
+}
+.mode-cell.selected .mode-value { color: var(--accent-gold); }
+.mode-cell.selected .mode-bar { transform: scaleX(1); background: var(--accent-gold); }
+
+/* Evolve Result */
+.evolve-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.evolve-info { line-height: 2; }
+
+.evolve-info .label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+.evolve-info .value {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-left: 0.5rem;
+}
+
+.evolve-info .value.gold { color: var(--accent-gold); }
+.evolve-info .value.cyan { color: var(--accent-cyan); }
+
+.awareness-bar-container {
+  margin-top: 0.8rem;
+}
+
+.awareness-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-deep);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.3rem;
+}
+
+.awareness-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-gold-dim), var(--accent-gold));
+  border-radius: 4px;
+  transition: width 0.8s ease-out;
+  width: 0%;
+}
+
+/* Thought Loop Visualizer */
+.thought-viz {
+  position: relative;
+}
+
+.thought-canvas-container {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+canvas#thoughtCanvas {
+  width: 100%;
+  height: 300px;
+  display: block;
+}
+
+.thought-steps {
+  max-height: 250px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg-deep);
+}
+
+.thought-step {
+  display: grid;
+  grid-template-columns: 40px 1fr 80px 70px 90px;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid rgba(42,42,64,0.5);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  align-items: center;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: stepAppear 0.4s forwards;
+}
+
+@keyframes stepAppear {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.thought-step .step-num {
+  color: var(--text-dim);
+}
+
+.thought-step .step-mode {
+  color: var(--accent-blue);
+}
+
+.thought-step .step-value {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.thought-step .step-awareness {
+  text-align: right;
+}
+
+.thought-step .step-decision {
+  text-align: right;
+  font-size: 0.7rem;
+}
+
+.decision-converged { color: var(--accent-green); }
+.decision-continue { color: var(--text-dim); }
+.decision-limit { color: var(--accent-red); }
+.decision-awakened { color: var(--accent-gold); }
+
+/* Sigma Panel */
+.sigma-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+.sigma-card {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.sigma-card .sigma-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+}
+
+.sigma-card .sigma-value {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.sigma-card .sigma-sub {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 0.3rem;
+}
+
+/* Summary */
+.summary-box {
+  background: rgba(196,163,90,0.05);
+  border: 1px solid var(--accent-gold-dim);
+  border-radius: 4px;
+  padding: 1.2rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  display: none;
+}
+
+.summary-box .highlight {
+  color: var(--accent-gold);
+  font-weight: 500;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  margin-top: 3rem;
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+footer a {
+  color: var(--accent-gold-dim);
+  text-decoration: none;
+}
+footer a:hover { color: var(--accent-gold); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .input-grid { grid-template-columns: 1fr; }
+  .modes-grid { grid-template-columns: repeat(2, 1fr); }
+  .evolve-panel { grid-template-columns: 1fr; }
+  .sigma-panel { grid-template-columns: 1fr; }
+  .thought-step { grid-template-columns: 30px 1fr 60px 60px; }
+  .thought-step .step-decision { display: none; }
+  header h1 { font-size: 1.6rem; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1><span class="kanji">Rei</span> 値観測所</h1>
+    <div class="subtitle">value observatory</div>
+    <div class="description">
+      Reiでは、値が自分自身を知り、自分で最適な計算方法を選び、自ら進化します。<br>
+      このデモは、他のどの言語にも存在しない「値の自己進化」を可視化します。
+    </div>
+  </header>
+
+  <!-- Step 1: Value Creation -->
+  <div class="card" id="createCard">
+    <div class="section-title">01 — 値の生成 / Create Value</div>
+    <div class="input-grid">
+      <div>
+        <div class="input-group">
+          <label>中心 (center)</label>
+          <input type="number" id="centerInput" value="10" step="1">
+        </div>
+        <div class="input-group">
+          <label>周囲 (neighbors) — カンマ区切り</label>
+          <input type="text" id="neighborsInput" value="1, 5, 8, 3">
+        </div>
+        <div class="input-group">
+          <label>思考戦略 (strategy)</label>
+          <select id="strategySelect">
+            <option value="converge">converge — 収束を目指す</option>
+            <option value="explore" selected>explore — 多様性を探索</option>
+            <option value="awaken">awaken — 覚醒を目指す</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>反復数 (iterations)</label>
+          <input type="number" id="iterInput" value="8" min="2" max="20">
+        </div>
+      </div>
+      <div>
+        <div class="code-preview" id="codePreview">
+          𝕄{10; 1, 5, 8, 3}
+        </div>
+        <div class="btn-group">
+          <button class="btn primary" onclick="runAll()">▶ 観測開始</button>
+          <button class="btn" onclick="randomize()">⟳ ランダム</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: 8-Mode Computation -->
+  <div class="card" id="modesCard" style="display:none">
+    <div class="section-title">02 — 八つの解 / Eight Parallel Modes</div>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem; font-family:var(--font-mono);">
+      同じ𝕄に対し、8つの計算モードが8つの異なる答えを返す。正解は一つではない。
+    </p>
+    <div class="modes-grid" id="modesGrid"></div>
+  </div>
+
+  <!-- Step 3: Evolve -->
+  <div class="card" id="evolveCard" style="display:none">
+    <div class="section-title">03 — 自動進化 / Evolve</div>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem; font-family:var(--font-mono);">
+      値が自分のσ（自己参照）を読み、最適なモードを自分で選ぶ。
+    </p>
+    <div class="evolve-panel" id="evolvePanel"></div>
+  </div>
+
+  <!-- Step 4: Thought Loop -->
+  <div class="card" id="thoughtCard" style="display:none">
+    <div class="section-title">04 — 思考ループ / Thought Loop</div>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem; font-family:var(--font-mono);">
+      値が繰り返し自己進化し、覚醒度が上がり、軌道が形成される。
+    </p>
+    <div class="thought-viz">
+      <div class="thought-canvas-container">
+        <canvas id="thoughtCanvas"></canvas>
+      </div>
+      <div class="thought-steps" id="thoughtSteps"></div>
+    </div>
+  </div>
+
+  <!-- Step 5: σ Summary -->
+  <div class="card" id="sigmaCard" style="display:none">
+    <div class="section-title">05 — σ 自己認識 / Self-Knowledge</div>
+    <div class="sigma-panel" id="sigmaPanel"></div>
+    <div class="summary-box" id="summaryBox"></div>
+  </div>
+
+  <footer>
+    <a href="https://www.npmjs.com/package/rei-lang">npm: rei-lang</a> · 
+    <a href="https://github.com/fc0web/rei-lang">GitHub</a> · 
+    <a href="https://fc0web.github.io/rei-lang/">Playground</a><br>
+    Rei (0₀式/れいしき) — 考案者: 藤本伸樹 (Nobuki Fujimoto)
+  </footer>
+</div>
+
+<!-- Rei Engine will be injected here -->
+<script>(()=>{var pt=(e,n)=>()=>(n||e((n={exports:{}}).exports,n),n.exports);var mt=pt(z=>{"use strict";var l={NUMBER:"NUMBER",STRING:"STRING",EXT_LIT:"EXT_LIT",SYMBOL_0_0:"SYMBOL_0_0",SYMBOL_DOT_PRIM:"SYMBOL_DOT_PRIM",CONST_PI:"CONST_PI",CONST_E:"CONST_E",CONST_PHI:"CONST_PHI",CONST_I:"CONST_I",CONST_PHI_UP:"CONST_PHI_UP",CONST_PSI_UP:"CONST_PSI_UP",CONST_OMEGA_UP:"CONST_OMEGA_UP",CONST_EMPTY:"CONST_EMPTY",QUAD_TOP:"QUAD_TOP",QUAD_BOT:"QUAD_BOT",QUAD_TOP_PI:"QUAD_TOP_PI",QUAD_BOT_PI:"QUAD_BOT_PI",LET:"LET",MUT:"MUT",COMPRESS:"COMPRESS",WEIGHT:"WEIGHT",GENESIS:"GENESIS",IF:"IF",THEN:"THEN",ELSE:"ELSE",MATCH:"MATCH",CASE:"CASE",WITNESSED:"WITNESSED",BY:"BY",TRUE:"TRUE",FALSE:"FALSE",NULL:"NULL",TEMPORAL:"TEMPORAL",TIMELESS:"TIMELESS",SPACE:"SPACE",LAYER:"LAYER",IDENT:"IDENT",PLUS:"PLUS",MINUS:"MINUS",STAR:"STAR",SLASH:"SLASH",OPLUS:"OPLUS",OTIMES:"OTIMES",CDOT:"CDOT",PIPE_OP:"PIPE_OP",EXTEND:"EXTEND",REDUCE:"REDUCE",ASSIGN:"ASSIGN",DOT:"DOT",ARROW:"ARROW",SEMICOLON:"SEMICOLON",COMMA:"COMMA",COLON:"COLON",LPAREN:"LPAREN",RPAREN:"RPAREN",LBRACE:"LBRACE",RBRACE:"RBRACE",LBRACKET:"LBRACKET",RBRACKET:"RBRACKET",CONVERGE:"CONVERGE",DIVERGE:"DIVERGE",REFLECT:"REFLECT",AND:"AND",OR:"OR",NOT:"NOT",GT_K:"GT_K",LT_K:"LT_K",EQ_K:"EQ_K",GT:"GT",LT:"LT",EQ:"EQ",NEQ:"NEQ",GTE:"GTE",LTE:"LTE",MDIM_OPEN:"MDIM_OPEN",NEWLINE:"NEWLINE",EOF:"EOF"},gt={let:l.LET,mut:l.MUT,compress:l.COMPRESS,weight:l.WEIGHT,genesis:l.GENESIS,if:l.IF,then:l.THEN,else:l.ELSE,match:l.MATCH,case:l.CASE,witnessed:l.WITNESSED,by:l.BY,true:l.TRUE,false:l.FALSE,null:l.NULL,Temporal:l.TEMPORAL,Timeless:l.TIMELESS,space:l.SPACE,layer:l.LAYER},P=new Set("oxzwensbua".split("")),qe=class{constructor(e){this.source=e,this.chars=Array.from(e)}chars;pos=0;line=1;col=1;tokens=[];tokenize(){for(this.tokens=[];this.pos<this.chars.length&&(this.skipWhitespaceAndComments(),!(this.pos>=this.chars.length));){let e=this.chars[this.pos];if(e===`
+`){this.emit(l.NEWLINE,`
+`),this.advance(),this.line++,this.col=1;continue}if(e==='"'){this.readString();continue}if(e==="0"&&this.peek(1)==="\u2080"){this.emit(l.SYMBOL_0_0,"0\u2080"),this.advance(),this.advance();continue}if(e==="\u{1D544}"&&this.peek(1)==="{"){this.emit(l.MDIM_OPEN,"\u{1D544}{"),this.advance(),this.advance();continue}if(e==="\u7A7A"){this.emit(l.SPACE,"\u7A7A"),this.advance();continue}if(e==="\u5C64"){this.emit(l.LAYER,"\u5C64"),this.advance();continue}if(!(this.isExtStart(e)&&this.readExtLit())){if(this.isDigit(e)||e==="-"&&this.isDigit(this.peek(1)??"")&&this.shouldNegateBePrefix()){this.readNumber();continue}if(!this.readUnicodeToken(e)&&!this.readMultiCharOp(e)&&!this.readSingleCharOp(e)){if(this.isIdentStart(e)){this.readIdentOrKeyword();continue}this.advance()}}}return this.emit(l.EOF,""),this.tokens.filter(e=>e.type!==l.NEWLINE)}skipWhitespaceAndComments(){for(;this.pos<this.chars.length;){let e=this.chars[this.pos];if(e===" "||e==="	"||e==="\r"){this.advance();continue}if(e==="/"&&this.peek(1)==="/"){for(;this.pos<this.chars.length&&this.chars[this.pos]!==`
+`;)this.advance();continue}if(e==="/"&&this.peek(1)==="*"){for(this.advance(),this.advance();this.pos<this.chars.length;){if(this.chars[this.pos]==="*"&&this.peek(1)==="/"){this.advance(),this.advance();break}this.chars[this.pos]===`
+`&&(this.line++,this.col=0),this.advance()}continue}break}}readString(){let e=this.col;this.advance();let n="";for(;this.pos<this.chars.length&&this.chars[this.pos]!=='"';){if(this.chars[this.pos]==="\\"&&this.pos+1<this.chars.length){this.advance();let t=this.chars[this.pos];t==="n"?n+=`
+`:t==="t"?n+="	":t==="\\"?n+="\\":t==='"'?n+='"':n+=t}else n+=this.chars[this.pos];this.advance()}this.pos<this.chars.length&&this.advance(),this.tokens.push({type:l.STRING,value:n,line:this.line,col:e})}isExtStart(e){if(e==="0"&&P.has(this.peek(1)??""))return!0;if(e==="\u03C0"||e==="\u03C6"){let n=this.peek(1);if(n&&P.has(n))return!0}if(e==="e"||e==="i"){let n=this.peek(1);if(!n||!P.has(n))return!1;let t=1;for(;this.peek(t)&&P.has(this.peek(t));)t++;let r=this.peek(t);return!(r&&/[a-zA-Z0-9_]/.test(r))}return!1}readExtLit(){let e=this.col,n=this.chars[this.pos];this.advance();let t="";for(;this.pos<this.chars.length&&P.has(this.chars[this.pos]);)t+=this.chars[this.pos],this.advance();return t.length>0?(this.tokens.push({type:l.EXT_LIT,value:n+t,line:this.line,col:e}),!0):(this.pos--,this.col--,!1)}readNumber(){let e=this.col,n="";for(this.chars[this.pos]==="-"&&(n+="-",this.advance());this.pos<this.chars.length&&this.isDigit(this.chars[this.pos]);)n+=this.chars[this.pos],this.advance();if(this.pos<this.chars.length&&this.chars[this.pos]==="."&&this.isDigit(this.peek(1)??""))for(n+=".",this.advance();this.pos<this.chars.length&&this.isDigit(this.chars[this.pos]);)n+=this.chars[this.pos],this.advance();this.tokens.push({type:l.NUMBER,value:n,line:this.line,col:e})}readUnicodeToken(e){let n=[["\u2295",l.OPLUS],["\u2297",l.OTIMES],["\xB7",l.CDOT],["\u03C0",l.CONST_PI],["\u03C6",l.CONST_PHI],["\u03A6",l.CONST_PHI_UP],["\u03A8",l.CONST_PSI_UP],["\u03A9",l.CONST_OMEGA_UP],["\u2205",l.CONST_EMPTY],["\u22A4",l.QUAD_TOP],["\u22A5",l.QUAD_BOT],["\u290A",l.CONVERGE],["\u290B",l.DIVERGE],["\u25C1",l.REFLECT],["\u2227",l.AND],["\u2228",l.OR],["\xAC",l.NOT],["\u30FB",l.SYMBOL_DOT_PRIM]];if(e==="\u22A4"&&this.peek(1)==="\u03C0")return this.emit(l.QUAD_TOP_PI,"\u22A4\u03C0"),this.advance(),this.advance(),!0;if(e==="\u22A5"&&this.peek(1)==="\u03C0")return this.emit(l.QUAD_BOT_PI,"\u22A5\u03C0"),this.advance(),this.advance(),!0;for(let[t,r]of n)if(e===t)return this.emit(r,t),this.advance(),!0;return!1}readMultiCharOp(e){let n=this.peek(1);return e==="|"&&n===">"?(this.emit(l.PIPE_OP,"|>"),this.advance(),this.advance(),!0):e===">"&&n===">"?(this.emit(l.EXTEND,">>"),this.advance(),this.advance(),!0):e==="<"&&n==="<"?(this.emit(l.REDUCE,"<<"),this.advance(),this.advance(),!0):e==="-"&&n===">"?(this.emit(l.ARROW,"->"),this.advance(),this.advance(),!0):e==="="&&n==="="?(this.emit(l.EQ,"=="),this.advance(),this.advance(),!0):e==="!"&&n==="="?(this.emit(l.NEQ,"!="),this.advance(),this.advance(),!0):e===">"&&n==="="?(this.emit(l.GTE,">="),this.advance(),this.advance(),!0):e==="<"&&n==="="?(this.emit(l.LTE,"<="),this.advance(),this.advance(),!0):e===">"&&n==="\u03BA"?(this.emit(l.GT_K,">\u03BA"),this.advance(),this.advance(),!0):e==="<"&&n==="\u03BA"?(this.emit(l.LT_K,"<\u03BA"),this.advance(),this.advance(),!0):e==="="&&n==="\u03BA"?(this.emit(l.EQ_K,"=\u03BA"),this.advance(),this.advance(),!0):!1}readSingleCharOp(e){let t={"+":l.PLUS,"-":l.MINUS,"*":l.STAR,"/":l.SLASH,"=":l.ASSIGN,".":l.DOT,",":l.COMMA,":":l.COLON,";":l.SEMICOLON,"(":l.LPAREN,")":l.RPAREN,"{":l.LBRACE,"}":l.RBRACE,"[":l.LBRACKET,"]":l.RBRACKET,"|":l.PIPE_OP,">":l.GT,"<":l.LT}[e];return t?(this.emit(t,e),this.advance(),!0):!1}readIdentOrKeyword(){let e=this.col,n="";for(;this.pos<this.chars.length&&this.isIdentPart(this.chars[this.pos]);)n+=this.chars[this.pos],this.advance();if(n.startsWith("compress")&&n.length>8){let r=n.slice(8);if(["\u2070","\xB9","\xB2","\xB3","\u221E"].includes(r)){this.tokens.push({type:l.COMPRESS,value:n,line:this.line,col:e});return}}let t=gt[n];t?this.tokens.push({type:t,value:n,line:this.line,col:e}):this.tokens.push({type:l.IDENT,value:n,line:this.line,col:e})}advance(){this.pos++,this.col++}peek(e){return this.chars[this.pos+e]}emit(e,n){this.tokens.push({type:e,value:n,line:this.line,col:this.col})}isDigit(e){return e>="0"&&e<="9"}isIdentStart(e){return/[a-zA-Z_α-ωΑ-Ω𝕄𝕌\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(e)}isIdentPart(e){return/[a-zA-Z0-9_α-ωΑ-Ω⁰¹²³∞𝕄𝕌\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(e)}shouldNegateBePrefix(){if(this.tokens.length===0)return!0;let e=this.tokens[this.tokens.length-1];return[l.LPAREN,l.COMMA,l.ASSIGN,l.PLUS,l.MINUS,l.STAR,l.SLASH,l.OPLUS,l.OTIMES,l.PIPE_OP,l.SEMICOLON,l.LBRACKET,l.COLON,l.MDIM_OPEN,l.LBRACE].includes(e.type)}};function g(e,n={}){return{type:e,...n}}var Qe=class{pos=0;tokens;constructor(e){this.tokens=e.filter(n=>n.type!==l.NEWLINE)}parseProgram(){let e=[];for(;!this.isAtEnd();){for(;this.check(l.SEMICOLON);)this.advance();if(this.isAtEnd())break;for(e.push(this.parseStatement());this.check(l.SEMICOLON);)this.advance()}return g("Program",{body:e})}parseStatement(){return this.check(l.LET)?this.parseLetStmt():this.check(l.COMPRESS)?this.parseCompressDef():this.parseExpression()}parseLetStmt(){this.expect(l.LET);let e=this.match(l.MUT),n=this.expect(l.IDENT).value,t=null,r=null;this.match(l.COLON)&&(t=this.expect(l.IDENT).value,this.check(l.IDENT)&&this.peek().value.startsWith("@")&&(r=this.advance().value.slice(1))),this.expect(l.ASSIGN);let i=this.parseExpression(),u=null;return this.match(l.WITNESSED)&&(this.expect(l.BY),u=this.expect(l.STRING).value),g(e?"MutStmt":"LetStmt",{name:n,init:i,typeAnnotation:t,phaseGuard:r,witness:u})}parseCompressDef(){let e=this.expect(l.COMPRESS),n=this.parseCompressLevel(e.value),t=this.expect(l.IDENT).value;this.expect(l.LPAREN);let r=[];if(!this.check(l.RPAREN))for(r.push(this.parseParamDecl());this.match(l.COMMA);)r.push(this.parseParamDecl());this.expect(l.RPAREN);let i=null;this.match(l.ARROW)&&(i=this.expect(l.IDENT).value),this.expect(l.ASSIGN);let u=this.parseExpression();return g("CompressDef",{name:t,params:r,body:u,level:n,returnType:i})}parseCompressLevel(e){return e==="compress"?-1:{"compress\u2070":0,"compress\xB9":1,"compress\xB2":2,"compress\xB3":3,"compress\u221E":1/0}[e]??-1}parseParamDecl(){let e;return this.check(l.IDENT)?e=this.advance().value:this.check(l.CONST_E)?e=this.advance().value:this.check(l.CONST_I)?e=this.advance().value:e=this.expect(l.IDENT).value,this.match(l.COLON)&&this.expect(l.IDENT),e}parseExpression(){return this.parsePipe()}parsePipe(){let e=this.parseLogicOr();for(;this.check(l.PIPE_OP)||this.check(l.REFLECT);)if(this.match(l.PIPE_OP)){let n=this.parsePipeCommand();e=g("Pipe",{input:e,command:n})}else if(this.match(l.REFLECT)){let n=this.parseLogicOr();e=g("ReflectOp",{left:e,right:n})}return e}parsePipeCommand(){if(this.check(l.IDENT)||this.check(l.GENESIS)||this.check(l.SPACE)||this.check(l.LAYER)){let e=this.advance().value,n=null,t=[];if(this.match(l.COLON)&&(n=this.expect(l.IDENT).value),this.match(l.LPAREN)){if(!this.check(l.RPAREN))for(t.push(this.parseExpression());this.match(l.COMMA);)t.push(this.parseExpression());this.expect(l.RPAREN)}return g("PipeCmd",{cmd:e,mode:n,args:t})}if(this.match(l.CONVERGE))return g("PipeCmd",{cmd:"\u290A",mode:null,args:[]});if(this.match(l.DIVERGE))return g("PipeCmd",{cmd:"\u290B",mode:null,args:[]});throw this.error("\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9\u304C\u5FC5\u8981")}parseLogicOr(){let e=this.parseLogicAnd();for(;this.match(l.OR);){let n=this.parseLogicAnd();e=g("BinOp",{op:"\u2228",left:e,right:n})}return e}parseLogicAnd(){let e=this.parseComparison();for(;this.match(l.AND);){let n=this.parseComparison();e=g("BinOp",{op:"\u2227",left:e,right:n})}return e}parseComparison(){let e=this.parseAddition(),n=[l.GT_K,l.LT_K,l.EQ_K,l.EQ,l.NEQ,l.GT,l.LT,l.GTE,l.LTE];for(;n.some(t=>this.check(t));){let t=this.advance(),r=this.parseAddition();e=g("BinOp",{op:t.value,left:e,right:r})}return e}parseAddition(){let e=this.parseMultiplication();for(;this.check(l.PLUS)||this.check(l.MINUS)||this.check(l.OPLUS);){let n=this.advance().value,t=this.parseMultiplication();e=g("BinOp",{op:n,left:e,right:t})}return e}parseMultiplication(){let e=this.parseExtendReduce();for(;this.check(l.STAR)||this.check(l.SLASH)||this.check(l.OTIMES)||this.check(l.CDOT);){let n=this.advance().value,t=this.parseExtendReduce();e=g("BinOp",{op:n,left:e,right:t})}return e}parseExtendReduce(){let e=this.parseUnary();for(;;)if(this.match(l.EXTEND))if(this.match(l.COLON)){let n=this.expect(l.IDENT).value;e=g("Extend",{target:e,subscript:n})}else{let n=this.parseUnary();e=g("Extend",{target:e,expr:n})}else if(this.match(l.REDUCE))e=g("Reduce",{target:e});else if(this.match(l.CONVERGE)){let n=this.parseUnary();e=g("ConvergeOp",{left:e,right:n})}else if(this.match(l.DIVERGE)){let n=this.parseUnary();e=g("DivergeOp",{left:e,right:n})}else break;return e}parseUnary(){if(this.match(l.NOT)){let e=this.parseUnary();return g("UnaryOp",{op:"\xAC",operand:e})}if(this.check(l.MINUS)&&this.shouldNegateBePrefix()){this.advance();let e=this.parseUnary();return g("UnaryOp",{op:"-",operand:e})}return this.parsePostfix()}parsePostfix(){let e=this.parsePrimary();for(;;)if(this.match(l.DOT)){if(this.check(l.IDENT)){let n=this.advance().value;this.check(l.DOT)&&this.checkAhead(l.IDENT,1)&&this.tokens[this.pos+1]?.value==="\u03BA"?(this.advance(),this.advance(),e=g("MemberAccess",{object:e,member:n,kappa:!0})):e=g("MemberAccess",{object:e,member:n,kappa:!1})}}else if(this.match(l.LPAREN)){let n=[];if(!this.check(l.RPAREN))for(n.push(this.parseExpression());this.match(l.COMMA);)n.push(this.parseExpression());this.expect(l.RPAREN),e=g("FnCall",{callee:e,args:n})}else if(this.match(l.LBRACKET)){let n=this.parseExpression();this.expect(l.RBRACKET),e=g("IndexAccess",{object:e,index:n})}else break;return e}parsePrimary(){if(this.check(l.NUMBER)){let e=this.advance().value;return g("NumLit",{value:parseFloat(e)})}if(this.check(l.STRING))return g("StrLit",{value:this.advance().value});if(this.match(l.TRUE))return g("BoolLit",{value:!0});if(this.match(l.FALSE))return g("BoolLit",{value:!1});if(this.match(l.NULL))return g("NullLit",{});if(this.check(l.EXT_LIT)){let e=this.advance().value;return g("ExtLit",{raw:e})}if(this.match(l.SYMBOL_0_0))return g("ExtLit",{raw:"0\u2080"});if(this.match(l.SYMBOL_DOT_PRIM))return g("ConstLit",{value:"\u30FB"});if(this.match(l.CONST_PI))return g("NumLit",{value:Math.PI});if(this.match(l.CONST_E))return g("NumLit",{value:Math.E});if(this.match(l.CONST_PHI))return g("NumLit",{value:(1+Math.sqrt(5))/2});if(this.match(l.CONST_I))return g("ConstLit",{value:"i"});if(this.match(l.CONST_EMPTY))return g("ConstLit",{value:"\u2205"});if(this.match(l.CONST_PHI_UP))return g("ConstLit",{value:"\u03A6"});if(this.match(l.CONST_PSI_UP))return g("ConstLit",{value:"\u03A8"});if(this.match(l.CONST_OMEGA_UP))return g("ConstLit",{value:"\u03A9"});if(this.match(l.QUAD_TOP))return g("QuadLit",{value:"top"});if(this.match(l.QUAD_BOT))return g("QuadLit",{value:"bottom"});if(this.match(l.QUAD_TOP_PI))return g("QuadLit",{value:"topPi"});if(this.match(l.QUAD_BOT_PI))return g("QuadLit",{value:"bottomPi"});if(this.match(l.MDIM_OPEN))return this.parseMDimLit();if(this.match(l.LBRACKET)){let e=[];if(!this.check(l.RBRACKET))for(e.push(this.parseExpression());this.match(l.COMMA);)e.push(this.parseExpression());return this.expect(l.RBRACKET),g("ArrayLit",{elements:e})}if(this.match(l.LPAREN)){let e=this.parseExpression();return this.expect(l.RPAREN),e}if(this.check(l.IF))return this.parseIfExpr();if(this.check(l.MATCH))return this.parseMatchExpr();if(this.check(l.GENESIS))return this.advance(),this.match(l.LPAREN)&&this.expect(l.RPAREN),g("FnCall",{callee:g("Ident",{name:"genesis"}),args:[]});if(this.check(l.SPACE))return this.parseSpaceLit();if(this.check(l.IDENT)){let e=this.advance().value;return g("Ident",{name:e})}throw this.error(`\u4E88\u671F\u3057\u306A\u3044\u30C8\u30FC\u30AF\u30F3: ${this.peek().value} (${this.peek().type})`)}parseMDimLit(){let e=this.parseExpression();this.expect(l.SEMICOLON);let n=[];for(n.push(this.parseExpression());this.match(l.COMMA)&&!(this.check(l.RBRACE)||this.check(l.WEIGHT));)n.push(this.parseExpression());let t=null;this.match(l.WEIGHT)&&(t=this.parseExpression());let r="weighted";return this.match(l.COLON)&&this.check(l.IDENT)&&(r=this.advance().value),this.expect(l.RBRACE),g("MDimLit",{center:e,neighbors:n,weight:t,mode:r})}parseSpaceLit(){this.expect(l.SPACE),this.expect(l.LBRACE);let e=[],n="flat";for(this.check(l.IDENT)&&this.peek().value==="topology"&&(this.advance(),this.expect(l.COLON),this.check(l.IDENT)&&(n=this.advance().value),this.match(l.COMMA));!this.check(l.RBRACE)&&!this.isAtEnd();){if(!this.check(l.LAYER))throw this.error(`\u5C64\u306E\u5B9A\u7FA9\u304C\u5FC5\u8981\u3067\u3059\u3002\u5B9F\u969B: ${this.peek().type} ("${this.peek().value}")`);this.expect(l.LAYER);let t=this.parseExpression();this.expect(l.COLON);let r=[];for(r.push(this.parseExpression());this.match(l.COMMA)&&!(this.check(l.LAYER)||this.check(l.RBRACE));)r.push(this.parseExpression());e.push({index:t,nodes:r})}return this.expect(l.RBRACE),g("SpaceLit",{layers:e,topology:n})}parseIfExpr(){this.expect(l.IF);let e=this.parseExpression();this.expect(l.THEN);let n=this.parseExpression();this.expect(l.ELSE);let t=this.parseExpression();return g("IfExpr",{cond:e,then:n,else:t})}parseMatchExpr(){this.expect(l.MATCH);let e=this.parseExpression();this.expect(l.LBRACE);let n=[];for(;!this.check(l.RBRACE)&&!this.isAtEnd();){this.expect(l.CASE);let t=this.parsePrimary();this.expect(l.ARROW);let r=this.parseExpression();n.push({pattern:t,body:r}),this.match(l.COMMA)}return this.expect(l.RBRACE),g("MatchExpr",{target:e,cases:n})}peek(){return this.tokens[this.pos]||{type:l.EOF,value:"",line:0,col:0}}isAtEnd(){return this.peek().type===l.EOF}check(e){return this.peek().type===e}checkAhead(e,n){let t=this.pos+n;return t<this.tokens.length&&this.tokens[t].type===e}advance(){let e=this.tokens[this.pos];return this.pos++,e}match(e){return this.check(e)?(this.advance(),!0):!1}expect(e){if(this.check(e))return this.advance();let n=this.peek();throw this.error(`\u671F\u5F85: ${e}, \u5B9F\u969B: ${n.type} ("${n.value}")`)}error(e){let n=this.peek();return new Error(`[\u884C ${n.line}:${n.col}] \u69CB\u6587\u30A8\u30E9\u30FC: ${e}`)}shouldNegateBePrefix(){if(this.pos===0)return!0;let e=this.tokens[this.pos-1];return[l.LPAREN,l.COMMA,l.ASSIGN,l.PLUS,l.MINUS,l.STAR,l.SLASH,l.OPLUS,l.OTIMES,l.PIPE_OP,l.SEMICOLON,l.LBRACKET,l.COLON,l.MDIM_OPEN,l.LBRACE].includes(e.type)}};function yt(e,n,t="weighted",r,i=0,u=0){return{reiType:"DNode",center:e,neighbors:[...n],mode:t,weights:r,stage:0,initialDirections:n.length,diffusionHistory:[{stage:0,directions:n.length,result:e,neighbors:[...n]}],momentum:"rest",layerIndex:i,nodeIndex:u,tendencyHistory:[]}}function Et(e="flat"){return{reiType:"Space",layers:new Map,topology:e,globalStage:0}}function bt(e,n){return e.layers.has(n)||e.layers.set(n,{index:n,nodes:[],frozen:!1}),e.layers.get(n)}function Q(e,n,t,r,i="weighted",u){let c=bt(e,n),s=c.nodes.length,o=yt(t,r,i,u,n,s);return c.nodes.push(o),o}function Ct(e){let n=e.length;if(n===0)return[];let t=[];for(let r=0;r<n;r++)t.push(e[r]),t.push((e[r]+e[(r+1)%n])/2);return t}function le(e,n){if(e.momentum==="converged"||e.momentum==="contracting")return;let r=Ct(e.neighbors),i=M(e);e.neighbors=r,e.stage+=1;let u=M(e);e.diffusionHistory.push({stage:e.stage,directions:r.length,result:u,neighbors:[...r]}),e.momentum="expanding",Math.abs(u-i)<.001?e.tendencyHistory.push("rest"):u>i?e.tendencyHistory.push("expand"):e.tendencyHistory.push("contract")}function M(e){let{center:n,neighbors:t,mode:r}=e,i=e.weights??t.map(()=>1),u=t.length;if(u===0)return n;switch(r){case"weighted":{let c=i.reduce((o,a)=>o+a,0),s=t.reduce((o,a,h)=>o+(i[h]??1)*a,0)/(c||1);return n+s}case"multiplicative":{let c=t.reduce((s,o)=>s*(1+o),1);return n*c}case"harmonic":{let c=t.reduce((s,o)=>s+1/(Math.abs(o)||1),0);return n+u/c}case"exponential":{let c=t.reduce((s,o)=>s+Math.exp(o),0);return n*(c/u)}default:return n}}function At(e,n){let t=e.diffusionHistory;if(t.length<2)return!1;switch(n.type){case"steps":return e.stage>=n.max;case"epsilon":{let r=t[t.length-1].result,i=t[t.length-2].result;return Math.abs(r-i)<n.threshold}case"fixed":{let r=t[t.length-1].result,i=t[t.length-2].result;return r===i}case"converged":{let r=t[t.length-1].result,i=t[t.length-2].result;return Math.abs(r-i)<1e-4}}}function Fe(e,n="weighted"){e.momentum="contracting";let t=M(e);return e.momentum="converged",t}function Ft(e,n,t){for(let[r,i]of e.layers)if(!(n!==void 0&&r!==n)&&!i.frozen)for(let u of i.nodes)le(u);e.globalStage++}function vt(e,n={type:"converged"},t,r="weighted",i,u=100){let c=0;for(;c<u;){let o=!0;for(let[a,h]of e.layers)if(!(t!==void 0&&a!==t)&&!h.frozen)for(let m of h.nodes)m.momentum!=="converged"&&(At(m,n)?Fe(m,r):(le(m),o=!1));if(e.globalStage++,c++,o)break}let s=[];for(let[o,a]of e.layers)if(!(t!==void 0&&o!==t))for(let h of a.nodes)h.momentum!=="converged"&&Fe(h,r),s.push(M(h));return s}function Dt(e){return{stage:e.stage,directions:e.neighbors.length,momentum:e.momentum,velocity:e.diffusionHistory.length>=2?Math.abs(e.diffusionHistory[e.diffusionHistory.length-1].result-e.diffusionHistory[e.diffusionHistory.length-2].result):0}}function kt(e){return[...e.diffusionHistory]}function Bt(e){let n=e.tendencyHistory,t=n.slice(-5),r={};for(let c of t)r[c]=(r[c]??0)+1;let i="rest",u=0;for(let[c,s]of Object.entries(r))s>u&&(u=s,i=c);if(n.length>=4){let c=0;for(let s=1;s<t.length;s++)t[s]!==t[s-1]&&c++;c>=t.length-1&&(i="spiral")}return{tendency:i,strength:u/Math.max(t.length,1),history:[...n]}}function Mt(e,n){let r=1/(1+Math.abs(e.center-n.center)),u=1/(1+Math.abs(e.neighbors.length-n.neighbors.length)),c=M(e),s=M(n),a=1/(1+Math.abs(c-s));return(r+u+a)/3}function wt(e,n=.5){let t=[];for(let[i,u]of e.layers)for(let c=0;c<u.nodes.length;c++)t.push({node:u.nodes[c],layer:i,index:c});let r=[];for(let i=0;i<t.length;i++)for(let u=i+1;u<t.length;u++){if(t[i].layer===t[u].layer&&t[i].index===t[u].index)continue;let c=Mt(t[i].node,t[u].node);c>=n&&r.push({nodeA:{layer:t[i].layer,index:t[i].index},nodeB:{layer:t[u].layer,index:t[u].index},similarity:Math.round(c*1e3)/1e3})}return r}function ve(e){let n=0,t=0,r=0,i=[];for(let[u,c]of e.layers){i.push(u),n+=c.nodes.length;for(let s of c.nodes)s.momentum==="converged"?t++:s.momentum==="expanding"&&r++}return{field:{layers:e.layers.size,total_nodes:n,active_nodes:n-t,topology:e.topology},flow:{global_stage:e.globalStage,converged_nodes:t,expanding_nodes:r},layer:i.sort((u,c)=>u-c)}}var Tt={strategy:"converge",maxIterations:50,epsilon:1e-4,awakenThreshold:.6,allowCycleDetection:!0,cycleWindowSize:5},Nt=["weighted","multiplicative","harmonic","exponential","geometric","median","minkowski","entropy"];function Ke(e,n){let{center:t,neighbors:r}=e,i=e.weights??r.map(()=>1),u=r.length;if(u===0)return t;switch(n){case"weighted":{let c=i.reduce((o,a)=>o+a,0),s=r.reduce((o,a,h)=>o+(i[h]??1)*a,0)/(c||1);return t+s}case"multiplicative":{let c=r.reduce((s,o)=>s*(1+o),1);return t*c}case"harmonic":{let c=r.reduce((s,o)=>s+1/(Math.abs(o)||1),0);return t+u/c}case"exponential":{let c=r.reduce((s,o)=>s+Math.exp(o),0);return t*(c/u)}case"geometric":{let c=r.reduce((s,o)=>s*Math.abs(o||1),1);return t*Math.pow(c,1/u)}case"median":{let c=[...r].sort((a,h)=>a-h),s=Math.floor(u/2),o=u%2===0?(c[s-1]+c[s])/2:c[s];return t+o}case"minkowski":{let s=r.reduce((o,a)=>o+Math.pow(Math.abs(a),2),0);return t+Math.pow(s/u,1/2)}case"entropy":{let c=r.reduce((a,h)=>a+Math.abs(h),0)||1,o=-r.map(a=>Math.abs(a)/c).reduce((a,h)=>a+(h>0?h*Math.log2(h):0),0);return t*(1+o)}default:return t}}function Ye(e){return typeof e=="number"?e:e==null?0:typeof e=="boolean"?e?1:0:e?.reiType==="ReiVal"?Ye(e.value):e?.reiType==="MDim"?Ke(e,e.mode||"weighted"):e?.reiType==="Ext"?e.valStar?.()??0:0}function te(e){return e?.reiType==="ReiVal"?te(e.value):e?.reiType==="MDim"?e:typeof e=="number"?{reiType:"MDim",center:e,neighbors:[],mode:"weighted"}:Array.isArray(e)?e.length===0?{reiType:"MDim",center:0,neighbors:[],mode:"weighted"}:{reiType:"MDim",center:e[0],neighbors:e.slice(1),mode:"weighted"}:{reiType:"MDim",center:0,neighbors:[],mode:"weighted"}}function St(e,n,t){let r=0;return r+=Math.min(e/10,1),r+=Math.min(n/5,1),t==="oscillating"?r+=.8:t==="chaotic"?r+=1:t==="converging"?r+=.5:t==="diverging"&&(r+=.3),Math.min(r/3,1)}function _t(e,n,t){let r=Nt.map(s=>({mode:s,value:Ke(e,s)})),i=n.map(s=>s.numericValue),u;switch(t){case"converge":case"stable":{if(i.length===0)u=r[0];else{let s=i[i.length-1];u=r.reduce((o,a)=>Math.abs(a.value-s)<Math.abs(o.value-s)?a:o)}break}case"explore":case"divergent":{if(i.length===0)u=r.reduce((s,o)=>Math.abs(o.value)>Math.abs(s.value)?o:s);else{let s=i.reduce((o,a)=>o+a,0)/i.length;u=r.reduce((o,a)=>Math.abs(a.value-s)>Math.abs(o.value-s)?a:o)}break}case"seek":{u=[...r].sort((o,a)=>o.value-a.value)[Math.floor(r.length/2)];break}case"creative":{let s=r.reduce((o,a)=>o+a.value,0)/r.length;u=r.reduce((o,a)=>Math.abs(a.value-s)>Math.abs(o.value-s)?a:o);break}default:{if(i.length>=3){let s=i.slice(-3),o=s.every((h,m)=>m===0||h>s[m-1]),a=s.every((h,m)=>m===0||h<s[m-1]);if(o){let h=i[i.length-1];u=r.reduce((m,d)=>Math.abs(d.value-h)<Math.abs(m.value-h)?d:m)}else a?u=r.reduce((h,m)=>m.value>h.value?m:h):u=r[0]}else u=r[0];break}}return{value:{...e,mode:u.mode},numericValue:u.value,selectedMode:u.mode}}function De(e){if(e.length<3)return"stable";let n=e.slice(1).map(c=>c.delta),t=n.map(Math.abs);if(t.every(c=>c<.001))return"stable";let r=0;for(let c=1;c<t.length;c++)t[c]<t[c-1]&&r++;if(r>=t.length*.7)return"converging";let i=0;for(let c=1;c<t.length;c++)t[c]>t[c-1]&&i++;if(i>=t.length*.7)return"diverging";let u=0;for(let c=1;c<n.length;c++)Math.sign(n[c])!==Math.sign(n[c-1])&&u++;return u>=n.length*.6?"oscillating":"chaotic"}function xt(e,n){if(e.length<n*2)return!1;let t=e.slice(-n),r=e.slice(-n*2,-n);if(t.every((c,s)=>Math.abs(c-r[s])<1e-4))return!0;let i=[...t].sort(),u=[...r].sort();return!!i.every((c,s)=>Math.abs(c-u[s])<1e-4)}function ke(e){if(e.length<2)return{tendency:"rest",strength:0};let n=e.slice(-5).map(a=>a.decision),t=e.slice(-5).map(a=>a.delta),r=n.filter(a=>a==="converged").length;if(r>0)return{tendency:"rest",strength:r/n.length};let i=t.map(Math.abs),u=0;for(let a=1;a<i.length;a++)i[a]<i[a-1]&&u++;if(u>i.length/2)return{tendency:"contract",strength:u/i.length};let c=0;for(let a=1;a<i.length;a++)i[a]>i[a-1]&&c++;if(c>i.length/2)return{tendency:"expand",strength:c/i.length};let s=e.slice(-5).map(a=>a.selectedMode),o=s.filter((a,h)=>h>0&&a!==s[h-1]).length;return o>=s.length*.6?{tendency:"spiral",strength:o/s.length}:{tendency:"rest",strength:.5}}function O(e,n={}){let t={...Tt,...n},r=te(e),i=[],u=[],c={...r},s=Ye(r),o=0,a="",h=null,m=0,d="limit";u.push(s);for(let E=0;E<t.maxIterations;E++){let A=t.strategy==="converge"?"stable":t.strategy==="seek"?"seek":t.strategy==="explore"?"divergent":t.strategy==="awaken"?"creative":"auto",C=_t(c,i,A),D=C.numericValue-s;a&&C.selectedMode!==a&&o++,a=C.selectedMode;let q=De(i),x=St(E+1,o,q);x>m&&(m=x);let dt=ke(i),w="continue",R="";if((t.strategy==="converge"||t.strategy==="auto")&&Math.abs(D)<t.epsilon&&E>0&&(w="converged",R=`|\u0394| = ${Math.abs(D).toFixed(6)} < \u03B5 = ${t.epsilon}`),t.strategy==="seek"&&t.targetValue!==void 0){let Ce=Math.abs(C.numericValue-t.targetValue),Ae=t.targetEpsilon??t.epsilon;Ce<Ae&&(w="target_reached",R=`|value - target| = ${Ce.toFixed(6)} < \u03B5 = ${Ae}`)}t.strategy==="awaken"&&x>=t.awakenThreshold&&h===null&&(h=E,w="awakened",R=`awareness = ${x.toFixed(3)} >= threshold = ${t.awakenThreshold}`),t.allowCycleDetection&&E>=t.cycleWindowSize*2&&xt(u,t.cycleWindowSize)&&(w="cycle_detected",R=`\u5FAA\u74B0\u30D1\u30BF\u30FC\u30F3\u691C\u51FA\uFF08\u7A93\u30B5\u30A4\u30BA${t.cycleWindowSize}\uFF09`);let ft={iteration:E,value:C.value,numericValue:C.numericValue,selectedMode:C.selectedMode,delta:D,awareness:x,tendency:dt.tendency,decision:w,reason:R};if(i.push(ft),u.push(C.numericValue),c=te(C.value),s=C.numericValue,w!=="continue"){d=w;break}}i.length===t.maxIterations&&i[i.length-1].decision==="continue"&&(i[i.length-1].decision="limit",i[i.length-1].reason=`\u6700\u5927\u53CD\u5FA9\u56DE\u6570 ${t.maxIterations} \u306B\u5230\u9054`,d="limit");let f=De(i),p=i.map(E=>E.selectedMode),y=ke(i),v=0;if(i.length>=2){let E=Math.abs(i[0].delta)||1;v=1-Math.abs(i[i.length-1].delta)/E}return{reiType:"ThoughtResult",finalValue:c,finalNumeric:s,totalIterations:i.length,steps:i,stopReason:d,stopStrategy:t.strategy,trajectory:f,convergenceRate:Math.max(0,Math.min(1,v)),loopTendency:y.tendency,loopStrength:y.strength,peakAwareness:m,finalAwareness:i.length>0?i[i.length-1].awareness:0,awakenedAt:h,modeHistory:p,modeTransitions:o}}function Be(e){return{reiType:"SigmaResult",field:{type:"thought_loop",finalValue:e.finalNumeric,totalIterations:e.totalIterations,trajectory:e.trajectory},flow:{direction:e.trajectory,momentum:e.totalIterations,velocity:e.steps.length>0?Math.abs(e.steps[e.steps.length-1].delta):0,convergenceRate:e.convergenceRate},memory:e.steps.map(n=>({iteration:n.iteration,value:n.numericValue,mode:n.selectedMode,delta:n.delta,decision:n.decision})),layer:e.awakenedAt!==null?1:0,will:{tendency:e.loopTendency,strength:e.loopStrength,history:e.modeHistory},relation:e.steps.length>1?e.steps.slice(1).map((n,t)=>({from:e.steps[t].iteration,to:n.iteration,delta:n.delta,modeChange:n.selectedMode!==e.steps[t].selectedMode})):[]}}function Me(e){let n=[];n.push("\u2550\u2550\u2550 \u601D\u8003\u30EB\u30FC\u30D7\u7D50\u679C \u2550\u2550\u2550"),n.push(`\u6226\u7565: ${e.stopStrategy}`),n.push(`\u53CD\u5FA9: ${e.totalIterations}\u56DE`),n.push(`\u505C\u6B62\u7406\u7531: ${e.stopReason}`),n.push(`\u6700\u7D42\u5024: ${e.finalNumeric.toFixed(6)}`),n.push(`\u8ECC\u8DE1: ${e.trajectory}`),n.push(`\u53CE\u675F\u7387: ${(e.convergenceRate*100).toFixed(1)}%`),n.push(`\u6700\u9AD8\u899A\u9192\u5EA6: ${(e.peakAwareness*100).toFixed(1)}%`),n.push(`\u30E2\u30FC\u30C9\u9077\u79FB: ${e.modeTransitions}\u56DE`),n.push(`\u30EB\u30FC\u30D7\u306E\u610F\u5FD7: ${e.loopTendency} (\u5F37\u5EA6: ${e.loopStrength.toFixed(2)})`),e.awakenedAt!==null&&n.push(`\u899A\u9192: \u53CD\u5FA9 #${e.awakenedAt} \u3067\u899A\u9192`),n.push("\u2500\u2500\u2500  \u8ECC\u8DE1  \u2500\u2500\u2500");for(let t of e.steps.slice(0,10)){let r=t.decision!=="continue"?` \u2190 ${t.decision}`:"";n.push(`  #${t.iteration}: ${t.numericValue.toFixed(4)} [${t.selectedMode}] \u0394=${t.delta>=0?"+":""}${t.delta.toFixed(4)}${r}`)}if(e.steps.length>10){n.push(`  ... (${e.steps.length-10}\u30B9\u30C6\u30C3\u30D7\u7701\u7565)`);let t=e.steps[e.steps.length-1];n.push(`  #${t.iteration}: ${t.numericValue.toFixed(4)} [${t.selectedMode}] \u0394=${t.delta>=0?"+":""}${t.delta.toFixed(4)} \u2190 ${t.decision}`)}return n.join(`
+`)}function we(e){return e.steps.map(n=>n.numericValue)}function Te(e){return e.modeHistory}function K(e){let n={};for(let i of e.modeHistory)n[i]=(n[i]??0)+1;let t="",r=0;for(let[i,u]of Object.entries(n))u>r&&(t=i,r=u);return{mode:t,count:r,ratio:e.modeHistory.length>0?r/e.modeHistory.length:0}}var H=[Date.now()^3735928559,Date.now()^3405691582];function Rt(e){H=[e^3735928559,e*1103515245+12345^3405691582]}function $(){let[e,n]=H,t=e+n>>>0;return n^=e,H[0]=(e<<23|e>>>9)^n^n<<17,H[1]=n<<6|n>>>26,(t>>>0)/4294967296}function ne(e){if(e.length===0)return{reiType:"RandomResult",value:null,probability:0,entropy:0,source:"uniform"};let n=Math.floor($()*e.length),t=1/e.length;return{reiType:"RandomResult",value:e[n],probability:t,entropy:Math.log2(e.length),source:"uniform"}}function Pt(e,n){if(e.length===0)return{reiType:"RandomResult",value:null,probability:0,entropy:0,source:"weighted"};let t=n.reduce((o,a)=>o+a,0)||1,r=n.map(o=>o/t),i=$(),u=0,c=e.length-1;for(let o=0;o<r.length;o++)if(u+=r[o],i<u){c=o;break}let s=-r.reduce((o,a)=>o+(a>0?a*Math.log2(a):0),0);return{reiType:"RandomResult",value:e[c],probability:r[c],entropy:s,source:"weighted"}}function Je(e){return e?.reiType!=="MDim"||!e.neighbors||e.neighbors.length===0?{reiType:"RandomResult",value:e?.center??0,probability:1,entropy:0,source:"uniform"}:e.weights&&e.weights.length===e.neighbors.length?Pt(e.neighbors,e.weights):ne(e.neighbors)}function G(e){if(e.length===0)return{reiType:"EntropyAnalysis",shannon:0,maxEntropy:0,relativeEntropy:0,distribution:[]};let n=new Map;for(let c of e){let s=JSON.stringify(c);n.set(s,(n.get(s)??0)+1)}let t=e.length,r=[],i=0;for(let[c,s]of n){let o=s/t;i-=o*Math.log2(o),r.push({value:JSON.parse(c),probability:o})}let u=Math.log2(n.size);return{reiType:"EntropyAnalysis",shannon:i,maxEntropy:u,relativeEntropy:u>0?i/u:1,distribution:r.sort((c,s)=>s.probability-c.probability)}}function Ot(e,n,t=1){let r=[e],i=e;for(let u=0;u<n;u++)i+=($()>.5?1:-1)*t,r.push(i);return r}function Ne(e,n){let t=[];for(let r=0;r<n;r++){let i=Je(e);t.push(i.value)}return{samples:t,entropy:G(t)}}function Lt(e){return e.board.reduce((n,t,r)=>t===0?[...n,r]:n,[])}function It(e,n){let t=[...e.board];t[n]=e.currentPlayer;let r={board:t,currentPlayer:e.currentPlayer===1?2:1,moveHistory:[...e.moveHistory,{player:e.currentPlayer,position:n,label:`${e.currentPlayer===1?"X":"O"} at (${Math.floor(n/3)},${n%3})`}],status:"playing",winner:null,turnCount:e.turnCount+1},i=W(r);return i?(r.status="win",r.winner=i):he(r)&&(r.status="draw"),r}var jt=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];function W(e){for(let[n,t,r]of jt)if(e.board[n]&&e.board[n]===e.board[t]&&e.board[t]===e.board[r])return e.board[n];return null}function he(e){return!W(e)&&e.board.every(n=>n!==0)}function $t(e,n){let t=W(e);if(t===n)return 10;if(t!==null)return-10;if(he(e))return 0;let r=0;e.board[4]===n&&(r+=3);for(let i of[0,2,6,8])e.board[i]===n&&(r+=1);return r}function zt(e){let n=[".","X","O"],t=[];for(let r=0;r<3;r++)t.push(e.board.slice(r*3,r*3+3).map(i=>n[i]).join(" "));return t.join(`
+`)}var Y={name:"tic_tac_toe",getLegalMoves:Lt,applyMove:It,checkWin:W,checkDraw:he,evaluate:$t,formatBoard:zt};function Ut(e){let n=e.board[0],t=[];for(let r=1;r<=Math.min(3,n);r++)t.push(r);return t}function Ht(e,n){let t=e.board[0]-n,r={board:[t],currentPlayer:e.currentPlayer===1?2:1,moveHistory:[...e.moveHistory,{player:e.currentPlayer,position:n,label:`Player ${e.currentPlayer} takes ${n} (${t} left)`}],status:"playing",winner:null,turnCount:e.turnCount+1};return t<=0&&(r.status="win",r.winner=e.currentPlayer===1?2:1),r}function Gt(e){return e.winner}function Vt(e){return!1}function Wt(e,n){if(e.winner===n)return 10;if(e.winner!==null)return-10;let r=(e.board[0]-1)%4===0;return e.currentPlayer===n?r?-5:5:r?5:-5}function qt(e){let n=e.board[0];return`Stones: ${"\u25CF".repeat(n)}${"\u25CB".repeat(Math.max(0,10-n))} (${n} remaining)`}var Se={name:"nim",getLegalMoves:Ut,applyMove:Ht,checkWin:Gt,checkDraw:Vt,evaluate:Wt,formatBoard:qt};function Qt(e){return[0,1]}function Kt(e,n){let t=$()>.5?1:0,r=n===t,i=[...e.board];r&&i[e.currentPlayer-1]++,i[2]=t;let u={board:i,currentPlayer:e.currentPlayer===1?2:1,moveHistory:[...e.moveHistory,{player:e.currentPlayer,position:n,label:`P${e.currentPlayer} guessed ${n===0?"H":"T"}, got ${t===0?"H":"T"} \u2192 ${r?"\u2713":"\u2717"}`}],status:"playing",winner:null,turnCount:e.turnCount+1};if(u.turnCount>=10){let c=i[0],s=i[1];c>s?(u.status="win",u.winner=1):s>c?(u.status="win",u.winner=2):u.status="draw"}return u}function Yt(e){return e.winner}function Jt(e){return e.status==="draw"}function Xt(e,n){return(e.board[n-1]??0)-(e.board[n===1?1:0]??0)}function Zt(e){return`P1: ${e.board[0]??0} | P2: ${e.board[1]??0} | Turn: ${e.turnCount}/10`}var _e={name:"coin_flip",getLegalMoves:Qt,applyMove:Kt,checkWin:Yt,checkDraw:Jt,evaluate:Xt,formatBoard:Zt};function en(e){return[0,1,2]}function tn(e,n){let t=[...e.moveHistory,{player:e.currentPlayer,position:n,label:`P${e.currentPlayer}: ${["Rock","Paper","Scissors"][n]}`}];if(e.currentPlayer===2){let r=e.board[2],i=n,u=[e.board[0],e.board[1]];r===i||((r+1)%3===i?u[1]++:u[0]++);let c=Math.floor(e.turnCount/2)+1,s={board:[u[0],u[1],-1],currentPlayer:1,moveHistory:t,status:"playing",winner:null,turnCount:e.turnCount+1};return c>=5&&(u[0]>u[1]?(s.status="win",s.winner=1):u[1]>u[0]?(s.status="win",s.winner=2):s.status="draw"),s}return{board:[e.board[0]??0,e.board[1]??0,n],currentPlayer:2,moveHistory:t,status:"playing",winner:null,turnCount:e.turnCount+1}}function nn(e){return e.winner}function rn(e){return e.status==="draw"}function un(e,n){return(e.board[n-1]??0)-(e.board[n===1?1:0]??0)}function sn(e){return`P1: ${e.board[0]??0} | P2: ${e.board[1]??0} | Round: ${Math.floor(e.turnCount/2)+1}/5`}var J={name:"rock_paper_scissors",getLegalMoves:en,applyMove:tn,checkWin:nn,checkDraw:rn,evaluate:un,formatBoard:sn},xe={tic_tac_toe:{rules:Y,initialBoard:()=>Array(9).fill(0)},ttt:{rules:Y,initialBoard:()=>Array(9).fill(0)},\u4E09\u76EE\u4E26\u3079:{rules:Y,initialBoard:()=>Array(9).fill(0)},nim:{rules:Se,initialBoard:()=>[10]},\u30CB\u30E0:{rules:Se,initialBoard:()=>[10]},coin_flip:{rules:_e,initialBoard:()=>[0,0,-1]},\u30B3\u30A4\u30F3:{rules:_e,initialBoard:()=>[0,0,-1]},rock_paper_scissors:{rules:J,initialBoard:()=>[0,0,-1]},rps:{rules:J,initialBoard:()=>[0,0,-1]},\u3058\u3083\u3093\u3051\u3093:{rules:J,initialBoard:()=>[0,0,-1]}};function Xe(e,n){let t=xe[e];if(!t)throw new Error(`\u672A\u77E5\u306E\u30B2\u30FC\u30E0: ${e} (\u5BFE\u5FDC: ${Object.keys(xe).join(", ")})`);let r=t.initialBoard();return n?.board&&(r=n.board),n?.stones&&e.includes("nim")&&(r=[n.stones]),{reiType:"GameSpace",state:{board:r,currentPlayer:1,moveHistory:[],status:"playing",winner:null,turnCount:0},rules:t.rules,strategy:"minimax",maxDepth:9,searchNodes:0}}function re(e,n,t,r,i,u,c,s){if(s.count++,n.checkWin(e)!==null||n.checkDraw(e)||t<=0)return n.evaluate(e,c);let a=n.getLegalMoves(e);if(a.length===0)return n.evaluate(e,c);if(u){let h=-1/0;for(let m of a){let d=n.applyMove(e,m),f=re(d,n,t-1,r,i,!1,c,s);if(h=Math.max(h,f),r=Math.max(r,f),i<=r)break}return h}else{let h=1/0;for(let m of a){let d=n.applyMove(e,m),f=re(d,n,t-1,r,i,!0,c,s);if(h=Math.min(h,f),i=Math.min(i,f),i<=r)break}return h}}function Ze(e){let{state:n,rules:t,strategy:r,maxDepth:i}=e,u=t.getLegalMoves(n);if(u.length===0)return{move:-1,score:0,searchNodes:0};switch(r){case"random":{let c=Math.floor($()*u.length);return{move:u[c],score:0,searchNodes:1}}case"greedy":{let c=u[0],s=-1/0;for(let o of u){let a=t.applyMove(n,o),h=t.evaluate(a,n.currentPlayer);h>s&&(s=h,c=o)}return{move:c,score:s,searchNodes:u.length}}case"defensive":{let c=n.currentPlayer===1?2:1,s=u[0],o=-1/0;for(let a of u){let h=t.applyMove(n,a),m=-t.evaluate(h,c);m>o&&(o=m,s=a)}return{move:s,score:o,searchNodes:u.length}}default:{let c={count:0},s=u[0],o=-1/0;for(let a of u){let h=t.applyMove(n,a),m=re(h,t,i-1,-1/0,1/0,!1,n.currentPlayer,c);m>o&&(o=m,s=a)}return{move:s,score:o,searchNodes:c.count}}}}function et(e,n){let t=e.rules.getLegalMoves(e.state);if(t.length===0||e.state.status!=="playing")return e;let r;if(n!==void 0&&t.includes(n))r=n;else{let i=Ze(e);r=i.move,e.searchNodes+=i.searchNodes}return{...e,state:e.rules.applyMove(e.state,r)}}function tt(e,n,t){let r={...e},i=n??e.strategy,u=t??e.strategy,c=0;for(;r.state.status==="playing"&&c<200;)c++,r={...r,strategy:r.state.currentPlayer===1?i:u},r=et(r);return r}function on(e){let n=e.rules.getLegalMoves(e.state);return{reiType:"MDim",center:e.state.turnCount,neighbors:n,mode:e.strategy,metadata:{game:e.rules.name,currentPlayer:e.state.currentPlayer,status:e.state.status}}}function Re(e){return{reiType:"SigmaResult",field:{game:e.rules.name,board:e.state.board,turnCount:e.state.turnCount,status:e.state.status},flow:{currentPlayer:e.state.currentPlayer,direction:e.state.status==="playing"?"active":"terminated",momentum:e.state.turnCount},memory:e.state.moveHistory,layer:e.maxDepth,relation:{players:2,type:e.rules.name==="nim"?"adversarial_sequential":e.rules.name==="coin_flip"?"independent_simultaneous":"adversarial_alternating"},will:{strategy:e.strategy,searchDepth:e.maxDepth,searchNodes:e.searchNodes}}}function an(e){let n=[];if(n.push(`\u2550\u2550\u2550 ${e.rules.name} \u2550\u2550\u2550`),n.push(e.rules.formatBoard(e.state)),n.push(`\u624B\u756A: Player ${e.state.currentPlayer} | \u72B6\u614B: ${e.state.status}`),e.state.winner&&n.push(`\u52DD\u8005: Player ${e.state.winner}`),e.state.moveHistory.length>0){n.push("\u2500\u2500\u2500 \u68CB\u8B5C \u2500\u2500\u2500");for(let t of e.state.moveHistory.slice(-5))n.push(`  ${t.label}`);e.state.moveHistory.length>5&&n.push(`  ... (${e.state.moveHistory.length-5}\u624B\u7701\u7565)`)}return n.join(`
+`)}function cn(e){return e.rules.getLegalMoves(e.state)}function ln(e,n,t="minimax",r="random"){let i=0,u=0,c=0;for(let s=0;s<n;s++){let o=Xe(e),a=tt(o,t,r);a.state.winner===1?i++:a.state.winner===2?u++:c++}return{p1Wins:i,p2Wins:u,draws:c,total:n,p1Rate:i/n}}function nt(e,n,t){return{row:e,col:n,value:0,candidates:Array.from({length:t},(r,i)=>i+1),fixed:!1,eliminationHistory:[]}}function hn(e){let n=[],t=Math.round(Math.sqrt(e));for(let r=0;r<e;r++)n.push({type:"all_different",cells:Array.from({length:e},(i,u)=>[r,u]),label:`\u884C${r}`});for(let r=0;r<e;r++)n.push({type:"all_different",cells:Array.from({length:e},(i,u)=>[u,r]),label:`\u5217${r}`});for(let r=0;r<t;r++)for(let i=0;i<t;i++){let u=[];for(let c=0;c<t;c++)for(let s=0;s<t;s++)u.push([r*t+c,i*t+s]);n.push({type:"all_different",cells:u,label:`\u30D6\u30ED\u30C3\u30AF(${r},${i})`})}return n}function mn(e){let n=[];for(let t=0;t<e;t++)n.push({type:"all_different",cells:Array.from({length:e},(r,i)=>[t,i]),label:`\u884C${t}`});for(let t=0;t<e;t++)n.push({type:"all_different",cells:Array.from({length:e},(r,i)=>[i,t]),label:`\u5217${t}`});return n}function L(e){let n=e.length,t=[];for(let i=0;i<n;i++){t[i]=[];for(let u=0;u<n;u++)t[i][u]=nt(i,u,n),e[i][u]>0&&(t[i][u].value=e[i][u],t[i][u].candidates=[],t[i][u].fixed=!0)}let r={reiType:"PuzzleSpace",puzzleType:"sudoku",size:n,cells:t,constraints:hn(n),history:[],solved:!1,step:0,totalCandidates:0,confirmedCells:0};return rt(r),_(r),r}function Pe(e){let n=e.length,t=[];for(let i=0;i<n;i++){t[i]=[];for(let u=0;u<n;u++)t[i][u]=nt(i,u,n),e[i][u]>0&&(t[i][u].value=e[i][u],t[i][u].candidates=[],t[i][u].fixed=!0)}let r={reiType:"PuzzleSpace",puzzleType:"latin_square",size:n,cells:t,constraints:mn(n),history:[],solved:!1,step:0,totalCandidates:0,confirmedCells:0};return rt(r),_(r),r}function rt(e){let{cells:n,constraints:t}=e,r=[],i=0;for(let u of t){if(u.type!=="all_different")continue;let c=new Set;for(let[s,o]of u.cells)n[s][o].value>0&&c.add(n[s][o].value);for(let[s,o]of u.cells)if(!(n[s][o].value>0)){for(let a of c){let h=n[s][o].candidates.indexOf(a);h>=0&&(n[s][o].candidates.splice(h,1),n[s][o].eliminationHistory.push({candidate:a,reason:`${u.type}_initial`,source:[-1,-1],step:0}),i++)}n[s][o].candidates.length===1&&(n[s][o].value=n[s][o].candidates[0],n[s][o].candidates=[],r.push(`(${s},${o})=${n[s][o].value} [\u521D\u671F\u4F1D\u64AD: ${u.label}]`))}}i>0&&e.history.push({step:0,eliminations:i,confirmations:r.length,technique:"initial_propagation",details:r})}function _(e){let n=0,t=0,{cells:r,size:i}=e;for(let u=0;u<i;u++)for(let c=0;c<i;c++)r[u][c].value>0?t++:n+=r[u][c].candidates.length;e.totalCandidates=n,e.confirmedCells=t,e.solved=t===i*i}function me(e){e.step++;let n=e.step,{cells:t,constraints:r,size:i}=e,u=[],c=0,s=0,o=!0;for(;o;){o=!1;for(let h=0;h<i;h++)for(let m=0;m<i;m++)if(!(t[h][m].value>0)&&t[h][m].candidates.length===1){let d=t[h][m].candidates[0];t[h][m].value=d,t[h][m].candidates=[],s++,o=!0,u.push(`(${h},${m})=${d} [Naked Single]`);for(let f of r)if(f.cells.some(([p,y])=>p===h&&y===m))for(let[p,y]of f.cells){if(p===h&&y===m||t[p][y].value>0)continue;let v=t[p][y].candidates.indexOf(d);v>=0&&(t[p][y].candidates.splice(v,1),t[p][y].eliminationHistory.push({candidate:d,reason:`${f.type}_propagation`,source:[h,m],step:n}),c++)}}}for(let h of r){if(h.type!=="all_different")continue;let m=new Set;for(let[d,f]of h.cells)t[d][f].value>0&&m.add(t[d][f].value);for(let d=1;d<=i;d++){if(m.has(d))continue;let f=[];for(let[p,y]of h.cells)t[p][y].value>0||t[p][y].candidates.includes(d)&&f.push([p,y]);if(f.length===1){let[p,y]=f[0];if(t[p][y].value>0)continue;let v=t[p][y].candidates.filter(E=>E!==d);for(let E of v)t[p][y].eliminationHistory.push({candidate:E,reason:"hidden_single",source:[p,y],step:n}),c++;t[p][y].value=d,t[p][y].candidates=[],s++,u.push(`(${p},${y})=${d} [Hidden Single: ${h.label}]`);for(let E of r)if(E.cells.some(([A,C])=>A===p&&C===y))for(let[A,C]of E.cells){if(A===p&&C===y||t[A][C].value>0)continue;let D=t[A][C].candidates.indexOf(d);D>=0&&(t[A][C].candidates.splice(D,1),t[A][C].eliminationHistory.push({candidate:d,reason:`${E.type}_propagation`,source:[p,y],step:n}),c++)}}}}let a={step:n,eliminations:c,confirmations:s,technique:s>0?"naked_single+hidden_single":"no_progress",details:u};return e.history.push(a),_(e),a}function de(e){e.step++;let n=e.step,{cells:t,constraints:r}=e,i=[],u=0;for(let s of r){if(s.type!=="all_different")continue;let o=[];for(let[a,h]of s.cells)t[a][h].candidates.length===2&&o.push({pos:[a,h],cands:[...t[a][h].candidates]});for(let a=0;a<o.length;a++)for(let h=a+1;h<o.length;h++)if(o[a].cands[0]===o[h].cands[0]&&o[a].cands[1]===o[h].cands[1]){let[m,d]=o[a].cands,[f,p]=o[a].pos,[y,v]=o[h].pos;for(let[E,A]of s.cells)if(!(E===f&&A===p||E===y&&A===v)&&!(t[E][A].value>0))for(let C of[m,d]){let D=t[E][A].candidates.indexOf(C);D>=0&&(t[E][A].candidates.splice(D,1),t[E][A].eliminationHistory.push({candidate:C,reason:"naked_pair",source:[f,p],step:n}),u++,i.push(`(${E},${A}) \u304B\u3089 ${C} \u3092\u6D88\u53BB [Naked Pair: (${f},${p})-(${y},${v})={${m},${d}} in ${s.label}]`))}}}let c={step:n,eliminations:u,confirmations:0,technique:u>0?"naked_pair":"no_progress",details:i};return e.history.push(c),_(e),c}function ut(e){let n=!0;for(;n;){let s=me(e);if(s.confirmations===0&&s.eliminations===0&&(de(e).eliminations===0?n=!1:n=!0),e.solved)return!0;for(let o=0;o<e.size;o++)for(let a=0;a<e.size;a++)if(e.cells[o][a].value===0&&e.cells[o][a].candidates.length===0)return!1}if(e.solved)return!0;let t=1/0,r=null;for(let s=0;s<e.size;s++)for(let o=0;o<e.size;o++){let a=e.cells[s][o];a.value===0&&a.candidates.length>0&&a.candidates.length<t&&(t=a.candidates.length,r=[s,o])}if(!r)return!1;let[i,u]=r,c=[...e.cells[i][u].candidates];for(let s of c){let o=fn(e);if(e.cells[i][u].value=s,e.cells[i][u].candidates=[],e.step++,e.history.push({step:e.step,eliminations:0,confirmations:1,technique:"backtracking_guess",details:[`(${i},${u})=${s} [\u4EEE\u5B9A: \u5019\u88DC${c.join(",")}\u304B\u3089]`]}),dn(e,i,u,s),_(e),ut(e))return!0;pn(e,o)}return!1}function dn(e,n,t,r){let{cells:i,constraints:u}=e;for(let c of u)if(c.cells.some(([s,o])=>s===n&&o===t))for(let[s,o]of c.cells){if(s===n&&o===t||i[s][o].value>0)continue;let a=i[s][o].candidates.indexOf(r);a>=0&&(i[s][o].candidates.splice(a,1),i[s][o].eliminationHistory.push({candidate:r,reason:`${c.type}_propagation`,source:[n,t],step:e.step}))}}function fn(e){let{cells:n,size:t}=e,r={cells:[],step:e.step,histLen:e.history.length,solved:e.solved};for(let i=0;i<t;i++){r.cells[i]=[];for(let u=0;u<t;u++)r.cells[i][u]={value:n[i][u].value,candidates:[...n[i][u].candidates],histLen:n[i][u].eliminationHistory.length}}return r}function pn(e,n){let{cells:t,size:r}=e;for(let i=0;i<r;i++)for(let u=0;u<r;u++)t[i][u].value=n.cells[i][u].value,t[i][u].candidates=[...n.cells[i][u].candidates],t[i][u].eliminationHistory=t[i][u].eliminationHistory.slice(0,n.cells[i][u].histLen);e.step=n.step,e.history=e.history.slice(0,n.histLen),e.solved=n.solved,_(e)}function gn(e){return e.solved||ut(e),e}function yn(e,n=100){let t=0;for(;t<n&&!e.solved;){let r=me(e);if(r.confirmations===0&&r.eliminations===0&&de(e).eliminations===0)break;t++}return e}function Oe(e,n,t){let r=e.cells[n]?.[t];if(!r)throw new Error(`\u30BB\u30EB(${n},${t})\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093`);return{reiType:"MDim",center:r.value,neighbors:[...r.candidates],mode:"weighted",__puzzle__:{row:r.row,col:r.col,fixed:r.fixed,eliminationCount:r.eliminationHistory.length}}}function En(e){let n=[];for(let t=0;t<e.size;t++){n[t]=[];for(let r=0;r<e.size;r++)n[t][r]=e.cells[t][r].value}return n}function bn(e,n,t){let r=e.cells[n]?.[t];return r?r.value>0?[]:[...r.candidates]:[]}function Le(e){let{size:n,cells:t}=e,r=0,i=0,u=1/0,c=0;for(let a=0;a<n;a++)for(let h=0;h<n;h++)if(t[a][h].value>0)i++;else{let m=t[a][h].candidates.length;r+=m,m<u&&(u=m),m>c&&(c=m)}let s=n*n,o=i/s;return{reiType:"SigmaResult",field:{puzzleType:e.puzzleType,size:e.size,totalCells:s,confirmedCells:i,remainingCells:s-i,totalCandidates:r,constraintGroups:e.constraints.length},flow:{step:e.step,momentum:e.solved?"converged":o>.5?"contracting":"expanding",progress:o,velocity:e.history.length>0?e.history[e.history.length-1].confirmations:0},memory:e.history.map(a=>({step:a.step,technique:a.technique,eliminations:a.eliminations,confirmations:a.confirmations})),layer:e.history.some(a=>a.technique==="backtracking_guess")?2:e.history.some(a=>a.technique==="naked_pair")?1:0,will:{tendency:e.solved?"rest":u<=2?"contract":c>=7?"expand":"spiral",strength:o,minCandidates:u===1/0?0:u,maxCandidates:c},relation:e.constraints.map(a=>({type:a.type,label:a.label,cells:a.cells.length}))}}function Cn(e){let{cells:n,size:t}=e,r=Math.round(Math.sqrt(t)),i=[];for(let u=0;u<t;u++){u>0&&u%r===0&&i.push("------+-------+------");let c=[];for(let s=0;s<t;s++){s>0&&s%r===0&&c.push("|");let o=n[u][s].value;c.push(o>0?` ${o}`:" .")}i.push(c.join(""))}return i.join(`
+`)}function An(e){let n=new Set(e.history.map(s=>s.technique)),t=e.history.length,r=n.has("backtracking_guess"),i=n.has("naked_pair"),u,c;return r?(u="\u6975\u96E3",c=5):i?(u="\u96E3",c=4):t>10?(u="\u4E2D",c=3):t>5?(u="\u6613",c=2):(u="\u5165\u9580",c=1),{reiType:"DifficultyResult",level:u,score:c,totalSteps:t,techniques:[...n],backtrackUsed:r,maxLayer:r?2:i?1:0}}function Ie(e=30,n){let t=Array.from({length:9},()=>Array(9).fill(0)),r=n??Date.now();function i(){return r=r*1103515245+12345&2147483647,r/2147483647}function u(m){for(let d=m.length-1;d>0;d--){let f=Math.floor(i()*(d+1));[m[d],m[f]]=[m[f],m[d]]}return m}function c(m){for(let d=0;d<9;d++)for(let f=0;f<9;f++){if(m[d][f]!==0)continue;let p=u([1,2,3,4,5,6,7,8,9]);for(let y of p)if(s(m,d,f,y)){if(m[d][f]=y,c(m))return!0;m[d][f]=0}return!1}return!0}function s(m,d,f,p){for(let E=0;E<9;E++)if(m[d][E]===p||m[E][f]===p)return!1;let y=Math.floor(d/3)*3,v=Math.floor(f/3)*3;for(let E=0;E<3;E++)for(let A=0;A<3;A++)if(m[y+E][v+A]===p)return!1;return!0}c(t);let o=u(Array.from({length:81},(m,d)=>[Math.floor(d/9),d%9])),a=0,h=81-Math.max(17,Math.min(40,e));for(let[m,d]of o){if(a>=h)break;t[m][d]=0,a++}return t}function X(e){let n;typeof e=="string"?n=e.replace(/[^0-9.]/g,"").split("").map(i=>i==="."?0:parseInt(i,10)):n=e;let t=Math.round(Math.sqrt(n.length)),r=[];for(let i=0;i<t;i++){r[i]=[];for(let u=0;u<t;u++)r[i][u]=n[i*t+u]??0}return r}function Fn(){return{memory:[],tendency:"rest",pipeCount:0}}function vn(e,n,t){let r=b(e),i=b(n),u=t?{...t,memory:[...t.memory,i],pipeCount:t.pipeCount+1}:{memory:[i],tendency:"rest",pipeCount:1};return u.tendency=Dn(u.memory,r),r===null||typeof r!="object"?{reiType:"ReiVal",value:r,__sigma__:u}:(r.__sigma__=u,r)}function Dn(e,n){if(e.length<2)return"rest";let t=e.slice(-5).map(N),r=N(n),i=0,u=0,c=0;for(let s=0;s<t.length;s++){let o=s===0?t[0]:t[s-1],a=s===t.length-1?r:t[s+1];a>o?i++:a<o&&u++,s>0&&a>o!=t[s]>t[s-1]&&c++}return c>=t.length-1?"spiral":i>u?"expand":u>i?"contract":"rest"}function N(e){if(typeof e=="number")return e;if(e==null)return 0;if(typeof e=="boolean")return e?1:0;if(typeof e=="object"&&e.reiType==="ReiVal")return N(e.value);if(typeof e=="object"&&e.reiType==="Ext")return e.valStar();if(typeof e=="object"&&e.reiType==="MDim"){let{center:n,neighbors:t,mode:r}=e,i=e.weights??t.map(()=>1);if(t.length===0)return n;let c=i.reduce((o,a)=>o+a,0),s=t.reduce((o,a,h)=>o+(i[h]??1)*a,0)/(c||1);return n+s}return 0}function b(e){return e!==null&&typeof e=="object"&&e.reiType==="ReiVal"?e.value:e}function U(e){return e!==null&&typeof e=="object"&&(e.reiType==="ReiVal"||e.__sigma__)?e.__sigma__:Fn()}function je(e,n){let t=b(e),r,i=0,u={direction:n.tendency==="rest"?"rest":n.tendency,momentum:n.pipeCount,velocity:0};t!==null&&typeof t=="object"?t.reiType==="MDim"?r={center:t.center,neighbors:[...t.neighbors],mode:t.mode,dim:t.neighbors.length}:t.reiType==="Ext"?(r={base:t.base,order:t.order,subscripts:t.subscripts},i=t.order):t.reiType==="State"?(r={state:t.state,omega:t.omega},u={direction:"forward",momentum:t.history.length-1,velocity:1}):t.reiType==="Quad"?r={value:t.value}:t.reiType==="DNode"?(r={center:t.center,neighbors:[...t.neighbors],layer:t.layerIndex,index:t.nodeIndex},i=t.layerIndex,u={stage:t.stage,directions:t.neighbors.length,momentum:t.momentum,velocity:0},t.diffusionHistory.length>=2&&(u.velocity=Math.abs(t.diffusionHistory[t.diffusionHistory.length-1].result-t.diffusionHistory[t.diffusionHistory.length-2].result))):t.reiType==="Space"?r={type:"space"}:Array.isArray(t)?r={length:t.length,first:t[0]??null,last:t[t.length-1]??null}:r={type:typeof t}:typeof t=="number"?r={center:t,neighbors:[]}:typeof t=="string"?r={value:t,length:t.length}:typeof t=="boolean"?r={value:t}:r={value:null};let c=[...n.memory];if(t!==null&&typeof t=="object"&&t.reiType==="State"&&t.history&&c.length===0&&t.history.length>1)for(let o=0;o<t.history.length-1;o++)c.push(t.history[o]);let s={tendency:n.tendency,strength:n.pipeCount>0?Math.min(n.pipeCount/5,1):0,history:n.memory.map((o,a)=>{if(a===0)return"rest";let h=N(n.memory[a-1]),m=N(n.memory[a]);return m>h?"expand":m<h?"contract":"rest"})};return{reiType:"SigmaResult",field:r,flow:u,memory:c,layer:i,will:s,relation:[]}}var $e=class{parent;bindings=new Map;constructor(e=null){this.parent=e}define(e,n,t=!1){this.bindings.set(e,{value:n,mutable:t})}get(e){let n=this.bindings.get(e);if(n)return n.value;if(this.parent)return this.parent.get(e);throw new Error(`\u672A\u5B9A\u7FA9\u306E\u5909\u6570: ${e}`)}set(e,n){let t=this.bindings.get(e);if(t){if(!t.mutable)throw new Error(`\u4E0D\u5909\u306E\u5909\u6570\u306B\u4EE3\u5165: ${e}`);t.value=n;return}if(this.parent){this.parent.set(e,n);return}throw new Error(`\u672A\u5B9A\u7FA9\u306E\u5909\u6570: ${e}`)}has(e){return this.bindings.has(e)?!0:this.parent?this.parent.has(e):!1}getBinding(e){let n=this.bindings.get(e);return n||(this.parent?this.parent.getBinding(e):null)}allBindings(){let e=new Map;if(this.parent)for(let[n,t]of this.parent.allBindings())e.set(n,t);for(let[n,t]of this.bindings)e.set(n,t);return e}};function j(e,n){let t=n.length;return{reiType:"Ext",base:e,order:t,subscripts:n,valStar(){return e===0?Math.pow(.1,t):e*Math.pow(.1,t)}}}function kn(e){if(e==="0\u2080")return j(0,"o");let n=e[0],t=e.slice(1),r={0:0,\u03C0:Math.PI,e:Math.E,\u03C6:(1+Math.sqrt(5))/2,i:NaN};return j(r[n]??0,t)}var T=["weighted","multiplicative","harmonic","exponential","geometric","median","minkowski","entropy"];function F(e){let{center:n,neighbors:t,mode:r}=e,i=e.weights??t.map(()=>1),u=t.length;if(u===0)return n;if(typeof r=="string"&&r.startsWith("blend("))return Bn(e,r);switch(r){case"weighted":{let c=i.reduce((o,a)=>o+a,0),s=t.reduce((o,a,h)=>o+(i[h]??1)*a,0)/(c||1);return n+s}case"multiplicative":{let c=t.reduce((s,o)=>s*(1+o),1);return n*c}case"harmonic":{let c=t.reduce((s,o)=>s+1/(Math.abs(o)||1),0);return n+u/c}case"exponential":{let c=t.reduce((s,o)=>s+Math.exp(o),0);return n*(c/u)}case"geometric":{let c=t.reduce((s,o)=>s*Math.abs(o||1),1);return n*Math.pow(c,1/u)}case"median":{let c=[...t].sort((a,h)=>a-h),s=Math.floor(u/2),o=u%2===0?(c[s-1]+c[s])/2:c[s];return n+o}case"minkowski":{let c=e.minkowskiP??2,s=t.reduce((o,a)=>o+Math.pow(Math.abs(a),c),0);return n+Math.pow(s/u,1/c)}case"entropy":{let c=t.reduce((a,h)=>a+Math.abs(h),0)||1,o=-t.map(a=>Math.abs(a)/c).reduce((a,h)=>a+(h>0?h*Math.log2(h):0),0);return n*(1+o)}default:return n}}function Bn(e,n){let r=n.slice(6,-1).split(",").map(c=>c.trim()),i=0,u=0;for(let c of r){let[s,o]=c.split(":").map(m=>m.trim()),a=parseFloat(o)||0,h=F({...e,mode:s});u+=a*h,i+=a}return i>0?u/i:e.center}function k(e,n,t){let r;if(Array.isArray(e))r=[...e];else if(typeof e=="string")r=Array.from(e).map(s=>s.charCodeAt(0));else if(typeof e=="number")r=Math.abs(e).toString().split("").map(Number);else if(e!==null&&typeof e=="object"&&e.reiType==="MDim")r=[e.center,...e.neighbors];else return{reiType:"MDim",center:e??0,neighbors:[],mode:"weighted"};if(r.length===0)return{reiType:"MDim",center:0,neighbors:[],mode:"weighted"};let i=0;if(n===":max"||n==="max")i=r.indexOf(Math.max(...r.map(Number)));else if(n===":min"||n==="min")i=r.indexOf(Math.min(...r.map(Number)));else if(n===":first"||n==="first")i=0;else if(n===":last"||n==="last")i=r.length-1;else if(n===":middle"||n==="middle")i=Math.floor(r.length/2);else if(typeof n=="number"){let s=r.indexOf(n);i=s>=0?s:0}let u=r[i],c=r.filter((s,o)=>o!==i);return{reiType:"MDim",center:u,neighbors:c,mode:"weighted"}}function fe(e){let n;if(Array.isArray(e))n=[...e];else if(typeof e=="string")n=Array.from(e).map(t=>t.charCodeAt(0));else if(typeof e=="number")n=Math.abs(e).toString().split("").map(Number);else if(e!==null&&typeof e=="object"&&e.reiType==="MDim")n=[e.center,...e.neighbors];else return[{reiType:"MDim",center:e??0,neighbors:[],mode:"weighted"}];return n.length===0?[]:n.map((t,r)=>{let i=n[r],u=n.filter((c,s)=>s!==r);return{reiType:"MDim",center:i,neighbors:u,mode:"weighted"}})}function S(e){return!e||e.reiType!=="MDim"?[]:T.map(n=>({mode:n,value:F({...e,mode:n})}))}function Mn(e,n,t){if(!e||e.reiType!=="MDim")return null;let r=F({...e,mode:n}),i=F({...e,mode:t});return{reiType:"CompareResult",mode1:{mode:n,value:r},mode2:{mode:t,value:i},diff:Math.abs(r-i),ratio:i!==0?r/i:1/0}}function wn(e){return fe(e).map((t,r)=>{let i=T.map(u=>({mode:u,value:F({...t,mode:u})}));return{projectionIndex:r,center:t.center,neighbors:t.neighbors,results:i}})}function ue(e){let n=e.reiType==="MDim"?e.center!==null&&typeof e.center=="object"&&e.center.reiType==="MDim"?ue(e.center):typeof e.center=="number"?e.center:0:typeof e=="number"?e:0,t=(e.neighbors??[]).map(r=>r!==null&&typeof r=="object"&&r.reiType==="MDim"?ue(r):typeof r=="number"?r:0);return F({...e,center:n,neighbors:t})}function pe(e,n,t="absorb"){if(e!==null&&typeof e=="object"&&e.reiType==="MDim"){let r=e;switch(t){case"absorb":{let i=n/(Math.abs(r.center)+Math.abs(n)||1),u=r.center+n*i;return{...r,center:u}}case"distribute":{let i=n/(r.neighbors.length||1),u=r.neighbors.map(c=>c+i);return{...r,neighbors:u}}case"reflect":{let i=r.neighbors.map(u=>u-n/(r.neighbors.length||1));return{...r,neighbors:i}}case"resonate":{let i=r.center*(1+Math.sin(n)),u=r.neighbors.map((c,s)=>c*(1+Math.sin(n+(s+1)*Math.PI/r.neighbors.length)));return{...r,center:i,neighbors:u}}default:return pe(e,n,"absorb")}}return typeof e=="number"?e+n:e}function Tn(e){if(e!==null&&typeof e=="object"&&e.reiType==="MDim"){let n=F(e),t=.001,r=pe(e,t,"absorb"),i=F(r);return Math.abs(i-n)/t}return typeof e=="number"?1:0}function V(e,n){let t=0,r=5;t+=Math.min(n.memory.length/5,1),n.tendency!=="rest"&&(t+=1),t+=Math.min(n.pipeCount/5,1);let i=b(e);if(i!==null&&typeof i=="object"&&(i.reiType==="MDim"&&i.neighbors?t+=Math.min(i.neighbors.length/8,1):i.reiType==="Space"?t+=1:i.reiType==="State"&&i.history&&(t+=Math.min(i.history.length/5,1))),n.memory.length>=2){let u=new Set(n.memory.map(c=>JSON.stringify(c)));t+=Math.min(u.size/n.memory.length,1)}return Math.min(t/r,1)}var ge=.6;function Nn(e,n,t){let r=b(e);if(r!==null&&typeof r=="object"&&r.reiType==="MDim"){let i=r;switch(n){case"scale":return{...i,center:i.center*t,neighbors:i.neighbors.map(u=>u*t)};case"shift":return{...i,center:i.center+t,neighbors:i.neighbors.map(u=>u+t)};case"rotate":{let u=i.neighbors.length;if(u===0)return i;let c=(t%u+u)%u,s=[...i.neighbors.slice(c),...i.neighbors.slice(0,c)];return{...i,neighbors:s}}case"invert":return{...i,neighbors:i.neighbors.map(u=>2*i.center-u)};case"normalize_to":{let u=Math.abs(i.center)+i.neighbors.reduce((s,o)=>s+Math.abs(o),0)||1,c=t/u;return{...i,center:i.center*c,neighbors:i.neighbors.map(s=>s*c)}}default:throw new Error(`\u672A\u77E5\u306E\u5909\u63DB: ${n}`)}}if(typeof r=="number")switch(n){case"scale":return r*t;case"shift":return r+t;case"invert":return-r;default:return r}return r}function Sn(e,n,t){if(!e||e.reiType!=="MDim")return{equivalent:!1,reason:"non-MDim input"};let r=F({...e,mode:n}),i=F({...e,mode:t});return{reiType:"ModeEquivResult",mode1:n,mode2:t,type_equivalent:typeof r==typeof i,value1:r,value2:i,relative_diff:Math.abs(i)>0?Math.abs(r-i)/Math.abs(i):r===i?0:1/0}}function st(e,n){let t=b(e),r=b(n),i=typeof t=="number"?t:t?.center??0,u=typeof r=="number"?r:r?.center??0,c=t?.neighbors?.length??0,s=r?.neighbors?.length??0,o=c===0&&s===0?1:1-Math.abs(c-s)/Math.max(c,s,1),a=Math.max(Math.abs(i),Math.abs(u),1),h=1-Math.abs(i-u)/a,m=0;if(c>0&&s>0){let f=Math.min(c,s),p=t.neighbors.slice(0,f),y=r.neighbors.slice(0,f),v=p.reduce((C,D,q)=>C+D*y[q],0),E=Math.sqrt(p.reduce((C,D)=>C+D*D,0))||1,A=Math.sqrt(y.reduce((C,D)=>C+D*D,0))||1;m=v/(E*A)}let d=o*.3+Math.max(h,0)*.3+(m+1)/2*.4;return{reiType:"ResonanceResult",strength:Math.max(0,Math.min(1,d)),dimMatch:o,valueProximity:Math.max(0,h),patternSimilarity:m,resonates:d>=.5}}function _n(e,n){let t=b(e),r=V(e,n)>=ge;return{reiType:"ResonanceField",awakened:r,range:r?"non-local":"local",capacity:r?1:.3,signature:t?.neighbors?.length??0}}function xn(e){let n=b(e);if(!Array.isArray(n))return n?.reiType==="MDim"?n.neighbors.map((r,i)=>({pair:[n.center,r],index:i,strength:1-Math.abs(n.center-r)/Math.max(Math.abs(n.center),Math.abs(r),1)})):[];let t=[];for(let r=0;r<n.length;r++)for(let i=r+1;i<n.length;i++){let u=st(n[r],n[i]);t.push({pair:[r,i],...u})}return t}function Rn(e){let n=b(e);if(!n||n.reiType!=="MDim")return{reiType:"ResonanceChain",chain:[],depth:0};let t=[],r=new Set;function i(u,c){if(!(r.has(u)||c>5)){r.add(u),t.push({value:u,depth:c});for(let s of n.neighbors)r.has(s)||1-Math.abs(u-s)/Math.max(Math.abs(u),Math.abs(s),1)>.3&&i(s,c+1)}}return i(n.center,0),{reiType:"ResonanceChain",chain:t,depth:t.length}}function Pn(e,n){let t=b(e),r;if(t?.reiType==="MDim")r=t;else if(Array.isArray(t))r=k(t,"first");else if(typeof t=="number"){let i=String(Math.abs(Math.floor(t))).split("").map(Number);r={reiType:"MDim",center:i[0],neighbors:i.slice(1),mode:"weighted"}}else r={reiType:"MDim",center:0,neighbors:[],mode:"weighted"};switch(n){case"graph":{let i=r.neighbors.map((u,c)=>({from:r.center,to:u,weight:Math.abs(r.center-u)}));return{reiType:"GraphProjection",hub:r.center,nodes:[r.center,...r.neighbors],edges:i,degree:r.neighbors.length}}case"series":{let i=[r.center,...r.neighbors],u=[];for(let c=1;c<i.length;c++)u.push(i[c]-i[c-1]);return{reiType:"SeriesProjection",values:i,deltas:u,trend:u.length>0?u.reduce((c,s)=>c+s,0)/u.length>0?"up":"down":"flat",length:i.length}}case"matrix":{let i=r.neighbors.length+1;return{reiType:"MatrixProjection",row:[r.center,...r.neighbors],size:i,diagonal:r.center,trace:r.center}}case"tree":{let i=r.neighbors.map((u,c)=>({value:u,depth:1,index:c,leaf:!0}));return{reiType:"TreeProjection",root:r.center,children:i,height:r.neighbors.length>0?1:0,leaves:r.neighbors.length}}default:throw new Error(`\u672A\u77E5\u306E\u5C04\u5F71\u578B: ${n}`)}}function On(e){let n=b(e);if(!Array.isArray(n)){if(n?.reiType==="MDim"){let c=fe(n).map(o=>F(o));return{reiType:"MDim",center:c.reduce((o,a)=>o+a,0)/c.length,neighbors:c,mode:"weighted"}}return n}let r=n.map(u=>u?.reiType==="MDim"?u:k(typeof u=="number"?[u]:u,"first")).map(u=>u.center);return{reiType:"MDim",center:r.reduce((u,c)=>u+c,0)/r.length,neighbors:r,mode:"weighted"}}function Ln(e){let n=b(e),t={reiType:"RepresentableResult",representable:!0,reason:"",lossless:!0};return n==null?(t.representable=!0,t.reason="null \u2192 \u{1D544}{0;}",t.lossless=!0):typeof n=="number"?(t.representable=!0,t.reason="number \u2192 \u{1D544}{n;}",t.lossless=!0):typeof n=="string"?(t.representable=!0,t.reason="string \u2192 \u{1D544}{charCode(center); charCodes(rest)}",t.lossless=!0):typeof n=="boolean"?(t.representable=!0,t.reason="boolean \u2192 \u{1D544}{0|1;}",t.lossless=!0):Array.isArray(n)?(t.representable=!0,t.reason=`array[${n.length}] \u2192 \u{1D544}{first; rest}`,t.lossless=!0):n?.reiType==="MDim"?(t.representable=!0,t.reason="already \u{1D544}",t.lossless=!0):n?.reiType==="Space"?(t.representable=!0,t.reason="Space \u2192 nested \u{1D544} (U3 hierarchical)",t.lossless=!0):n?.reiType?(t.representable=!0,t.reason=`${n.reiType} \u2192 \u{1D544} via structural projection`,t.lossless=!1):typeof n=="object"?(t.representable=!0,t.reason="object \u2192 \u{1D544}{keys; values}",t.lossless=!1):(t.representable=!1,t.reason=`unknown type: ${typeof n}`,t.lossless=!1),t}function In(e,n,t){if(!e||e.reiType!=="MDim")throw new Error("derive_mode: \u{1D544}\u578B\u304C\u5FC5\u8981\u3067\u3059");let r=n.map(c=>F({...e,mode:c})),i=0,u=0;for(let c=0;c<r.length;c++){let s=t[c]??1;i+=r[c]*s,u+=s}return i=u>0?i/u:0,{reiType:"DerivedModeResult",value:i,baseModes:n,weights:t,formula:n.map((c,s)=>`${t[s]??1}\xD7${c}`).join(" + ")}}function jn(e){if(!e||e.reiType!=="MDim")return{reiType:"ModeSpace",modes:T.length,values:[],coverage:0};let n=T.map(c=>({mode:c,value:F({...e,mode:c})})),t=[];for(let c=0;c<n.length;c++){t[c]=[];for(let s=0;s<n.length;s++)t[c][s]=Math.abs(n[c].value-n[s].value)}let r=n.map(c=>c.value),i=r.reduce((c,s)=>c+s,0)/r.length,u=r.reduce((c,s)=>c+(s-i)**2,0)/r.length;return{reiType:"ModeSpace",modes:T.length,values:n,variance:u,diversity:Math.sqrt(u),coverage:1}}function se(e){let n=b(e);if(!n||n.reiType!=="MDim")return 0;let t=0;if(n.center!==null&&typeof n.center=="object"&&n.center.reiType==="MDim"&&(t=Math.max(t,1+se(n.center))),n.neighbors)for(let r of n.neighbors)r!==null&&typeof r=="object"&&r.reiType==="MDim"&&(t=Math.max(t,1+se(r)));return t}function ie(e,n=1){let t=b(e);if(!t||t.reiType!=="MDim"){let i={reiType:"MDim",center:typeof t=="number"?t:0,neighbors:[],mode:"weighted"};return n<=1?i:ie(i,n-1)}if(n<=0)return t;let r={reiType:"MDim",center:t,neighbors:[],mode:"weighted"};return n<=1?r:ie(r,n-1)}function oe(e){let n=b(e);if(typeof n=="number")return n;if(!n||n.reiType!=="MDim")return 0;let t=n.center?.reiType==="MDim"?oe(n.center):typeof n.center=="number"?n.center:0,r=(n.neighbors||[]).map(i=>i?.reiType==="MDim"?oe(i):typeof i=="number"?i:0);return F({reiType:"MDim",center:t,neighbors:r,mode:n.mode||"weighted"})}function it(e,n){let t=b(e),r=b(n),i=t?.neighbors?.length??0,u=r?.neighbors?.length??0,c=i===0&&u===0?1:1-Math.abs(i-u)/Math.max(i,u,1),s=typeof t=="number"?t:t?.center??0,o=typeof r=="number"?r:r?.center??0,a=(t?.neighbors??[]).map(p=>s!==0?p/s:p),h=(r?.neighbors??[]).map(p=>o!==0?p/o:p),m=0;if(a.length>0&&h.length>0){let p=Math.min(a.length,h.length),y=0;for(let v=0;v<p;v++)y+=Math.abs(a[v]-h[v]);m=1/(1+y/p)}else a.length===0&&h.length===0&&(m=1);let d=(t?.mode??"weighted")===(r?.mode??"weighted")?1:.5,f=c*.4+m*.4+d*.2;return{reiType:"SimilarityResult",similarity:f,dimSimilarity:c,ratioSimilarity:m,modeSimilarity:d,isomorphic:f>.9}}function $n(e,n){let t=it(e,n),r=b(e),i=b(n),u=typeof r=="number"?r:r?.center??0,c=typeof i=="number"?i:i?.center??0,s=u!==0?c/u:1;return{reiType:"BridgeResult",similarity:t.similarity,scaleFactor:s,mapping:{centerA:u,centerB:c,dimA:r?.neighbors?.length??0,dimB:i?.neighbors?.length??0},transferable:t.similarity>.5}}function ot(e){let n=b(e);if(n?.reiType==="MDim")return n;if(typeof n=="number")return{reiType:"MDim",center:n,neighbors:[],mode:"weighted"};if(typeof n=="string"){let t=Array.from(n).map(r=>r.charCodeAt(0));return t.length===0?{reiType:"MDim",center:0,neighbors:[],mode:"weighted"}:{reiType:"MDim",center:t[0],neighbors:t.slice(1),mode:"weighted"}}if(typeof n=="boolean")return{reiType:"MDim",center:n?1:0,neighbors:[],mode:"weighted"};if(n==null)return{reiType:"MDim",center:0,neighbors:[],mode:"weighted"};if(Array.isArray(n)){let t=n.map(r=>typeof r=="number"?r:0);return{reiType:"MDim",center:t[0]??0,neighbors:t.slice(1),mode:"weighted"}}if(typeof n=="object"){let t=Object.values(n).filter(r=>typeof r=="number");return{reiType:"MDim",center:t[0]??0,neighbors:t.slice(1),mode:"weighted"}}return{reiType:"MDim",center:0,neighbors:[],mode:"weighted"}}function zn(e,n){let t=b(e),r=t?.reiType==="MDim"?t:ot(t);switch(n){case"number":return F(r);case"array":return[r.center,...r.neighbors];case"string":return String.fromCharCode(r.center,...r.neighbors);case"object":let i={center:r.center};return r.neighbors.forEach((u,c)=>{i[`n${c}`]=u}),i;default:return[r.center,...r.neighbors]}}function ze(e,n,t=1){let r=S(e);return r.map(i=>{let u;switch(n){case"scale":u=i.value*t;break;case"shift":u=i.value+t;break;case"normalize":{let c=Math.max(...r.map(s=>Math.abs(s.value)),1);u=i.value/c;break}case"rank_normalize":{u=([...r].sort((o,a)=>o.value-a.value).findIndex(o=>o.mode===i.mode)+1)/r.length;break}default:u=i.value}return{...i,original:i.value,value:u,transform:n}})}function Ue(e){let n=S(e),t=n.map(a=>a.value),r=[...t].sort((a,h)=>a-h),i=r.length%2===0?(r[r.length/2-1]+r[r.length/2])/2:r[Math.floor(r.length/2)],u=t.reduce((a,h)=>a+h,0)/t.length,c=t.reduce((a,h)=>a+(h-u)**2,0)/t.length,s=Math.sqrt(c),o=1/(1+s/(Math.abs(u)||1));return{reiType:"ConsensusResult",median:i,mean:u,stddev:s,agreement:o,solutions:n.length,range:{min:r[0],max:r[r.length-1]}}}function He(e,n="median_closest"){let t=S(e),r=t.map(i=>i.value);switch(n){case"max":return t.reduce((i,u)=>u.value>i.value?u:i);case"min":return t.reduce((i,u)=>u.value<i.value?u:i);default:{let i=[...r].sort((c,s)=>c-s),u=i.length%2===0?(i[i.length/2-1]+i[i.length/2])/2:i[Math.floor(i.length/2)];return t.reduce((c,s)=>Math.abs(s.value-u)<Math.abs(c.value-u)?s:c)}}}function Ge(e,n="value"){return[...S(e)].sort((i,u)=>{switch(n){case"value":return u.value-i.value;case"abs":return Math.abs(u.value)-Math.abs(i.value);default:return u.value-i.value}}).map((i,u)=>({...i,rank:u+1}))}function Ve(e){let n=S(e),t=n.map(p=>p.value),r=new Set(t.map(p=>Math.round(p*1e6)/1e6)),i=r.size/t.length,u=[...t].sort((p,y)=>p-y),c=u[u.length-1]-u[0],s=4,o=c/s||1,a=new Array(s).fill(0);for(let p of t){let y=Math.min(Math.floor((p-u[0])/o),s-1);a[y]++}let h=t.length,m=0;for(let p of a)if(p>0){let y=p/h;m-=y*Math.log2(y)}let d=Math.log2(s),f=d>0?m/d:1;return{reiType:"CompletenessResult",totalModes:n.length,uniqueSolutions:r.size,uniqueRatio:i,range:c,uniformity:f,completeness:i*.5+f*.5,isComplete:i>.5&&f>.3}}function We(e,n,t="auto"){let r=b(e),i;r?.reiType==="MDim"?i=r:Array.isArray(r)?i=k(r,"first"):typeof r=="number"?i={reiType:"MDim",center:r,neighbors:[],mode:"weighted"}:i={reiType:"MDim",center:0,neighbors:[],mode:"weighted"};let u=T.map(h=>({mode:h,value:F({...i,mode:h})})),c=V(e,n),s=n.tendency,o,a;switch(t){case"stable":o=at(u,n),a=Un(o,u,n);break;case"divergent":o=Hn(u),a=`\u6700\u3082\u4ED6\u306E\u30E2\u30FC\u30C9\u3068\u7570\u306A\u308B\u7D50\u679C\u3092\u51FA\u3059\u30E2\u30FC\u30C9\uFF08\u504F\u5DEE: ${ae(o.value,u).toFixed(4)}\uFF09`;break;case"creative":o=Gn(u),a=`\u4E2D\u592E\u5024\u304B\u3089\u6700\u3082\u9060\u3044\u7D50\u679C\uFF08\u8DDD\u96E2: ${ce(o.value,u).toFixed(4)}\uFF09`;break;case"tendency":o=ct(u,s,i),a=`\u03C4\u306E\u50BE\u5411\u6027\u300C${s}\u300D\u3068\u6574\u5408\u3059\u308B\u30E2\u30FC\u30C9`;break;default:({selected:o,reason:a}=Vn(u,n,c,i)),t="auto";break}return{reiType:"EvolveResult",value:o.value,selectedMode:o.mode,strategy:t,reason:a,candidates:u,awareness:c,tendency:s}}function at(e,n){if(n.memory.length===0){let i=e.reduce((u,c)=>u+c.value,0)/e.length;return e.reduce((u,c)=>Math.abs(c.value-i)<Math.abs(u.value-i)?c:u)}let t=n.memory.slice(-5).map(N),r=t.reduce((i,u)=>i+u,0)/t.length;return e.reduce((i,u)=>Math.abs(u.value-r)<Math.abs(i.value-r)?u:i)}function Un(e,n,t){return t.memory.length===0?"\u5168\u30E2\u30FC\u30C9\u306E\u5E73\u5747\u306B\u6700\u3082\u8FD1\u3044\u7D50\u679C\uFF08\u6765\u6B74\u306A\u3057\u3001\u521D\u56DE\u9078\u629E\uFF09":`\u904E\u53BB${t.memory.length}\u56DE\u306E\u6765\u6B74\u306E\u50BE\u5411\u306B\u6700\u3082\u6574\u5408\uFF08\u5B89\u5B9A\u6027\u512A\u5148\uFF09`}function Hn(e){return e.reduce((n,t)=>ae(t.value,e)>ae(n.value,e)?t:n)}function Gn(e){return e.reduce((n,t)=>ce(t.value,e)>ce(n.value,e)?t:n)}function ct(e,n,t){let r=F({...t,mode:"weighted"});switch(n){case"expand":return e.reduce((i,u)=>u.value>i.value?u:i);case"contract":return e.reduce((i,u)=>Math.abs(u.value-t.center)<Math.abs(i.value-t.center)?u:i);case"spiral":{let i=[...e].sort((c,s)=>Math.abs(c.value-r)-Math.abs(s.value-r)),u=Math.floor(i.length/2);return i[u]}default:return e.find(i=>i.mode==="weighted")??e[0]}}function Vn(e,n,t,r){if(t<.3)return{selected:at(e,n),reason:`\u899A\u9192\u5EA6\u304C\u4F4E\u3044\uFF08${t.toFixed(2)}\uFF09\u305F\u3081\u5B89\u5B9A\u30E2\u30FC\u30C9\u3092\u9078\u629E`};if(t>=ge)return{selected:ct(e,n.tendency,r),reason:`\u899A\u9192\u72B6\u614B\uFF08${t.toFixed(2)}\uFF09: \u50BE\u5411\u6027\u300C${n.tendency}\u300D\u306B\u57FA\u3065\u304D\u9078\u629E`};if(n.memory.length>=3){let u=n.memory.slice(-3).map(N),c=u[u.length-1]-u[0];if(c>0)return{selected:e.reduce((o,a)=>a.value>o.value?a:o),reason:"\u6765\u6B74\u304B\u3089\u5897\u52A0\u50BE\u5411\u3092\u691C\u51FA \u2192 \u6700\u5927\u5024\u30E2\u30FC\u30C9\u3092\u9078\u629E"};if(c<0)return{selected:e.reduce((o,a)=>Math.abs(a.value-r.center)<Math.abs(o.value-r.center)?a:o),reason:"\u6765\u6B74\u304B\u3089\u6E1B\u5C11\u50BE\u5411\u3092\u691C\u51FA \u2192 \u4E2D\u5FC3\u53CE\u675F\u30E2\u30FC\u30C9\u3092\u9078\u629E"}}return{selected:e.find(u=>u.mode==="entropy")??e[0],reason:`\u4E2D\u9593\u899A\u9192\u5EA6\uFF08${t.toFixed(2)}\uFF09: \u60C5\u5831\u30A8\u30F3\u30C8\u30ED\u30D4\u30FC\u30E2\u30FC\u30C9\u3067\u63A2\u7D22`}}function ae(e,n){let t=n.reduce((r,i)=>r+i.value,0)/n.length;return Math.abs(e-t)}function ce(e,n){let t=[...n].map(u=>u.value).sort((u,c)=>u-c),r=Math.floor(t.length/2),i=t.length%2===0?(t[r-1]+t[r])/2:t[r];return Math.abs(e-i)}var B={\u65E5:{components:[],radical:"\u65E5",radicalName:"\u306B\u3061",strokes:4,on:["\u30CB\u30C1","\u30B8\u30C4"],kun:["\u3072","\u304B"],category:"\u8C61\u5F62",meaning:"sun/day"},\u6708:{components:[],radical:"\u6708",radicalName:"\u3064\u304D",strokes:4,on:["\u30B2\u30C4","\u30AC\u30C4"],kun:["\u3064\u304D"],category:"\u8C61\u5F62",meaning:"moon/month"},\u5C71:{components:[],radical:"\u5C71",radicalName:"\u3084\u307E",strokes:3,on:["\u30B5\u30F3","\u30BB\u30F3"],kun:["\u3084\u307E"],category:"\u8C61\u5F62",meaning:"mountain"},\u5DDD:{components:[],radical:"\u5DDD",radicalName:"\u304B\u308F",strokes:3,on:["\u30BB\u30F3"],kun:["\u304B\u308F"],category:"\u8C61\u5F62",meaning:"river"},\u6C34:{components:[],radical:"\u6C34",radicalName:"\u307F\u305A",strokes:4,on:["\u30B9\u30A4"],kun:["\u307F\u305A"],category:"\u8C61\u5F62",meaning:"water"},\u706B:{components:[],radical:"\u706B",radicalName:"\u3072",strokes:4,on:["\u30AB"],kun:["\u3072","\u307B"],category:"\u8C61\u5F62",meaning:"fire"},\u6728:{components:[],radical:"\u6728",radicalName:"\u304D",strokes:4,on:["\u30E2\u30AF","\u30DC\u30AF"],kun:["\u304D","\u3053"],category:"\u8C61\u5F62",meaning:"tree/wood"},\u91D1:{components:[],radical:"\u91D1",radicalName:"\u304B\u306D",strokes:8,on:["\u30AD\u30F3","\u30B3\u30F3"],kun:["\u304B\u306D","\u304B\u306A"],category:"\u8C61\u5F62",meaning:"gold/metal"},\u571F:{components:[],radical:"\u571F",radicalName:"\u3064\u3061",strokes:3,on:["\u30C9","\u30C8"],kun:["\u3064\u3061"],category:"\u8C61\u5F62",meaning:"earth/soil"},\u4EBA:{components:[],radical:"\u4EBA",radicalName:"\u3072\u3068",strokes:2,on:["\u30B8\u30F3","\u30CB\u30F3"],kun:["\u3072\u3068"],category:"\u8C61\u5F62",meaning:"person"},\u53E3:{components:[],radical:"\u53E3",radicalName:"\u304F\u3061",strokes:3,on:["\u30B3\u30A6","\u30AF"],kun:["\u304F\u3061"],category:"\u8C61\u5F62",meaning:"mouth"},\u76EE:{components:[],radical:"\u76EE",radicalName:"\u3081",strokes:5,on:["\u30E2\u30AF","\u30DC\u30AF"],kun:["\u3081","\u307E"],category:"\u8C61\u5F62",meaning:"eye"},\u624B:{components:[],radical:"\u624B",radicalName:"\u3066",strokes:4,on:["\u30B7\u30E5"],kun:["\u3066","\u305F"],category:"\u8C61\u5F62",meaning:"hand"},\u8033:{components:[],radical:"\u8033",radicalName:"\u307F\u307F",strokes:6,on:["\u30B8"],kun:["\u307F\u307F"],category:"\u8C61\u5F62",meaning:"ear"},\u8DB3:{components:[],radical:"\u8DB3",radicalName:"\u3042\u3057",strokes:7,on:["\u30BD\u30AF"],kun:["\u3042\u3057","\u305F"],category:"\u8C61\u5F62",meaning:"foot/leg"},\u5973:{components:[],radical:"\u5973",radicalName:"\u304A\u3093\u306A",strokes:3,on:["\u30B8\u30E7","\u30CB\u30E7"],kun:["\u304A\u3093\u306A","\u3081"],category:"\u8C61\u5F62",meaning:"woman"},\u5B50:{components:[],radical:"\u5B50",radicalName:"\u3053",strokes:3,on:["\u30B7","\u30B9"],kun:["\u3053"],category:"\u8C61\u5F62",meaning:"child"},\u7530:{components:[],radical:"\u7530",radicalName:"\u305F",strokes:5,on:["\u30C7\u30F3"],kun:["\u305F"],category:"\u8C61\u5F62",meaning:"rice field"},\u8C9D:{components:[],radical:"\u8C9D",radicalName:"\u304B\u3044",strokes:7,on:["\u30D0\u30A4"],kun:["\u304B\u3044"],category:"\u8C61\u5F62",meaning:"shell"},\u8ECA:{components:[],radical:"\u8ECA",radicalName:"\u304F\u308B\u307E",strokes:7,on:["\u30B7\u30E3"],kun:["\u304F\u308B\u307E"],category:"\u8C61\u5F62",meaning:"vehicle"},\u99AC:{components:[],radical:"\u99AC",radicalName:"\u3046\u307E",strokes:10,on:["\u30D0"],kun:["\u3046\u307E","\u307E"],category:"\u8C61\u5F62",meaning:"horse"},\u9B5A:{components:[],radical:"\u9B5A",radicalName:"\u3046\u304A",strokes:11,on:["\u30AE\u30E7"],kun:["\u3046\u304A","\u3055\u304B\u306A"],category:"\u8C61\u5F62",meaning:"fish"},\u9CE5:{components:[],radical:"\u9CE5",radicalName:"\u3068\u308A",strokes:11,on:["\u30C1\u30E7\u30A6"],kun:["\u3068\u308A"],category:"\u8C61\u5F62",meaning:"bird"},\u96E8:{components:[],radical:"\u96E8",radicalName:"\u3042\u3081",strokes:8,on:["\u30A6"],kun:["\u3042\u3081","\u3042\u307E"],category:"\u8C61\u5F62",meaning:"rain"},\u77F3:{components:[],radical:"\u77F3",radicalName:"\u3044\u3057",strokes:5,on:["\u30BB\u30AD","\u30B7\u30E3\u30AF"],kun:["\u3044\u3057"],category:"\u8C61\u5F62",meaning:"stone"},\u7AF9:{components:[],radical:"\u7AF9",radicalName:"\u305F\u3051",strokes:6,on:["\u30C1\u30AF"],kun:["\u305F\u3051"],category:"\u8C61\u5F62",meaning:"bamboo"},\u7CF8:{components:[],radical:"\u7CF8",radicalName:"\u3044\u3068",strokes:6,on:["\u30B7"],kun:["\u3044\u3068"],category:"\u8C61\u5F62",meaning:"thread"},\u7C73:{components:[],radical:"\u7C73",radicalName:"\u3053\u3081",strokes:6,on:["\u30D9\u30A4","\u30DE\u30A4"],kun:["\u3053\u3081"],category:"\u8C61\u5F62",meaning:"rice"},\u866B:{components:[],radical:"\u866B",radicalName:"\u3080\u3057",strokes:6,on:["\u30C1\u30E5\u30A6"],kun:["\u3080\u3057"],category:"\u8C61\u5F62",meaning:"insect"},\u72AC:{components:[],radical:"\u72AC",radicalName:"\u3044\u306C",strokes:4,on:["\u30B1\u30F3"],kun:["\u3044\u306C"],category:"\u8C61\u5F62",meaning:"dog"},\u529B:{components:[],radical:"\u529B",radicalName:"\u3061\u304B\u3089",strokes:2,on:["\u30EA\u30AD","\u30EA\u30E7\u30AF"],kun:["\u3061\u304B\u3089"],category:"\u8C61\u5F62",meaning:"power"},\u5200:{components:[],radical:"\u5200",radicalName:"\u304B\u305F\u306A",strokes:2,on:["\u30C8\u30A6"],kun:["\u304B\u305F\u306A"],category:"\u8C61\u5F62",meaning:"sword"},\u9580:{components:[],radical:"\u9580",radicalName:"\u3082\u3093",strokes:8,on:["\u30E2\u30F3"],kun:["\u304B\u3069"],category:"\u8C61\u5F62",meaning:"gate"},\u5FC3:{components:[],radical:"\u5FC3",radicalName:"\u3053\u3053\u308D",strokes:4,on:["\u30B7\u30F3"],kun:["\u3053\u3053\u308D"],category:"\u8C61\u5F62",meaning:"heart/mind"},\u4E00:{components:[],radical:"\u4E00",radicalName:"\u3044\u3061",strokes:1,on:["\u30A4\u30C1","\u30A4\u30C4"],kun:["\u3072\u3068"],category:"\u6307\u4E8B",meaning:"one"},\u4E8C:{components:[],radical:"\u4E8C",radicalName:"\u306B",strokes:2,on:["\u30CB"],kun:["\u3075\u305F"],category:"\u6307\u4E8B",meaning:"two"},\u4E09:{components:[],radical:"\u4E00",radicalName:"\u3044\u3061",strokes:3,on:["\u30B5\u30F3"],kun:["\u307F","\u307F\u3063"],category:"\u6307\u4E8B",meaning:"three"},\u4E0A:{components:[],radical:"\u4E00",radicalName:"\u3044\u3061",strokes:3,on:["\u30B8\u30E7\u30A6","\u30B7\u30E7\u30A6"],kun:["\u3046\u3048","\u3042"],category:"\u6307\u4E8B",meaning:"above"},\u4E0B:{components:[],radical:"\u4E00",radicalName:"\u3044\u3061",strokes:3,on:["\u30AB","\u30B2"],kun:["\u3057\u305F","\u3055","\u304F\u3060"],category:"\u6307\u4E8B",meaning:"below"},\u672C:{components:["\u6728","\u4E00"],radical:"\u6728",radicalName:"\u304D",strokes:5,on:["\u30DB\u30F3"],kun:["\u3082\u3068"],category:"\u6307\u4E8B",meaning:"origin/book"},\u672B:{components:["\u6728","\u4E00"],radical:"\u6728",radicalName:"\u304D",strokes:5,on:["\u30DE\u30C4","\u30D0\u30C4"],kun:["\u3059\u3048"],category:"\u6307\u4E8B",meaning:"end/tip"},\u4E2D:{components:["\u53E3","\u4E28"],radical:"\u4E28",radicalName:"\u307C\u3046",strokes:4,on:["\u30C1\u30E5\u30A6"],kun:["\u306A\u304B"],category:"\u6307\u4E8B",meaning:"center/middle"},\u5929:{components:["\u4E00","\u5927"],radical:"\u5927",radicalName:"\u3060\u3044",strokes:4,on:["\u30C6\u30F3"],kun:["\u3042\u3081","\u3042\u307E"],category:"\u6307\u4E8B",meaning:"heaven/sky"},\u4F11:{components:["\u4EBA","\u6728"],radical:"\u4EBA",radicalName:"\u306B\u3093\u3079\u3093",strokes:6,on:["\u30AD\u30E5\u30A6"],kun:["\u3084\u3059"],category:"\u4F1A\u610F",meaning:"rest"},\u660E:{components:["\u65E5","\u6708"],radical:"\u65E5",radicalName:"\u306B\u3061",strokes:8,on:["\u30E1\u30A4","\u30DF\u30E7\u30A6"],kun:["\u3042\u304B","\u3042\u304D"],category:"\u4F1A\u610F",meaning:"bright"},\u68EE:{components:["\u6728","\u6728","\u6728"],radical:"\u6728",radicalName:"\u304D",strokes:12,on:["\u30B7\u30F3"],kun:["\u3082\u308A"],category:"\u4F1A\u610F",meaning:"forest"},\u6797:{components:["\u6728","\u6728"],radical:"\u6728",radicalName:"\u304D",strokes:8,on:["\u30EA\u30F3"],kun:["\u306F\u3084\u3057"],category:"\u4F1A\u610F",meaning:"grove"},\u7537:{components:["\u7530","\u529B"],radical:"\u7530",radicalName:"\u305F",strokes:7,on:["\u30C0\u30F3","\u30CA\u30F3"],kun:["\u304A\u3068\u3053"],category:"\u4F1A\u610F",meaning:"man"},\u597D:{components:["\u5973","\u5B50"],radical:"\u5973",radicalName:"\u304A\u3093\u306A",strokes:6,on:["\u30B3\u30A6"],kun:["\u3059","\u3053\u306E","\u3088"],category:"\u4F1A\u610F",meaning:"like/good"},\u4FE1:{components:["\u4EBA","\u8A00"],radical:"\u4EBA",radicalName:"\u306B\u3093\u3079\u3093",strokes:9,on:["\u30B7\u30F3"],kun:[""],category:"\u4F1A\u610F",meaning:"trust/believe"},\u708E:{components:["\u706B","\u706B"],radical:"\u706B",radicalName:"\u3072",strokes:8,on:["\u30A8\u30F3"],kun:["\u307B\u306E\u304A"],category:"\u4F1A\u610F",meaning:"flame"},\u5CA9:{components:["\u5C71","\u77F3"],radical:"\u5C71",radicalName:"\u3084\u307E",strokes:8,on:["\u30AC\u30F3"],kun:["\u3044\u308F"],category:"\u4F1A\u610F",meaning:"rock"},\u82B1:{components:["\u8349","\u5316"],radical:"\u8349",radicalName:"\u304F\u3055\u304B\u3093\u3080\u308A",strokes:7,on:["\u30AB"],kun:["\u306F\u306A"],category:"\u4F1A\u610F",meaning:"flower"},\u8349:{components:["\u8349\u51A0","\u65E9"],radical:"\u8349",radicalName:"\u304F\u3055\u304B\u3093\u3080\u308A",strokes:9,on:["\u30BD\u30A6"],kun:["\u304F\u3055"],category:"\u4F1A\u610F",meaning:"grass"},\u9CF4:{components:["\u53E3","\u9CE5"],radical:"\u9CE5",radicalName:"\u3068\u308A",strokes:14,on:["\u30E1\u30A4"],kun:["\u306A"],category:"\u4F1A\u610F",meaning:"cry/chirp"},\u7551:{components:["\u706B","\u7530"],radical:"\u7530",radicalName:"\u305F",strokes:9,on:[],kun:["\u306F\u305F","\u306F\u305F\u3051"],category:"\u4F1A\u610F",meaning:"field (cultivated)"},\u5CE0:{components:["\u5C71","\u4E0A","\u4E0B"],radical:"\u5C71",radicalName:"\u3084\u307E",strokes:9,on:[],kun:["\u3068\u3046\u3052"],category:"\u4F1A\u610F",meaning:"mountain pass"},\u96F7:{components:["\u96E8","\u7530"],radical:"\u96E8",radicalName:"\u3042\u3081",strokes:13,on:["\u30E9\u30A4"],kun:["\u304B\u307F\u306A\u308A"],category:"\u4F1A\u610F",meaning:"thunder"},\u770B:{components:["\u624B","\u76EE"],radical:"\u76EE",radicalName:"\u3081",strokes:9,on:["\u30AB\u30F3"],kun:["\u307F"],category:"\u4F1A\u610F",meaning:"watch/look"},\u601D:{components:["\u7530","\u5FC3"],radical:"\u5FC3",radicalName:"\u3053\u3053\u308D",strokes:9,on:["\u30B7"],kun:["\u304A\u3082"],category:"\u4F1A\u610F",meaning:"think"},\u5FCD:{components:["\u5200","\u5FC3"],radical:"\u5FC3",radicalName:"\u3053\u3053\u308D",strokes:7,on:["\u30CB\u30F3"],kun:["\u3057\u306E"],category:"\u4F1A\u610F",meaning:"endure/ninja"},\u6B66:{components:["\u6B62","\u6208"],radical:"\u6B62",radicalName:"\u3068\u3081\u308B",strokes:8,on:["\u30D6","\u30E0"],kun:["\u305F\u3051"],category:"\u4F1A\u610F",meaning:"martial"},\u53CB:{components:["\u53C8","\u53C8"],radical:"\u53C8",radicalName:"\u307E\u305F",strokes:4,on:["\u30E6\u30A6"],kun:["\u3068\u3082"],category:"\u4F1A\u610F",meaning:"friend"},\u5149:{components:["\u706B","\u513F"],radical:"\u513F",radicalName:"\u306B\u3093\u306B\u3087\u3046",strokes:6,on:["\u30B3\u30A6"],kun:["\u3072\u304B","\u3072\u304B\u308A"],category:"\u4F1A\u610F",meaning:"light"},\u7A7A:{components:["\u7A74","\u5DE5"],radical:"\u7A74",radicalName:"\u3042\u306A",strokes:8,on:["\u30AF\u30A6"],kun:["\u305D\u3089","\u3042","\u304B\u3089"],category:"\u4F1A\u610F",meaning:"sky/empty"},\u6D77:{components:["\u6C34","\u6BCE"],radical:"\u6C34",radicalName:"\u3055\u3093\u305A\u3044",strokes:9,on:["\u30AB\u30A4"],kun:["\u3046\u307F"],category:"\u4F1A\u610F",meaning:"sea"},\u9053:{components:["\u9996","\u8FB6"],radical:"\u8FB6",radicalName:"\u3057\u3093\u306B\u3087\u3046",strokes:12,on:["\u30C9\u30A6","\u30C8\u30A6"],kun:["\u307F\u3061"],category:"\u4F1A\u610F",meaning:"way/path"},\u548C:{components:["\u79BE","\u53E3"],radical:"\u53E3",radicalName:"\u304F\u3061",strokes:8,on:["\u30EF"],kun:["\u3084\u308F","\u306A\u3054"],category:"\u4F1A\u610F",meaning:"harmony/Japan"},\u7F8E:{components:["\u7F8A","\u5927"],radical:"\u7F8A",radicalName:"\u3072\u3064\u3058",strokes:9,on:["\u30D3"],kun:["\u3046\u3064\u304F"],category:"\u4F1A\u610F",meaning:"beauty"},\u611B:{components:["\u722A","\u5196","\u5FC3","\u5902"],radical:"\u5FC3",radicalName:"\u3053\u3053\u308D",strokes:13,on:["\u30A2\u30A4"],kun:[""],category:"\u4F1A\u610F",meaning:"love"},\u5922:{components:["\u8349","\u7F52","\u5196","\u5915"],radical:"\u5915",radicalName:"\u3086\u3046\u3079",strokes:13,on:["\u30E0","\u30DC\u30A6"],kun:["\u3086\u3081"],category:"\u4F1A\u610F",meaning:"dream"},\u98A8:{components:["\u51E0","\u866B"],radical:"\u98A8",radicalName:"\u304B\u305C",strokes:9,on:["\u30D5\u30A6","\u30D5"],kun:["\u304B\u305C","\u304B\u3056"],category:"\u4F1A\u610F",meaning:"wind"},\u96EA:{components:["\u96E8","\u30E8"],radical:"\u96E8",radicalName:"\u3042\u3081",strokes:11,on:["\u30BB\u30C4"],kun:["\u3086\u304D"],category:"\u4F1A\u610F",meaning:"snow"},\u96F2:{components:["\u96E8","\u4E91"],radical:"\u96E8",radicalName:"\u3042\u3081",strokes:12,on:["\u30A6\u30F3"],kun:["\u304F\u3082"],category:"\u4F1A\u610F",meaning:"cloud"},\u661F:{components:["\u65E5","\u751F"],radical:"\u65E5",radicalName:"\u306B\u3061",strokes:9,on:["\u30BB\u30A4","\u30B7\u30E7\u30A6"],kun:["\u307B\u3057"],category:"\u4F1A\u610F",meaning:"star"},\u56FD:{components:["\u56D7","\u7389"],radical:"\u56D7",radicalName:"\u304F\u306B\u304C\u307E\u3048",strokes:8,on:["\u30B3\u30AF"],kun:["\u304F\u306B"],category:"\u4F1A\u610F",meaning:"country"},\u8A9E:{components:["\u8A00","\u4E94","\u53E3"],radical:"\u8A00",radicalName:"\u3054\u3093\u3079\u3093",strokes:14,on:["\u30B4"],kun:["\u304B\u305F"],category:"\u4F1A\u610F",meaning:"language/word"},\u8A71:{components:["\u8A00","\u820C"],radical:"\u8A00",radicalName:"\u3054\u3093\u3079\u3093",strokes:13,on:["\u30EF"],kun:["\u306F\u306A\u3057","\u306F\u306A"],category:"\u4F1A\u610F",meaning:"talk/story"},\u8AAD:{components:["\u8A00","\u58F2"],radical:"\u8A00",radicalName:"\u3054\u3093\u3079\u3093",strokes:14,on:["\u30C9\u30AF","\u30C8\u30AF","\u30C8\u30A6"],kun:["\u3088"],category:"\u5F62\u58F0",meaning:"read"},\u66F8:{components:["\u807F","\u65E5"],radical:"\u65E5",radicalName:"\u306B\u3061",strokes:10,on:["\u30B7\u30E7"],kun:["\u304B"],category:"\u4F1A\u610F",meaning:"write/book"},\u751F:{components:[],radical:"\u751F",radicalName:"\u305B\u3044",strokes:5,on:["\u30BB\u30A4","\u30B7\u30E7\u30A6"],kun:["\u3044","\u3046","\u306F","\u304D","\u306A\u307E"],category:"\u8C61\u5F62",meaning:"life/birth"},\u5927:{components:[],radical:"\u5927",radicalName:"\u3060\u3044",strokes:3,on:["\u30C0\u30A4","\u30BF\u30A4"],kun:["\u304A\u304A","\u304A\u304A\u304D"],category:"\u8C61\u5F62",meaning:"big"},\u5C0F:{components:[],radical:"\u5C0F",radicalName:"\u3057\u3087\u3046",strokes:3,on:["\u30B7\u30E7\u30A6"],kun:["\u3061\u3044","\u3053","\u304A"],category:"\u8C61\u5F62",meaning:"small"},\u767D:{components:[],radical:"\u767D",radicalName:"\u3057\u308D",strokes:5,on:["\u30CF\u30AF","\u30D3\u30E3\u30AF"],kun:["\u3057\u308D","\u3057\u3089"],category:"\u8C61\u5F62",meaning:"white"},\u8D64:{components:["\u571F","\u706B"],radical:"\u8D64",radicalName:"\u3042\u304B",strokes:7,on:["\u30BB\u30AD","\u30B7\u30E3\u30AF"],kun:["\u3042\u304B"],category:"\u4F1A\u610F",meaning:"red"},\u9752:{components:["\u751F","\u6708"],radical:"\u9752",radicalName:"\u3042\u304A",strokes:8,on:["\u30BB\u30A4","\u30B7\u30E7\u30A6"],kun:["\u3042\u304A"],category:"\u4F1A\u610F",meaning:"blue/green"},\u9ED2:{components:["\u91CC","\u706C"],radical:"\u9ED2",radicalName:"\u304F\u308D",strokes:11,on:["\u30B3\u30AF"],kun:["\u304F\u308D"],category:"\u4F1A\u610F",meaning:"black"},\u6674:{components:["\u65E5","\u9752"],radical:"\u65E5",radicalName:"\u306B\u3061",strokes:12,on:["\u30BB\u30A4"],kun:["\u306F"],category:"\u5F62\u58F0",meaning:"clear weather"},\u6E05:{components:["\u6C34","\u9752"],radical:"\u6C34",radicalName:"\u3055\u3093\u305A\u3044",strokes:11,on:["\u30BB\u30A4","\u30B7\u30E7\u30A6"],kun:["\u304D\u3088"],category:"\u5F62\u58F0",meaning:"pure/clean"},\u8ACB:{components:["\u8A00","\u9752"],radical:"\u8A00",radicalName:"\u3054\u3093\u3079\u3093",strokes:15,on:["\u30BB\u30A4","\u30B7\u30F3"],kun:["\u3053","\u3046"],category:"\u5F62\u58F0",meaning:"request"},\u60C5:{components:["\u5FC3","\u9752"],radical:"\u5FC3",radicalName:"\u308A\u3063\u3057\u3093\u3079\u3093",strokes:11,on:["\u30B8\u30E7\u30A6","\u30BB\u30A4"],kun:["\u306A\u3055\u3051"],category:"\u5F62\u58F0",meaning:"emotion"},\u7CBE:{components:["\u7C73","\u9752"],radical:"\u7C73",radicalName:"\u3053\u3081",strokes:14,on:["\u30BB\u30A4","\u30B7\u30E7\u30A6"],kun:[""],category:"\u5F62\u58F0",meaning:"spirit/refined"},\u9285:{components:["\u91D1","\u540C"],radical:"\u91D1",radicalName:"\u304B\u306D",strokes:14,on:["\u30C9\u30A6"],kun:["\u3042\u304B\u304C\u306D"],category:"\u5F62\u58F0",meaning:"copper"},\u92FC:{components:["\u91D1","\u5CA1"],radical:"\u91D1",radicalName:"\u304B\u306D",strokes:16,on:["\u30B3\u30A6"],kun:["\u306F\u304C\u306D"],category:"\u5F62\u58F0",meaning:"steel"},\u6CB3:{components:["\u6C34","\u53EF"],radical:"\u6C34",radicalName:"\u3055\u3093\u305A\u3044",strokes:8,on:["\u30AB"],kun:["\u304B\u308F"],category:"\u5F62\u58F0",meaning:"river"},\u6E56:{components:["\u6C34","\u80E1"],radical:"\u6C34",radicalName:"\u3055\u3093\u305A\u3044",strokes:12,on:["\u30B3"],kun:["\u307F\u305A\u3046\u307F"],category:"\u5F62\u58F0",meaning:"lake"},\u6C60:{components:["\u6C34","\u4E5F"],radical:"\u6C34",radicalName:"\u3055\u3093\u305A\u3044",strokes:6,on:["\u30C1"],kun:["\u3044\u3051"],category:"\u5F62\u58F0",meaning:"pond"},\u6D0B:{components:["\u6C34","\u7F8A"],radical:"\u6C34",radicalName:"\u3055\u3093\u305A\u3044",strokes:9,on:["\u30E8\u30A6"],kun:[""],category:"\u5F62\u58F0",meaning:"ocean/Western"},\u677E:{components:["\u6728","\u516C"],radical:"\u6728",radicalName:"\u304D",strokes:8,on:["\u30B7\u30E7\u30A6"],kun:["\u307E\u3064"],category:"\u5F62\u58F0",meaning:"pine"},\u685C:{components:["\u6728","\u5B30"],radical:"\u6728",radicalName:"\u304D",strokes:10,on:["\u30AA\u30A6"],kun:["\u3055\u304F\u3089"],category:"\u5F62\u58F0",meaning:"cherry blossom"},\u6A4B:{components:["\u6728","\u55AC"],radical:"\u6728",radicalName:"\u304D",strokes:16,on:["\u30AD\u30E7\u30A6"],kun:["\u306F\u3057"],category:"\u5F62\u58F0",meaning:"bridge"},\u6751:{components:["\u6728","\u5BF8"],radical:"\u6728",radicalName:"\u304D",strokes:7,on:["\u30BD\u30F3"],kun:["\u3080\u3089"],category:"\u5F62\u58F0",meaning:"village"},\u7D19:{components:["\u7CF8","\u6C0F"],radical:"\u7CF8",radicalName:"\u3044\u3068",strokes:10,on:["\u30B7"],kun:["\u304B\u307F"],category:"\u5F62\u58F0",meaning:"paper"},\u7DDA:{components:["\u7CF8","\u6CC9"],radical:"\u7CF8",radicalName:"\u3044\u3068",strokes:15,on:["\u30BB\u30F3"],kun:[""],category:"\u5F62\u58F0",meaning:"line/thread"},\u732B:{components:["\u72AC","\u82D7"],radical:"\u72AC",radicalName:"\u3051\u3082\u306E\u3078\u3093",strokes:11,on:["\u30D3\u30E7\u30A6"],kun:["\u306D\u3053"],category:"\u5F62\u58F0",meaning:"cat"},\u6642:{components:["\u65E5","\u5BFA"],radical:"\u65E5",radicalName:"\u306B\u3061",strokes:10,on:["\u30B8"],kun:["\u3068\u304D"],category:"\u5F62\u58F0",meaning:"time"},\u9593:{components:["\u9580","\u65E5"],radical:"\u9580",radicalName:"\u3082\u3093",strokes:12,on:["\u30AB\u30F3","\u30B1\u30F3"],kun:["\u3042\u3044\u3060","\u307E"],category:"\u5F62\u58F0",meaning:"interval/between"},\u805E:{components:["\u9580","\u8033"],radical:"\u8033",radicalName:"\u307F\u307F",strokes:14,on:["\u30D6\u30F3","\u30E2\u30F3"],kun:["\u304D"],category:"\u5F62\u58F0",meaning:"hear/ask"},\u9589:{components:["\u9580","\u624D"],radical:"\u9580",radicalName:"\u3082\u3093",strokes:11,on:["\u30D8\u30A4"],kun:["\u3057","\u3068"],category:"\u5F62\u58F0",meaning:"close/shut"},\u958B:{components:["\u9580","\u5F00"],radical:"\u9580",radicalName:"\u3082\u3093",strokes:12,on:["\u30AB\u30A4"],kun:["\u3042","\u3072\u3089"],category:"\u5F62\u58F0",meaning:"open"},\u554F:{components:["\u9580","\u53E3"],radical:"\u53E3",radicalName:"\u304F\u3061",strokes:11,on:["\u30E2\u30F3"],kun:["\u3068"],category:"\u5F62\u58F0",meaning:"question"},\u6B4C:{components:["\u53EF","\u6B20"],radical:"\u6B20",radicalName:"\u3042\u304F\u3073",strokes:14,on:["\u30AB"],kun:["\u3046\u305F","\u3046\u305F"],category:"\u5F62\u58F0",meaning:"song"},\u7B97:{components:["\u7AF9","\u76EE","\u5EFE"],radical:"\u7AF9",radicalName:"\u305F\u3051\u304B\u3093\u3080\u308A",strokes:14,on:["\u30B5\u30F3"],kun:[""],category:"\u5F62\u58F0",meaning:"calculate"},\u6570:{components:["\u7C73","\u5973","\u6535"],radical:"\u6535",radicalName:"\u307C\u304F\u3065\u304F\u308A",strokes:13,on:["\u30B9\u30A6","\u30B9"],kun:["\u304B\u305A","\u304B\u305E"],category:"\u5F62\u58F0",meaning:"number/count"},\u96F6:{components:["\u96E8","\u4EE4"],radical:"\u96E8",radicalName:"\u3042\u3081",strokes:13,on:["\u30EC\u30A4"],kun:[""],category:"\u5F62\u58F0",meaning:"zero"},\u7121:{components:["\u4E00","\u706B"],radical:"\u706B",radicalName:"\u308C\u3063\u304B",strokes:12,on:["\u30E0","\u30D6"],kun:["\u306A"],category:"\u4F1A\u610F",meaning:"nothing/void"},\u59CB:{components:["\u5973","\u53F0"],radical:"\u5973",radicalName:"\u304A\u3093\u306A",strokes:8,on:["\u30B7"],kun:["\u306F\u3058"],category:"\u5F62\u58F0",meaning:"begin"}},lt={\u9752:["\u6674","\u6E05","\u8ACB","\u60C5","\u7CBE"],\u9580:["\u9593","\u805E","\u9589","\u958B","\u554F"],\u6C34:["\u6CB3","\u6E56","\u6C60","\u6D0B","\u6D77","\u6E05"],\u6728:["\u6797","\u68EE","\u677E","\u685C","\u6A4B","\u6751","\u672C","\u672B"],\u91D1:["\u9285","\u92FC"],\u8A00:["\u8A9E","\u8A71","\u8AAD","\u8ACB"],\u65E5:["\u660E","\u6674","\u6642","\u9593","\u661F"],\u5FC3:["\u601D","\u5FCD","\u60C5","\u611B"],\u706B:["\u708E","\u7551","\u5149"],\u5C71:["\u5CA9","\u5CE0"],\u96E8:["\u96F7","\u96EA","\u96F2","\u96F6"]};function I(e){let n=B[e];return n?{reiType:"StringMDim",center:e,neighbors:n.components.length>0?n.components:[e],mode:"kanji",metadata:{known:!0,radical:n.radical,radicalName:n.radicalName,strokes:n.strokes,on:n.on,kun:n.kun,category:n.category,meaning:n.meaning}}:{reiType:"StringMDim",center:e,neighbors:[],mode:"kanji",metadata:{known:!1}}}function Wn(e){let n=Array.from(e);return n.length===1?I(n[0]):{reiType:"StringMDim",center:e,neighbors:n,mode:"kanji",metadata:{charCount:n.length,components:n.map(t=>{let r=B[t];return r?{char:t,components:r.components,category:r.category}:{char:t,components:[],category:"unknown"}})}}}function qn(e){let n=/([がはをにでとのへもやかながらまでよりさえだけばかりしかこそ]+)/,t=[],r="",i=e.split(n).filter(c=>c.length>0),u="";for(let c of i)u+=c,n.test(c)&&(t.push(u),u="");return u.length>0&&(r=u),!r&&t.length>0&&(r=t.pop()),{reiType:"StringMDim",center:r||e,neighbors:t,mode:"sentence",metadata:{original:e,bunsetsuCount:t.length+1,particlesFound:t.map(c=>{let s=c.match(n);return s?s[0]:""})}}}function Qn(e,n){return{reiType:"StringMDim",center:e,neighbors:n,mode:"tone",metadata:{toneCount:n.length,m1_correspondence:"tone = compute mode"}}}function Kn(e,n){let t=new Set(e.neighbors),r=new Set(n.neighbors),i=[];for(let f of t)r.has(f)&&i.push(f);let u=new Set([...t,...r]).size,c=u>0?i.length/u:0,s=e.metadata?.radical===n.metadata?.radical,o=e.metadata?.category===n.metadata?.category,a=Math.abs((e.metadata?.strokes??0)-(n.metadata?.strokes??0)),h=1/(1+a),m=!1;for(let[,f]of Object.entries(lt))if(f.includes(e.center)&&f.includes(n.center)){m=!0;break}let d=c*.35+(s?.25:0)+(o?.15:0)+h*.1+(m?.15:0);return{reiType:"KanjiSimilarity",pair:[e.center,n.center],strength:Math.min(1,d),sharedComponents:i,jaccard:c,sameRadical:s,sameCategory:o,strokeDiff:a,sharedPhoneticGroup:m}}function Yn(e){let n=[],t=new Set(e);for(let[r,i]of Object.entries(B))i.components.length!==0&&i.components.every(u=>t.has(u))&&n.push(r);return n}function Jn(e){for(let[n,t]of Object.entries(lt))if(e===n||t.includes(e))return t;return[]}var Xn="0.3.1";function Zn(e,n=!1){let t=tr(e),r;e!==null&&typeof e=="object"&&e.__sigma__&&(r={memory:e.__sigma__.memory||[],tendency:e.__sigma__.tendency||"rest",pipeCount:e.__sigma__.pipeCount||0});let i=ht(e),u={__rei__:!0,version:Xn,type:t,timestamp:new Date().toISOString(),payload:i,...r?{sigma:r}:{}};return JSON.stringify(u,null,n?2:void 0)}function er(e){let n;typeof e=="string"?n=e:typeof e=="object"&&e!==null&&e.reiType==="ReiVal"&&typeof e.value=="string"?n=e.value:n=JSON.stringify(e);let t;try{t=JSON.parse(n)}catch(r){throw new Error(`deserialize: \u7121\u52B9\u306AJSON \u2014 ${r.message}`)}if(t&&t.__rei__===!0&&"payload"in t){let r=t.payload;return t.sigma&&r!==null&&typeof r=="object"&&(r.__sigma__={memory:t.sigma.memory||[],tendency:t.sigma.tendency||"rest",pipeCount:t.sigma.pipeCount||0}),r}return t}function tr(e){return e==null?"null":typeof e=="number"?"number":typeof e=="string"?"string":typeof e=="boolean"?"boolean":Array.isArray(e)?"array":typeof e=="object"&&e.reiType?e.reiType:"object"}function ht(e){if(e==null||typeof e!="object")return e;if(Array.isArray(e))return e.map(ht);let n={};for(let t of Object.keys(e))t!=="__sigma__"&&(n[t]=e[t]);return n}function nr(e){switch(e){case"top":return"bottom";case"bottom":return"top";case"topPi":return"bottomPi";case"bottomPi":return"topPi";default:return e}}function rr(e,n){return e==="bottom"||n==="bottom"?"bottom":e==="top"&&n==="top"?"top":"bottomPi"}function ur(e,n){return e==="top"||n==="top"?"top":e==="bottom"&&n==="bottom"?"bottom":"topPi"}var Z=["void","dot","line","surface","solid","omega"];function ee(){return{reiType:"State",state:"void",omega:0,history:["void"]}}function sr(e){let n=Z.indexOf(e.state);n<Z.length-1&&(e.state=Z[n+1],e.history.push(e.state),e.state==="omega"&&(e.omega=1))}var ye=class{env;constructor(e){this.env=new $e(e??null),this.registerBuiltins()}registerBuiltins(){this.env.define("e",Math.E),this.env.define("PI",Math.PI),this.env.define("genesis",{reiType:"Function",name:"genesis",params:[],body:null,closure:this.env});let e=["abs","sqrt","sin","cos","log","exp","floor","ceil","round","min","max","len","print"];for(let n of e)this.env.define(n,{reiType:"Function",name:n,params:["x"],body:null,closure:this.env})}eval(e){switch(e.type){case"Program":return this.evalProgram(e);case"NumLit":return e.value;case"StrLit":return e.value;case"BoolLit":return e.value;case"NullLit":return null;case"ExtLit":return kn(e.raw);case"ConstLit":return this.evalConstLit(e);case"QuadLit":return{reiType:"Quad",value:e.value};case"MDimLit":return this.evalMDimLit(e);case"ArrayLit":return e.elements.map(n=>this.eval(n));case"Ident":return this.env.get(e.name);case"LetStmt":return this.evalLetStmt(e);case"MutStmt":return this.evalMutStmt(e);case"CompressDef":return this.evalCompressDef(e);case"BinOp":return this.evalBinOp(e);case"UnaryOp":return this.evalUnaryOp(e);case"Pipe":return this.evalPipe(e);case"FnCall":return this.evalFnCall(e);case"MemberAccess":return this.evalMemberAccess(e);case"IndexAccess":return this.evalIndexAccess(e);case"Extend":return this.evalExtend(e);case"Reduce":return this.evalReduce(e);case"ConvergeOp":return this.evalConverge(e);case"DivergeOp":return this.evalDiverge(e);case"ReflectOp":return this.evalReflect(e);case"IfExpr":return this.evalIfExpr(e);case"MatchExpr":return this.evalMatchExpr(e);case"SpaceLit":return this.evalSpaceLit(e);default:throw new Error(`\u672A\u5B9F\u88C5\u306E\u30CE\u30FC\u30C9\u578B: ${e.type}`)}}evalProgram(e){let n=null;for(let t of e.body)n=this.eval(t);return n}evalConstLit(e){switch(e.value){case"\u30FB":return ee();case"\u2205":return null;case"i":return{reiType:"Ext",base:NaN,order:0,subscripts:"",valStar:()=>NaN};case"\u03A6":return"\u03A6";case"\u03A8":return"\u03A8";case"\u03A9":return"\u03A9";default:return null}}evalMDimLit(e){let n=this.eval(e.center),t=e.neighbors.map(o=>this.eval(o));if(typeof n=="string"||t.some(o=>typeof o=="string")){let o=typeof n=="string"?n:String(n),a=t.map(m=>typeof m=="string"?m:String(m)),h=e.mode||"freeform";return{reiType:"StringMDim",center:o,neighbors:a,mode:h,metadata:{source:"literal"}}}let i=this.toNumber(n),u=t.map(o=>this.toNumber(o)),c=e.weight?[this.toNumber(this.eval(e.weight))]:void 0,s=e.mode||"weighted";return{reiType:"MDim",center:i,neighbors:u,mode:s,weights:c}}evalSpaceLit(e){let n=Et(e.topology||"flat");for(let t of e.layers){let r=typeof t.index=="object"?this.toNumber(this.eval(t.index)):t.index;for(let i of t.nodes){let u=this.eval(i);this.isMDim(u)?Q(n,r,u.center,u.neighbors,u.mode,u.weights):typeof u=="number"&&Q(n,r,u,[])}}return n}evalLetStmt(e){let n=this.eval(e.init);return this.env.define(e.name,n,!1),n}evalMutStmt(e){let n=this.eval(e.init);return this.env.define(e.name,n,!0),n}evalCompressDef(e){let n={reiType:"Function",name:e.name,params:e.params,body:e.body,closure:this.env};return this.env.define(e.name,n),n}evalBinOp(e){let n=this.eval(e.left),t=this.eval(e.right);if(this.isQuad(n)&&this.isQuad(t))switch(e.op){case"\u2227":return{reiType:"Quad",value:rr(n.value,t.value)};case"\u2228":return{reiType:"Quad",value:ur(n.value,t.value)}}let r=this.toNumber(n),i=this.toNumber(t);switch(e.op){case"+":return r+i;case"-":return r-i;case"*":return r*i;case"/":return i!==0?r/i:NaN;case"\u2295":return r+i;case"\u2297":return r*i;case"\xB7":return r*i;case"==":return r===i;case"!=":return r!==i;case">":return r>i;case"<":return r<i;case">=":return r>=i;case"<=":return r<=i;case">\u03BA":return r>i;case"<\u03BA":return r<i;case"=\u03BA":return r===i;case"\u2227":return r!==0&&i!==0;case"\u2228":return r!==0||i!==0;default:throw new Error(`\u672A\u77E5\u306E\u6F14\u7B97\u5B50: ${e.op}`)}}evalUnaryOp(e){let n=this.eval(e.operand);switch(e.op){case"-":return-this.toNumber(n);case"\xAC":return this.isQuad(n)?{reiType:"Quad",value:nr(n.value)}:!n;default:throw new Error(`\u672A\u77E5\u306E\u5358\u9805\u6F14\u7B97\u5B50: ${e.op}`)}}evalPipe(e){let n=this.eval(e.input),t=e.command;if(t.type==="PipeCmd"){if(t.cmd==="sigma")return this.execPipeCmd(n,t);if(t.cmd==="serialize"||t.cmd==="serialize_pretty")return Zn(n,t.cmd==="serialize_pretty");if(t.cmd==="deserialize")return er(n);if(t.cmd==="evolve_value")return this.execPipeCmd(n,t);if(t.cmd==="think"||t.cmd==="\u601D\u8003"||t.cmd==="think_trajectory"||t.cmd==="\u8ECC\u8DE1"||t.cmd==="think_modes"||t.cmd==="think_dominant"||t.cmd==="think_format"||t.cmd==="\u601D\u8003\u8868\u793A")return this.execPipeCmd(n,t);if((n?.reiType==="ThoughtResult"||n?.reiType==="ReiVal"&&n?.value?.reiType==="ThoughtResult")&&["final_value","\u6700\u7D42\u5024","iterations","\u53CD\u5FA9\u6570","stop_reason","\u505C\u6B62\u7406\u7531","trajectory","\u8ECC\u8DE1","convergence","\u53CE\u675F\u7387","awareness","\u899A\u9192\u5EA6","tendency","\u610F\u5FD7","steps","\u5168\u5C65\u6B74","dominant_mode","\u652F\u914D\u30E2\u30FC\u30C9"].includes(t.cmd))return this.execPipeCmd(n,t);if(["game","\u30B2\u30FC\u30E0","play","\u6253\u3064","auto_play","\u81EA\u52D5\u5BFE\u5C40","best_move","\u6700\u5584\u624B","legal_moves","\u5408\u6CD5\u624B","game_format","\u76E4\u9762\u8868\u793A","game_sigma","simulate","\u30B7\u30DF\u30E5\u30EC\u30FC\u30C8","random","\u30E9\u30F3\u30C0\u30E0","random_walk","entropy","\u30A8\u30F3\u30C8\u30ED\u30D4\u30FC","monte_carlo","seed"].includes(t.cmd))return this.execPipeCmd(n,t);let i=n?.reiType==="ReiVal"?n.value:n;if(i?.reiType==="GameSpace"&&["play","\u6253\u3064","auto_play","\u81EA\u52D5\u5BFE\u5C40","best_move","\u6700\u5584\u624B","legal_moves","\u5408\u6CD5\u624B","board","\u76E4\u9762","status","\u72B6\u614B","winner","\u52DD\u8005","turn","\u624B\u756A","history","\u68CB\u8B5C","game_format","\u76E4\u9762\u8868\u793A","sigma","as_mdim"].includes(t.cmd))return this.execPipeCmd(n,t);if(i?.reiType==="RandomResult"||i?.reiType==="EntropyAnalysis")return this.execPipeCmd(n,t);if(["puzzle","\u30D1\u30BA\u30EB","\u6570\u72EC","sudoku","latin_square","\u30E9\u30C6\u30F3\u65B9\u9663","solve","\u89E3\u304F","propagate","\u4F1D\u64AD","propagate_pair","cell","\u30BB\u30EB","grid","\u76E4\u9762","candidates","\u5019\u88DC","puzzle_format","\u6570\u72EC\u8868\u793A","difficulty","\u96E3\u6613\u5EA6","generate_sudoku","\u6570\u72EC\u751F\u6210"].includes(t.cmd))return this.execPipeCmd(n,t);if((n?.reiType==="ReiVal"?n.value:n)?.reiType==="PuzzleSpace"&&["solve","\u89E3\u304F","propagate","\u4F1D\u64AD","propagate_pair","cell","\u30BB\u30EB","grid","\u76E4\u9762","candidates","\u5019\u88DC","puzzle_format","\u6570\u72EC\u8868\u793A","difficulty","\u96E3\u6613\u5EA6","sigma","status","\u72B6\u614B","history","\u5C65\u6B74","as_mdim"].includes(t.cmd))return this.execPipeCmd(n,t);if(["strokes","\u753B\u6570","category","\u516D\u66F8","meaning","\u610F\u5473","readings","\u8AAD\u307F","radicals","\u90E8\u9996","phonetic_group","\u97F3\u7B26","compose","\u5408\u6210","decompose","\u5206\u89E3","similarity","\u985E\u4F3C"].includes(t.cmd))return this.execPipeCmd(n,t);let o=this.execPipeCmd(n,t),a=U(n);return vn(o,n,a.pipeCount>0?a:void 0)}throw new Error("\u7121\u52B9\u306A\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9")}execPipeCmd(e,n){let{cmd:t,mode:r,args:i}=n,u=i.map(o=>this.eval(o)),c=U(e),s=b(e);if(t==="sigma"){if(this.isSpace(s))return ve(s);if(this.isDNode(s)){let o=s;return{reiType:"SigmaResult",flow:Dt(o),memory:[...kt(o),...c.memory],layer:o.layerIndex,will:Bt(o),field:{center:o.center,neighbors:[...o.neighbors],layer:o.layerIndex,index:o.nodeIndex},relation:[]}}if(s!==null&&typeof s=="object"&&s.reiType==="StringMDim"){let o=s;return{reiType:"SigmaResult",field:{center:o.center,neighbors:o.neighbors,mode:o.mode,type:"string"},flow:{direction:"rest",momentum:0,velocity:0},memory:c.memory,layer:0,will:{tendency:c.tendency,strength:0,history:[]},relation:o.neighbors.map(a=>({from:o.center,to:a,type:o.mode}))}}return s!==null&&typeof s=="object"&&s.reiType==="ThoughtResult"?Be(s):s!==null&&typeof s=="object"&&s.reiType==="GameSpace"?Re(s):s!==null&&typeof s=="object"&&s.reiType==="PuzzleSpace"?Le(s):je(s,c)}if(this.isSpace(s)){let o=s;switch(t){case"step":{let a=u.length>0?this.toNumber(u[0]):void 0;return Ft(o,a),o}case"diffuse":{let a={type:"converged"},h,m="weighted";if(u.length>=1){let d=u[0];if(typeof d=="number")a={type:"steps",max:d};else if(typeof d=="string")switch(d){case"converged":a={type:"converged"};break;case"fixed":a={type:"fixed"};break;default:let f=parseFloat(d);isNaN(f)||(a={type:"epsilon",threshold:f})}}return u.length>=2&&typeof u[1]=="number"&&(h=u[1]),u.length>=3&&typeof u[2]=="string"&&(m=u[2]),vt(o,a,h,m)}case"node":{let a=u.length>=1?this.toNumber(u[0]):0,h=u.length>=2?this.toNumber(u[1]):0,m=o.layers.get(a);if(m&&m.nodes[h])return m.nodes[h];throw new Error(`\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093: \u5C64${a}, index ${h}`)}case"sigma":return ve(o);case"resonances":{let a=u.length>=1?this.toNumber(u[0]):.5;return wt(o,a)}case"freeze":{let a=this.toNumber(u[0]??0),h=o.layers.get(a);return h&&(h.frozen=!0),o}case"thaw":{let a=this.toNumber(u[0]??0),h=o.layers.get(a);return h&&(h.frozen=!1),o}case"spawn":{let a=u[0],h=u.length>=2?this.toNumber(u[1]):0;return this.isMDim(a)&&Q(o,h,a.center,a.neighbors,a.mode,a.weights),o}case"result":{let a=u.length>=1?this.toNumber(u[0]):void 0,h=[];for(let[m,d]of o.layers)if(!(a!==void 0&&m!==a))for(let f of d.nodes)h.push(M(f));return h.length===1?h[0]:h}}}if(this.isDNode(s)){let o=s;switch(t){case"sigma":return je(o,c);case"compute":return M(o);case"center":return o.center;case"neighbors":return o.neighbors;case"dim":return o.neighbors.length;case"stage":return o.stage;case"step":return le(o),o;case"extract":return{reiType:"MDim",center:o.center,neighbors:o.neighbors,mode:o.mode,weights:o.weights}}}if(this.isObj(s)&&s.reiType==="SigmaResult")switch(t){case"flow":return s.flow;case"memory":return s.memory;case"layer":case"\u5C64":return s.layer;case"will":return s.will;case"field":return s.field;case"relation":return s.relation??[]}if(t==="project"){let o=u.length>0?u[0]:":first";return k(s,o)}if(t==="reproject"){if(this.isMDim(s)&&u.length>0){let o=u[0],a=[s.center,...s.neighbors],h=typeof o=="number"?a.indexOf(o):0;if(h<0)throw new Error(`reproject: \u4E2D\u5FC3\u5024 ${o} \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093`);let m=a[h],d=a.filter((f,p)=>p!==h);return{reiType:"MDim",center:m,neighbors:d,mode:s.mode}}return k(s,u[0]??":first")}if(t==="modes")return[...T];if(t==="blend"){if(!this.isMDim(s))throw new Error("blend: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");let o=0,a=0;for(let h=0;h<u.length-1;h+=2){let m=String(u[h]),d=typeof u[h+1]=="number"?u[h+1]:0,f=F({...s,mode:m});o+=d*f,a+=d}return a>0?o/a:F(s)}if(t==="project_all")return fe(s);if(t==="compute_all"){if(this.isMDim(s))return S(s);if(Array.isArray(s)){let o=k(s,"first");return S(o)}return[]}if(t==="compare"){if(!this.isMDim(s))throw new Error("compare: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");let o=u.length>=1?String(u[0]):"weighted",a=u.length>=2?String(u[1]):"geometric";return Mn(s,o,a)}if(t==="perspectives")return wn(s);if(t==="flatten_nested")return this.isMDim(s)?ue(s):s;if(t==="respond"){let o=u.length>=1?this.toNumber(u[0]):0,a=u.length>=2?String(u[1]):"absorb";return pe(s,o,a)}if(t==="sensitivity")return Tn(s);if(t==="awareness")return V(s,c);if(t==="awakened")return V(s,c)>=ge;if(t==="transform"){let o=u.length>=1?String(u[0]):"scale",a=u.length>=2?this.toNumber(u[1]):1;return Nn(s,o,a)}if(t==="mode_equiv"){if(!this.isMDim(s))throw new Error("mode_equiv: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");let o=u.length>=1?String(u[0]):"weighted",a=u.length>=2?String(u[1]):"geometric";return Sn(s,o,a)}if(t==="resonate"){if(u.length<1)throw new Error("resonate: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");return st(s,u[0])}if(t==="resonance_field")return _n(s,c);if(t==="resonance_map")return xn(s);if(t==="resonance_chain")return Rn(s);if(t==="project_as"){let o=u.length>=1?String(u[0]):"graph";return Pn(s,o)}if(t==="compose_projections")return On(s);if(t==="representable")return Ln(s);if(t==="derive_mode"){if(!this.isMDim(s))throw new Error("derive_mode: \u{1D544}\u578B\u304C\u5FC5\u8981\u3067\u3059");let o=u.filter(h=>typeof h=="string"),a=u.filter(h=>typeof h=="number");return o.length===0&&o.push("weighted","geometric"),a.length===0&&a.push(.5,.5),In(s,o,a)}if(t==="mode_space")return jn(s);if(t==="depth")return se(s);if(t==="nest"){let o=u.length>=1?this.toNumber(u[0]):1;return ie(s,o)}if(t==="recursive_compute")return oe(s);if(t==="bridge"){if(u.length<1)throw new Error("bridge: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");return $n(s,u[0])}if(t==="structural_similarity"){if(u.length<1)throw new Error("structural_similarity: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");return it(s,u[0])}if(t==="encode")return ot(s);if(t==="decode"){let o=u.length>=1?String(u[0]):"array";return zn(s,o)}if(t==="map_solutions"){if(!this.isMDim(s)){if(Array.isArray(s)){let o=k(s,"first");return ze(o,u.length>=1?String(u[0]):"scale",u.length>=2?this.toNumber(u[1]):1)}throw new Error("map_solutions: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return ze(s,u.length>=1?String(u[0]):"scale",u.length>=2?this.toNumber(u[1]):1)}if(t==="consensus"){if(!this.isMDim(s)){if(Array.isArray(s))return Ue(k(s,"first"));throw new Error("consensus: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return Ue(s)}if(t==="best"){if(!this.isMDim(s)){if(Array.isArray(s))return He(k(s,"first"),u.length>=1?String(u[0]):"median_closest");throw new Error("best: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return He(s,u.length>=1?String(u[0]):"median_closest")}if(t==="rank"){if(!this.isMDim(s)){if(Array.isArray(s))return Ge(k(s,"first"),u.length>=1?String(u[0]):"value");throw new Error("rank: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return Ge(s,u.length>=1?String(u[0]):"value")}if(t==="solution_completeness"){if(!this.isMDim(s)){if(Array.isArray(s))return Ve(k(s,"first"));throw new Error("solution_completeness: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return Ve(s)}if(t==="evolve"){let o=u.length>=1?String(u[0]):"auto";return We(e,c,o)}if(t==="evolve_value"){let o=u.length>=1?String(u[0]):"auto";return We(e,c,o).value}if(this.isMDim(s)){let o=s;switch(t){case"compute":{let a=r||o.mode;return F({...o,mode:a})}case"center":return o.center;case"neighbors":return o.neighbors;case"dim":return o.neighbors.length;case"normalize":{let a=o.neighbors.reduce((h,m)=>h+Math.abs(m),0)||1;return{reiType:"MDim",center:o.center,neighbors:o.neighbors.map(h=>h/a),mode:o.mode}}case"flatten":return F(o);case"map":{if(u.length>0&&this.isFunction(u[0])){let a=u[0],h=o.neighbors.map(m=>this.toNumber(this.callFunction(a,[m])));return{...o,neighbors:h}}return o}}}if(this.isExt(s)){let o=s;switch(t){case"order":return o.order;case"base":return o.base;case"valStar":case"val":return o.valStar();case"subscripts":return o.subscripts}}if(this.isGenesis(s)){let o=s;switch(t){case"forward":return sr(o),o;case"phase":return o.state;case"history":return o.history;case"omega":return o.omega}}if(Array.isArray(s))switch(t){case"len":return s.length;case"sum":return s.reduce((o,a)=>o+this.toNumber(a),0);case"avg":return s.length===0?0:s.reduce((o,a)=>o+this.toNumber(a),0)/s.length;case"first":return s[0]??null;case"last":return s[s.length-1]??null;case"reverse":return[...s].reverse();case"sort":return[...s].sort((o,a)=>this.toNumber(o)-this.toNumber(a));case"map":return u.length>0&&this.isFunction(u[0])?s.map(o=>this.callFunction(u[0],[o])):s;case"filter":return u.length>0&&this.isFunction(u[0])?s.filter(o=>!!this.callFunction(u[0],[o])):s;case"reduce":return u.length>=2&&this.isFunction(u[0])?s.reduce((o,a)=>this.callFunction(u[0],[o,a]),u[1]):s}if(typeof s=="number")switch(t){case"abs":return Math.abs(s);case"sqrt":return Math.sqrt(s);case"round":return Math.round(s);case"floor":return Math.floor(s);case"ceil":return Math.ceil(s);case"negate":return-s}if(typeof s=="string")switch(t){case"len":return s.length;case"upper":return s.toUpperCase();case"lower":return s.toLowerCase();case"trim":return s.trim();case"split":return s.split(u[0]??"");case"reverse":return Array.from(s).reverse().join("");case"kanji":case"\u6F22\u5B57":{let o=Array.from(s);return o.length===1?I(o[0]):Wn(s)}case"sentence":case"\u6587":return qn(s);case"tone":case"\u58F0\u8ABF":return Qn(s,u.map(String))}if(s!==null&&typeof s=="object"&&s.reiType==="StringMDim"){let o=s;switch(t){case"center":return o.center;case"neighbors":return o.neighbors;case"dim":return o.neighbors.length;case"mode":return o.mode;case"metadata":return o.metadata??{};case"similarity":case"\u985E\u4F3C":{let a;if(typeof u[0]=="string")a=I(u[0]);else if(u[0]?.reiType==="StringMDim")a=u[0];else throw new Error("similarity: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059\uFF08\u6587\u5B57\u5217\u307E\u305F\u306FStringMDim\uFF09");return Kn(o,a)}case"radicals":case"\u90E8\u9996":return o.mode==="kanji"&&o.metadata?.known?{radical:o.metadata.radical,name:o.metadata.radicalName}:o.neighbors.map(a=>{let h=B[a];return h?{char:a,radical:h.radical,name:h.radicalName}:{char:a,radical:"?",name:"unknown"}});case"readings":case"\u8AAD\u307F":return o.mode==="kanji"&&o.metadata?.known?{on:o.metadata.on,kun:o.metadata.kun}:o.neighbors.map(a=>{let h=B[a];return h?{char:a,on:h.on,kun:h.kun}:{char:a,on:[],kun:[]}});case"strokes":case"\u753B\u6570":return o.mode==="kanji"&&o.metadata?.known?o.metadata.strokes:o.neighbors.reduce((a,h)=>{let m=B[h];return a+(m?.strokes??0)},0);case"category":case"\u516D\u66F8":return o.mode==="kanji"&&o.metadata?.known?o.metadata.category:o.neighbors.map(a=>{let h=B[a];return h?{char:a,category:h.category}:{char:a,category:"unknown"}});case"meaning":case"\u610F\u5473":return o.mode==="kanji"&&o.metadata?.known?o.metadata.meaning:o.neighbors.map(a=>{let h=B[a];return h?{char:a,meaning:h.meaning}:{char:a,meaning:"unknown"}});case"phonetic_group":case"\u97F3\u7B26":return Jn(o.center);case"compose":case"\u5408\u6210":return Yn(o.neighbors);case"decompose":case"\u5206\u89E3":return o.neighbors.map(a=>I(a));case"kanji":case"\u6F22\u5B57":return I(o.center);case"sigma":return{reiType:"SigmaResult",field:{center:o.center,neighbors:o.neighbors,mode:o.mode,type:"string"},flow:{direction:"rest",momentum:0,velocity:0},memory:[],layer:0,will:{tendency:"rest",strength:0,history:[]},relation:o.neighbors.map(a=>({from:o.center,to:a,type:o.mode}))}}}if(t==="\u290A"||t==="converge")return this.isMDim(s)?F(s):s;if(t==="\u290B"||t==="diverge")return typeof s=="number"?{reiType:"MDim",center:s,neighbors:[s,s,s,s],mode:"weighted"}:s;if(t==="think"||t==="\u601D\u8003"){let o={};if(u.length>=1){let a=u[0];typeof a=="string"?o.strategy=a:typeof a=="number"&&(o.maxIterations=a,o.strategy="converge")}if(u.length>=2){let a=u[1];typeof a=="number"&&(o.strategy==="seek"?o.targetValue=a:o.maxIterations=a)}return u.length>=3&&typeof u[2]=="number"&&(o.maxIterations=u[2]),O(s,o)}if(t==="think_trajectory"||t==="\u8ECC\u8DE1"){if(s?.reiType==="ThoughtResult")return we(s);let o={};return u.length>=1&&typeof u[0]=="string"&&(o.strategy=u[0]),u.length>=1&&typeof u[0]=="number"&&(o.maxIterations=u[0]),we(O(s,o))}if(t==="think_modes")return s?.reiType==="ThoughtResult"?Te(s):Te(O(s,{}));if(t==="think_dominant"||t==="\u652F\u914D\u30E2\u30FC\u30C9")return s?.reiType==="ThoughtResult"?K(s):K(O(s,{}));if(t==="think_format"||t==="\u601D\u8003\u8868\u793A")return s?.reiType==="ThoughtResult"?Me(s):Me(O(s,{}));if(s?.reiType==="ThoughtResult"){let o=s;switch(t){case"final_value":case"\u6700\u7D42\u5024":return o.finalValue;case"iterations":case"\u53CD\u5FA9\u6570":return o.totalIterations;case"stop_reason":case"\u505C\u6B62\u7406\u7531":return o.stopReason;case"trajectory":case"\u8ECC\u8DE1":return o.trajectory;case"convergence":case"\u53CE\u675F\u7387":return o.convergenceRate;case"awareness":case"\u899A\u9192\u5EA6":return o.peakAwareness;case"tendency":case"\u610F\u5FD7":return{tendency:o.loopTendency,strength:o.loopStrength};case"steps":case"\u5168\u5C65\u6B74":return o.steps;case"dominant_mode":case"\u652F\u914D\u30E2\u30FC\u30C9":return K(o);case"sigma":return Be(o)}}if(t==="random"||t==="\u30E9\u30F3\u30C0\u30E0")return s?.reiType==="MDim"?Je(s):Array.isArray(s)?ne(s):typeof s=="number"?Math.floor(s*Math.random()):ne([s]);if(t==="seed"){let o=typeof s=="number"?s:42;return Rt(o),o}if(t==="random_walk"){let o=typeof s=="number"?s:0,a=u.length>=1?Number(u[0]):20,h=u.length>=2?Number(u[1]):1;return Ot(o,a,h)}if(t==="entropy"||t==="\u30A8\u30F3\u30C8\u30ED\u30D4\u30FC")return Array.isArray(s)?G(s):s?.reiType==="MDim"?G(s.neighbors):G([s]);if(t==="monte_carlo"){let o=u.length>=1?Number(u[0]):100;return s?.reiType==="MDim"?Ne(s,o):Ne({reiType:"MDim",center:0,neighbors:Array.isArray(s)?s:[s]},o)}if(t==="game"||t==="\u30B2\u30FC\u30E0"){let o=typeof s=="string"?s:u.length>=1?String(u[0]):"tic_tac_toe",a={};return typeof s=="number"&&(a.stones=s),u.length>=2&&typeof u[1]=="number"&&(a.stones=u[1]),Xe(o,a)}if(s?.reiType==="GameSpace"){let o=s;switch(t){case"play":case"\u6253\u3064":{let a=u.length>=1?Number(u[0]):void 0;return et(o,a)}case"auto_play":case"\u81EA\u52D5\u5BFE\u5C40":{let a=u.length>=1?String(u[0]):o.strategy,h=u.length>=2?String(u[1]):o.strategy;return tt(o,a,h)}case"best_move":case"\u6700\u5584\u624B":return Ze(o);case"legal_moves":case"\u5408\u6CD5\u624B":return cn(o);case"board":case"\u76E4\u9762":return o.state.board;case"status":case"\u72B6\u614B":return o.state.status;case"winner":case"\u52DD\u8005":return o.state.winner;case"turn":case"\u624B\u756A":return o.state.currentPlayer;case"history":case"\u68CB\u8B5C":return o.state.moveHistory;case"game_format":case"\u76E4\u9762\u8868\u793A":return an(o);case"as_mdim":return on(o);case"sigma":case"game_sigma":return Re(o)}}if(t==="simulate"||t==="\u30B7\u30DF\u30E5\u30EC\u30FC\u30C8"){let o=typeof s=="string"?s:"tic_tac_toe",a=u.length>=1?Number(u[0]):10,h=u.length>=2?String(u[1]):"minimax",m=u.length>=3?String(u[2]):"random";return ln(o,a,h,m)}if(s?.reiType==="RandomResult"){let o=s;switch(t){case"value":return o.value;case"probability":case"\u78BA\u7387":return o.probability;case"entropy":case"\u30A8\u30F3\u30C8\u30ED\u30D4\u30FC":return o.entropy}}if(s?.reiType==="EntropyAnalysis"){let o=s;switch(t){case"shannon":return o.shannon;case"relative":return o.relativeEntropy;case"distribution":return o.distribution}}if(t==="puzzle"||t==="\u30D1\u30BA\u30EB"||t==="sudoku"||t==="\u6570\u72EC"){if(typeof s=="string"){let o=X(s);return L(o)}if(Array.isArray(s)){if(Array.isArray(s[0]))return L(s);let o=X(s);return L(o)}if(typeof s=="number"){let o=u.length>0?Number(u[0]):void 0,a=Ie(s,o);return L(a)}throw new Error("puzzle: \u6587\u5B57\u5217\u30FB\u914D\u5217\u30FB\u6570\u5024\u306E\u3044\u305A\u308C\u304B\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044")}if(t==="latin_square"||t==="\u30E9\u30C6\u30F3\u65B9\u9663"){if(Array.isArray(s)){if(Array.isArray(s[0]))return Pe(s);let o=X(s);return Pe(o)}throw new Error("latin_square: \u4E8C\u6B21\u5143\u914D\u5217\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044")}if(t==="generate_sudoku"||t==="\u6570\u72EC\u751F\u6210"){let o=typeof s=="number"?s:30,a=u.length>0?Number(u[0]):void 0,h=Ie(o,a);return L(h)}if(s?.reiType==="PuzzleSpace"){let o=s;switch(t){case"solve":case"\u89E3\u304F":return gn(o);case"propagate":case"\u4F1D\u64AD":{let a=u.length>0?Number(u[0]):100;return yn(o,a)}case"step":case"\u30B9\u30C6\u30C3\u30D7":return me(o),o;case"propagate_pair":case"\u88F8\u30DA\u30A2":return de(o),o;case"cell":case"\u30BB\u30EB":{let a=u.length>0?Number(u[0]):0,h=u.length>1?Number(u[1]):0;return Oe(o,a,h)}case"candidates":case"\u5019\u88DC":{let a=u.length>0?Number(u[0]):0,h=u.length>1?Number(u[1]):0;return bn(o,a,h)}case"grid":case"\u76E4\u9762":return En(o);case"puzzle_format":case"\u6570\u72EC\u8868\u793A":return Cn(o);case"difficulty":case"\u96E3\u6613\u5EA6":return An(o);case"sigma":return Le(o);case"status":case"\u72B6\u614B":return{solved:o.solved,confirmedCells:o.confirmedCells,totalCandidates:o.totalCandidates,step:o.step,size:o.size,puzzleType:o.puzzleType};case"history":case"\u5C65\u6B74":return o.history;case"as_mdim":{let a=u.length>0?Number(u[0]):0,h=u.length>1?Number(u[1]):0;return Oe(o,a,h)}}}if(this.env.has(t)){let o=this.env.get(t);if(this.isFunction(o))return this.callFunction(o,[s,...u])}throw new Error(`\u672A\u77E5\u306E\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9: ${t}`)}evalFnCall(e){let n=this.eval(e.callee),t=e.args.map(r=>this.eval(r));if(e.callee.type==="Ident"&&e.callee.name==="genesis")return ee();if(this.isFunction(n))return this.callFunction(n,t);throw new Error(`\u547C\u3073\u51FA\u3057\u4E0D\u53EF\u80FD: ${JSON.stringify(n)}`)}callFunction(e,n){if(e.body===null||e.body===void 0)return this.callBuiltin(e.name,n);let t=new $e(e.closure);for(let u=0;u<e.params.length;u++)t.define(e.params[u],n[u]??null);let r=this.env;this.env=t;let i=this.eval(e.body);return this.env=r,i}callBuiltin(e,n){if(e==="genesis")return ee();let t=n[0]!==void 0?this.toNumber(n[0]):0,r=n[1]!==void 0?this.toNumber(n[1]):0;switch(e){case"abs":return Math.abs(t);case"sqrt":return Math.sqrt(t);case"sin":return Math.sin(t);case"cos":return Math.cos(t);case"log":return Math.log(t);case"exp":return Math.exp(t);case"floor":return Math.floor(t);case"ceil":return Math.ceil(t);case"round":return Math.round(t);case"min":return Math.min(t,r);case"max":return Math.max(t,r);case"len":return Array.isArray(n[0])||typeof n[0]=="string"?n[0].length:0;case"print":return n[0]??null;default:throw new Error(`\u672A\u77E5\u306E\u7D44\u8FBC\u307F\u95A2\u6570: ${e}`)}}evalMemberAccess(e){let n=this.eval(e.object),t=b(n);if(e.member==="__sigma__")return U(n);if(this.isObj(t)&&t.reiType==="EvolveResult")switch(e.member){case"value":return t.value;case"selectedMode":return t.selectedMode;case"strategy":return t.strategy;case"reason":return t.reason;case"candidates":return t.candidates;case"awareness":return t.awareness;case"tendency":return t.tendency}if(this.isObj(t)&&t.reiType==="StringMDim")switch(e.member){case"center":return t.center;case"neighbors":return t.neighbors;case"mode":return t.mode;case"dim":return t.neighbors.length;case"metadata":return t.metadata??{};case"radical":return t.metadata?.radical??null;case"radicalName":return t.metadata?.radicalName??null;case"strokes":return t.metadata?.strokes??0;case"on":return t.metadata?.on??[];case"kun":return t.metadata?.kun??[];case"category":return t.metadata?.category??null;case"meaning":return t.metadata?.meaning??null;case"known":return t.metadata?.known??!1}if(this.isObj(t)&&t.reiType==="KanjiSimilarity")switch(e.member){case"strength":return t.strength;case"pair":return t.pair;case"sharedComponents":return t.sharedComponents;case"jaccard":return t.jaccard;case"sameRadical":return t.sameRadical;case"sameCategory":return t.sameCategory;case"strokeDiff":return t.strokeDiff;case"sharedPhoneticGroup":return t.sharedPhoneticGroup}if(this.isObj(t)&&t.reiType==="SigmaResult")switch(e.member){case"flow":return t.flow;case"memory":return t.memory;case"layer":return t.layer;case"will":return t.will;case"field":return t.field;case"relation":return t.relation??[]}if(this.isObj(t)&&t.stage!==void 0&&t.momentum!==void 0&&t.directions!==void 0)switch(e.member){case"stage":return t.stage;case"directions":return t.directions;case"momentum":return t.momentum;case"velocity":return t.velocity}if(this.isObj(t)&&t.tendency!==void 0&&t.strength!==void 0)switch(e.member){case"tendency":return t.tendency;case"strength":return t.strength;case"history":return t.history}if(this.isObj(t)&&t.layers!==void 0&&t.total_nodes!==void 0)switch(e.member){case"layers":return t.layers;case"total_nodes":return t.total_nodes;case"active_nodes":return t.active_nodes;case"topology":return t.topology}if(this.isObj(t)&&t.global_stage!==void 0&&t.converged_nodes!==void 0)switch(e.member){case"global_stage":return t.global_stage;case"converged_nodes":return t.converged_nodes;case"expanding_nodes":return t.expanding_nodes}if(this.isDNode(t)){let r=t;switch(e.member){case"center":return r.center;case"neighbors":return r.neighbors;case"stage":return r.stage;case"momentum":return r.momentum;case"mode":return r.mode;case"dim":return r.neighbors.length}}if(this.isMDim(t))switch(e.member){case"center":return t.center;case"neighbors":return t.neighbors;case"mode":return t.mode;case"dim":return t.neighbors.length}if(this.isExt(t))switch(e.member){case"order":return t.order;case"base":return t.base;case"subscripts":return t.subscripts;case"valStar":return t.valStar()}if(this.isGenesis(t))switch(e.member){case"state":case"phase":return t.state;case"omega":return t.omega;case"history":return t.history}if(Array.isArray(t))switch(e.member){case"length":return t.length;case"first":return t[0]??null;case"last":return t[t.length-1]??null}throw new Error(`\u30E1\u30F3\u30D0\u30FC ${e.member} \u306B\u30A2\u30AF\u30BB\u30B9\u3067\u304D\u307E\u305B\u3093`)}evalIndexAccess(e){let n=this.eval(e.object),t=this.toNumber(this.eval(e.index));if(Array.isArray(n)||typeof n=="string")return n[t]??null;if(this.isMDim(n))return n.neighbors[t]??null;throw new Error("\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u30A2\u30AF\u30BB\u30B9\u4E0D\u53EF")}evalExtend(e){let n=this.eval(e.target);if(this.isExt(n))return e.subscript?j(n.base,n.subscripts+e.subscript):j(n.base,n.subscripts+"o");throw new Error("\u62E1\u5F35\u306F\u62E1\u5F35\u6570\u306B\u306E\u307F\u9069\u7528\u53EF\u80FD")}evalReduce(e){let n=this.eval(e.target);if(this.isExt(n))return n.order<=1?n.base:j(n.base,n.subscripts.slice(0,-1));throw new Error("\u7E2E\u7D04\u306F\u62E1\u5F35\u6570\u306B\u306E\u307F\u9069\u7528\u53EF\u80FD")}evalConverge(e){let n=this.eval(e.left),t=this.eval(e.right);return this.isMDim(n)&&this.isMDim(t)?{reiType:"MDim",center:(n.center+t.center)/2,neighbors:[...n.neighbors,...t.neighbors],mode:n.mode}:this.toNumber(n)+this.toNumber(t)}evalDiverge(e){let n=this.eval(e.left),t=this.eval(e.right);if(this.isMDim(n)){this.toNumber(t);let r=Math.floor(n.neighbors.length/2);return[{reiType:"MDim",center:n.center,neighbors:n.neighbors.slice(0,r),mode:n.mode},{reiType:"MDim",center:n.center,neighbors:n.neighbors.slice(r),mode:n.mode}]}return this.toNumber(n)-this.toNumber(t)}evalReflect(e){let n=this.eval(e.left);return this.eval(e.right),this.isMDim(n)?{reiType:"MDim",center:n.center,neighbors:[...n.neighbors].reverse(),mode:n.mode}:this.toNumber(n)}evalIfExpr(e){let n=this.eval(e.cond);return this.isTruthy(n)?this.eval(e.then):this.eval(e.else)}evalMatchExpr(e){let n=this.eval(e.target);for(let{pattern:t,body:r}of e.cases){let i=this.eval(t);if(this.matches(n,i))return this.eval(r)}throw new Error("\u30DE\u30C3\u30C1\u3059\u308B\u5206\u5C90\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093")}toNumber(e){return e!==null&&typeof e=="object"&&e.reiType==="ReiVal"?this.toNumber(e.value):typeof e=="number"?e:typeof e=="boolean"?e?1:0:e===null?0:this.isExt(e)?e.valStar():this.isMDim(e)?F(e):typeof e=="string"&&parseFloat(e)||0}isTruthy(e){let n=b(e);return n===null||n===!1||n===0?!1:this.isQuad(n)?n.value==="top"||n.value==="topPi":!0}matches(e,n){return typeof e==typeof n&&e===n?!0:this.isQuad(e)&&this.isQuad(n)?e.value===n.value:!1}isObj(e){let n=b(e);return n!==null&&typeof n=="object"&&!Array.isArray(n)}isMDim(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="MDim"}isExt(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="Ext"}isGenesis(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="State"}isFunction(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="Function"}isQuad(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="Quad"}isSpace(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="Space"}isDNode(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="DNode"}isReiVal(e){return e!==null&&typeof e=="object"&&e.reiType==="ReiVal"}isStringMDim(e){let n=b(e);return n!==null&&typeof n=="object"&&n.reiType==="StringMDim"}getSigmaMetadata(e){return U(e)}unwrap(e){return b(e)}};function ir(e){return e!==null&&typeof e=="object"&&e.reiType==="ReiVal"?e.value:Array.isArray(e)&&e.__sigma__?[...e]:e}var Ee=new ye;function be(e){let t=new qe(e).tokenize(),i=new Qe(t).parseProgram(),u=Ee.eval(i);return ir(u)}be.reset=function(){Ee=new ye};be.evaluator=function(){return Ee};var or=be;z.Evaluator=ye;z.Lexer=qe;z.Parser=Qe;z.rei=or});var{rei:ar,Evaluator:cr,Lexer:lr,Parser:hr}=mt();window.Rei={rei:ar,Evaluator:cr,Lexer:lr,Parser:hr};})();
+</script>
+
+<script>
+// ============================================================
+// Rei Value Observatory — Demo Application
+// ============================================================
+
+let reiReady = false;
+
+// Update code preview on input change
+function updatePreview() {
+  const c = document.getElementById('centerInput').value;
+  const n = document.getElementById('neighborsInput').value;
+  document.getElementById('codePreview').textContent = `𝕄{${c}; ${n}}`;
+}
+document.getElementById('centerInput').addEventListener('input', updatePreview);
+document.getElementById('neighborsInput').addEventListener('input', updatePreview);
+
+function randomize() {
+  const center = Math.floor(Math.random() * 20) + 1;
+  const numNeighbors = Math.floor(Math.random() * 4) + 2;
+  const neighbors = [];
+  for (let i = 0; i < numNeighbors; i++) {
+    neighbors.push(Math.floor(Math.random() * 15) + 1);
+  }
+  document.getElementById('centerInput').value = center;
+  document.getElementById('neighborsInput').value = neighbors.join(', ');
+  updatePreview();
+}
+
+// ============================================================
+// Main orchestrator
+// ============================================================
+async function runAll() {
+  const center = parseFloat(document.getElementById('centerInput').value) || 5;
+  const neighborsStr = document.getElementById('neighborsInput').value;
+  const neighbors = neighborsStr.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+  const strategy = document.getElementById('strategySelect').value;
+  const iterations = parseInt(document.getElementById('iterInput').value) || 8;
+
+  if (neighbors.length === 0) {
+    alert('周囲の値を1つ以上入力してください');
+    return;
+  }
+
+  const expr = `𝕄{${center}; ${neighbors.join(', ')}}`;
+
+  try {
+    // Step 2: 8 Modes
+    const computeAll = Rei.rei(expr + ' |> compute_all');
+    showModes(computeAll);
+
+    // Step 3: Evolve
+    await delay(600);
+    const evolveResult = Rei.rei(expr + ' |> evolve');
+    showEvolve(evolveResult);
+
+    // Step 4: Thought Loop
+    await delay(800);
+    const thinkResult = Rei.rei(expr + ` |> think("${strategy}", ${iterations})`);
+    await showThought(thinkResult);
+
+    // Step 5: σ Summary
+    await delay(400);
+    showSigma(thinkResult, evolveResult);
+  } catch (e) {
+    console.error(e);
+    alert('Reiエラー: ' + e.message);
+  }
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ============================================================
+// 8-Mode Display
+// ============================================================
+function showModes(results) {
+  const card = document.getElementById('modesCard');
+  card.style.display = 'block';
+  const grid = document.getElementById('modesGrid');
+  grid.innerHTML = '';
+
+  const maxVal = Math.max(...results.map(r => Math.abs(r.value)));
+
+  results.forEach((r, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'mode-cell';
+    cell.style.animationDelay = (i * 80) + 'ms';
+    cell.innerHTML = `
+      <div class="mode-name">${r.mode}</div>
+      <div class="mode-value">${formatNum(r.value)}</div>
+      <div class="mode-bar"></div>
+    `;
+    grid.appendChild(cell);
+
+    // Animate bar
+    setTimeout(() => {
+      const bar = cell.querySelector('.mode-bar');
+      bar.style.transform = `scaleX(${Math.abs(r.value) / maxVal})`;
+    }, 100 + i * 80);
+  });
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ============================================================
+// Evolve Display
+// ============================================================
+function showEvolve(result) {
+  const card = document.getElementById('evolveCard');
+  card.style.display = 'block';
+  const panel = document.getElementById('evolvePanel');
+
+  // Highlight selected mode
+  document.querySelectorAll('.mode-cell').forEach(cell => {
+    const name = cell.querySelector('.mode-name').textContent;
+    if (name === result.selectedMode) {
+      cell.classList.add('selected');
+    } else {
+      cell.classList.remove('selected');
+    }
+  });
+
+  panel.innerHTML = `
+    <div class="evolve-info">
+      <div><span class="label">選択モード:</span> <span class="value gold">${result.selectedMode}</span></div>
+      <div><span class="label">計算結果:</span> <span class="value">${formatNum(result.value)}</span></div>
+      <div><span class="label">戦略:</span> <span class="value">${result.strategy}</span></div>
+      <div><span class="label">選択理由:</span> <span class="value cyan">${result.reason}</span></div>
+      <div><span class="label">傾向性:</span> <span class="value">${result.tendency || 'rest'}</span></div>
+    </div>
+    <div>
+      <div class="awareness-bar-container">
+        <div class="evolve-info">
+          <span class="label">覚醒度 (awareness):</span>
+          <span class="value gold">${(result.awareness * 100).toFixed(1)}%</span>
+        </div>
+        <div class="awareness-bar">
+          <div class="awareness-fill" id="evolveFill"></div>
+        </div>
+      </div>
+      <div style="margin-top:1rem;">
+        <div class="evolve-info"><span class="label">候補モード数:</span> <span class="value">${result.candidates ? result.candidates.length : 0}</span></div>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    document.getElementById('evolveFill').style.width = (result.awareness * 100) + '%';
+  }, 100);
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ============================================================
+// Thought Loop Visualization
+// ============================================================
+async function showThought(result) {
+  const card = document.getElementById('thoughtCard');
+  card.style.display = 'block';
+  const stepsDiv = document.getElementById('thoughtSteps');
+  stepsDiv.innerHTML = '';
+
+  // Draw canvas
+  drawTrajectory(result);
+
+  // Animate steps
+  for (let i = 0; i < result.steps.length; i++) {
+    const s = result.steps[i];
+    await delay(300);
+    const step = document.createElement('div');
+    step.className = 'thought-step';
+    step.style.animationDelay = '0ms';
+
+    const decisionClass = s.decision === 'converged' ? 'decision-converged'
+      : s.decision === 'limit' ? 'decision-limit'
+      : s.decision === 'awakened' ? 'decision-awakened'
+      : 'decision-continue';
+
+    step.innerHTML = `
+      <span class="step-num">#${s.iteration}</span>
+      <span class="step-mode">${s.selectedMode}</span>
+      <span class="step-value">${formatNum(s.numericValue)}</span>
+      <span class="step-awareness" style="color:${awarenessColor(s.awareness)}">${(s.awareness * 100).toFixed(1)}%</span>
+      <span class="step-decision ${decisionClass}">${s.decision}</span>
+    `;
+    stepsDiv.appendChild(step);
+    stepsDiv.scrollTop = stepsDiv.scrollHeight;
+
+    // Update canvas highlight
+    highlightStep(i, result.steps.length);
+  }
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function drawTrajectory(result) {
+  const canvas = document.getElementById('thoughtCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width - 16;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const steps = result.steps;
+
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+
+  if (steps.length < 2) return;
+
+  const pad = { top: 30, bottom: 40, left: 50, right: 30 };
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  // Value range
+  const values = steps.map(s => s.numericValue);
+  const awareness = steps.map(s => s.awareness);
+  const minV = Math.min(...values) * 0.9;
+  const maxV = Math.max(...values) * 1.1 || 1;
+
+  // Grid lines
+  ctx.strokeStyle = '#1a1a28';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (plotH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#55556a';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (plotH / 4) * i;
+    const val = maxV - (maxV - minV) * (i / 4);
+    ctx.fillText(formatNum(val), pad.left - 8, y + 3);
+  }
+
+  // X axis labels
+  ctx.textAlign = 'center';
+  steps.forEach((s, i) => {
+    const x = pad.left + (plotW / (steps.length - 1)) * i;
+    ctx.fillText('#' + i, x, h - pad.bottom + 20);
+  });
+
+  // Title labels
+  ctx.fillStyle = '#8888a0';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText('値 (value)', pad.left, pad.top - 12);
+  ctx.fillStyle = '#c4a35a88';
+  ctx.textAlign = 'right';
+  ctx.fillText('覚醒度 (awareness)', w - pad.right, pad.top - 12);
+
+  // Draw value line
+  ctx.strokeStyle = '#5a8ab4';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  steps.forEach((s, i) => {
+    const x = pad.left + (plotW / (steps.length - 1)) * i;
+    const y = pad.top + plotH - ((s.numericValue - minV) / (maxV - minV)) * plotH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Draw value dots
+  steps.forEach((s, i) => {
+    const x = pad.left + (plotW / (steps.length - 1)) * i;
+    const y = pad.top + plotH - ((s.numericValue - minV) / (maxV - minV)) * plotH;
+    ctx.fillStyle = '#5a8ab4';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw awareness line
+  ctx.strokeStyle = '#c4a35a66';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  steps.forEach((s, i) => {
+    const x = pad.left + (plotW / (steps.length - 1)) * i;
+    const y = pad.top + plotH - s.awareness * plotH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw awareness dots
+  steps.forEach((s, i) => {
+    const x = pad.left + (plotW / (steps.length - 1)) * i;
+    const y = pad.top + plotH - s.awareness * plotH;
+    ctx.fillStyle = '#c4a35a';
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Store for highlighting
+  canvas._steps = steps;
+  canvas._pad = pad;
+  canvas._plotW = plotW;
+  canvas._plotH = plotH;
+  canvas._minV = minV;
+  canvas._maxV = maxV;
+}
+
+function highlightStep(idx, total) {
+  const canvas = document.getElementById('thoughtCanvas');
+  if (!canvas._steps) return;
+  const ctx = canvas.getContext('2d');
+  const { _steps: steps, _pad: pad, _plotW: plotW, _plotH: plotH, _minV: minV, _maxV: maxV } = canvas;
+
+  const x = pad.left + (plotW / (steps.length - 1)) * idx;
+  const y = pad.top + plotH - ((steps[idx].numericValue - minV) / (maxV - minV)) * plotH;
+
+  // Glow effect
+  ctx.fillStyle = 'rgba(196,163,90,0.15)';
+  ctx.beginPath();
+  ctx.arc(x, y, 12, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#c4a35a';
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ============================================================
+// σ Summary
+// ============================================================
+function showSigma(thinkResult, evolveResult) {
+  const card = document.getElementById('sigmaCard');
+  card.style.display = 'block';
+  const panel = document.getElementById('sigmaPanel');
+  const summary = document.getElementById('summaryBox');
+
+  const trajectoryColors = {
+    'stable': 'var(--accent-green)',
+    'oscillating': 'var(--accent-blue)',
+    'chaotic': 'var(--accent-red)',
+    'diverging': 'var(--accent-purple)',
+    'converging': 'var(--accent-cyan)'
+  };
+
+  const trajectoryJP = {
+    'stable': '安定',
+    'oscillating': '振動',
+    'chaotic': '混沌',
+    'diverging': '発散',
+    'converging': '収束'
+  };
+
+  panel.innerHTML = `
+    <div class="sigma-card">
+      <div class="sigma-label">TRAJECTORY / 軌道</div>
+      <div class="sigma-value" style="color:${trajectoryColors[thinkResult.trajectory] || 'var(--text-primary)'}">
+        ${thinkResult.trajectory}
+      </div>
+      <div class="sigma-sub">${trajectoryJP[thinkResult.trajectory] || ''}</div>
+    </div>
+    <div class="sigma-card">
+      <div class="sigma-label">PEAK AWARENESS / 最大覚醒度</div>
+      <div class="sigma-value" style="color:var(--accent-gold)">
+        ${(thinkResult.peakAwareness * 100).toFixed(1)}%
+      </div>
+      <div class="sigma-sub">${thinkResult.awakenedAt !== null ? '覚醒ステップ: #' + thinkResult.awakenedAt : '未覚醒'}</div>
+    </div>
+    <div class="sigma-card">
+      <div class="sigma-label">MODE TRANSITIONS / モード遷移</div>
+      <div class="sigma-value" style="color:var(--accent-blue)">
+        ${thinkResult.modeTransitions}
+      </div>
+      <div class="sigma-sub">${thinkResult.totalIterations} 反復中</div>
+    </div>
+  `;
+
+  // Summary narrative
+  const uniqueModes = [...new Set(thinkResult.modeHistory)];
+  summary.style.display = 'block';
+  summary.innerHTML = `
+    この値は<span class="highlight">${thinkResult.totalIterations}回</span>の自己進化を経て、
+    軌道パターンは「<span class="highlight">${trajectoryJP[thinkResult.trajectory] || thinkResult.trajectory}</span>」。
+    ${uniqueModes.length}種のモード（${uniqueModes.map(m => '<span class="highlight">' + m + '</span>').join('、')}）を試行し、
+    覚醒度は<span class="highlight">${(thinkResult.peakAwareness * 100).toFixed(1)}%</span>に到達。
+    停止理由: <span class="highlight">${thinkResult.stopReason}</span>。
+    <br><br>
+    <span style="color:var(--text-dim)">
+      — これは「値が自分の来歴を見て、自分で計算方法を選び、自分で停止を決める」プロセスです。<br>
+      　他のどのプログラミング言語にも、この機能は存在しません。
+    </span>
+  `;
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function formatNum(n) {
+  if (typeof n !== 'number') return String(n);
+  if (Math.abs(n) > 9999) return n.toExponential(2);
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(2);
+}
+
+function awarenessColor(a) {
+  if (a < 0.2) return 'var(--text-dim)';
+  if (a < 0.5) return 'var(--text-secondary)';
+  if (a < 0.8) return 'var(--accent-gold-dim)';
+  return 'var(--accent-gold)';
+}
+</script>
+</body>
+</html>

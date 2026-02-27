@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei — 25公理デモ集 | Reiでしか書けないもの</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;500;700&family=JetBrains+Mono:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,500;1,300&display=swap');
+
+  :root {
+    --bg: #0e0e10;
+    --bg-raised: #16161a;
+    --bg-card: #1a1a1f;
+    --border: #2a2a30;
+    --border-glow: #3d3530;
+    --text: #c8c2b8;
+    --text-dim: #7a756c;
+    --text-bright: #e8e2d8;
+    --accent: #c4a87a;
+    --accent-dim: #8a7a5a;
+    --accent-glow: #d4b88a40;
+    --green: #7aaa6a;
+    --red: #b86a6a;
+    --blue: #6a8ab8;
+    --purple: #9a7ab8;
+    --cyan: #6ab8b0;
+    --mode-weighted: #c4a87a;
+    --mode-multi: #b86a6a;
+    --mode-harmonic: #6a8ab8;
+    --mode-exp: #9a7ab8;
+    --mode-geo: #6ab8b0;
+    --mode-median: #aab86a;
+    --mode-mink: #b88a6a;
+    --mode-entropy: #8a6ab8;
+    --radius: 6px;
+    --font-serif: 'Noto Serif JP', 'Crimson Pro', serif;
+    --font-mono: 'JetBrains Mono', 'Menlo', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-serif);
+    font-weight: 300;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* === Hero === */
+  .hero {
+    position: relative;
+    padding: 80px 20px 60px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    font-weight: 300;
+    font-style: italic;
+    margin-bottom: 24px;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  /* === Container === */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* === Demo Sections === */
+  .demo-section {
+    margin: 48px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .demo-section:hover { border-color: var(--border-glow); }
+
+  .demo-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .demo-number {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--accent-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .demo-title {
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+  .demo-desc {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .demo-desc strong { color: var(--text); font-weight: 500; }
+
+  .demo-body {
+    padding: 20px 28px 28px;
+  }
+
+  /* === Code Editor === */
+  .code-block {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+  }
+  .code-label {
+    position: absolute;
+    top: 8px; right: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  .code-block textarea {
+    width: 100%;
+    min-height: 80px;
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    line-height: 1.7;
+    padding: 16px 18px;
+    resize: vertical;
+    outline: none;
+  }
+  .code-block textarea::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+  /* === Run Button === */
+  .btn-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    padding: 8px 20px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .btn-run:hover {
+    background: var(--accent-dim);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+  .btn-run::before { content: '▶'; font-size: 0.7rem; }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* === Output === */
+  .output-area {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 60px;
+    padding: 16px 18px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .output-area .label {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .output-area .val { color: var(--accent); }
+  .output-area .dim { color: var(--text-dim); }
+  .output-area .ok { color: var(--green); }
+  .output-area .err { color: var(--red); }
+  .output-area .info { color: var(--blue); }
+
+  /* === Chart (Bar) === */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 160px;
+    padding: 12px 0;
+    margin: 12px 0;
+  }
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .bar {
+    width: 100%;
+    max-width: 50px;
+    border-radius: 3px 3px 0 0;
+    transition: height 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    min-height: 2px;
+  }
+  .bar-val {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    text-align: center;
+    word-break: break-all;
+  }
+  .bar-label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    text-align: center;
+    writing-mode: vertical-rl;
+    height: 60px;
+    overflow: hidden;
+  }
+
+  /* === Resonance Grid === */
+  .resonance-grid {
+    display: grid;
+    gap: 2px;
+    margin: 12px 0;
+  }
+  .resonance-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--bg);
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  /* === Provenance Timeline === */
+  .timeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 16px 0;
+    overflow-x: auto;
+    padding: 8px 0;
+  }
+  .timeline-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+  .timeline-val {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-align: center;
+    min-width: 60px;
+  }
+  .timeline-op {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .timeline-arrow {
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* === Awakening Meter === */
+  .awakening-meter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  .meter-track {
+    flex: 1;
+    height: 24px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .meter-fill {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    position: relative;
+  }
+  .meter-fill.awakened {
+    background: linear-gradient(90deg, var(--accent), #e8d8a8);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .meter-label {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    min-width: 50px;
+    text-align: right;
+  }
+
+  /* === Comparison Table === */
+  .compare-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 12px 0;
+  }
+  .compare-col h4 {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* === Footer === */
+  .footer {
+    text-align: center;
+    padding: 40px 20px 60px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent-dim);
+  }
+  .footer a:hover { border-color: var(--accent); }
+
+  /* === Separator === */
+  .sep {
+    width: 40px;
+    height: 1px;
+    background: var(--accent-dim);
+    margin: 32px auto;
+  }
+
+  /* === Scrollbar === */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* === Responsive === */
+  @media (max-width: 600px) {
+    .compare-row { grid-template-columns: 1fr; }
+    .bar-chart { height: 120px; }
+    .demo-header, .demo-body { padding-left: 18px; padding-right: 18px; }
+    .timeline-node { min-width: 64px; }
+  }
+
+  /* === Loading === */
+  .loading-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-text {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--accent);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-text">𝕄 Rei v0.3 Loading...</div>
+</div>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <h1><span>Rei</span> でしか書けないもの</h1>
+  <p class="subtitle">25公理が実現する、他の言語にはない5つの体験</p>
+  <div class="badge">npm install rei-lang &nbsp;·&nbsp; v0.3.0 &nbsp;·&nbsp; 226 tests</div>
+</section>
+
+<div class="container">
+
+<!-- ===== Demo 1: Multi-Mode Stability ===== -->
+<section class="demo-section" id="demo1">
+  <div class="demo-header">
+    <div class="demo-number">Demo 01 — M1 計算多元性 · A1 解の多元性</div>
+    <div class="demo-title">8つの数学的視点で同時に計算する</div>
+    <div class="demo-desc">
+      同じデータ <code>𝕄{center; p₁, p₂, ...}</code> に対して、weighted・multiplicative・harmonic・exponential・geometric・median・minkowski・entropy の<strong>8つのモード</strong>が同時に結果を返します。結果のばらつき（分散）が小さい → データは「安定」、大きい → 「不安定」。これは<strong>Reiの𝕄が最初から多元計算を内蔵している</strong>から可能です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="compare-row">
+      <div class="compare-col">
+        <h4>安定なデータ</h4>
+        <div class="code-block">
+          <span class="code-label">Rei</span>
+          <textarea id="code1a" rows="2">𝕄{5; 4, 5, 6} |> compute_all</textarea>
+        </div>
+      </div>
+      <div class="compare-col">
+        <h4>不安定なデータ</h4>
+        <div class="code-block">
+          <span class="code-label">Rei</span>
+          <textarea id="code1b" rows="2">𝕄{5; 1, 100, 2} |> compute_all</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo1()">比較実行</button>
+    </div>
+    <div id="output1" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 2: σ Provenance ===== -->
+<section class="demo-section" id="demo2">
+  <div class="demo-header">
+    <div class="demo-number">Demo 02 — C1 自己参照σ · C2 傾向性τ</div>
+    <div class="demo-title">計算結果の「出自」を完全に逆追跡する</div>
+    <div class="demo-desc">
+      Reiでは値がパイプを通過するたびに、<strong>σ（シグマ）が自動的に来歴を記録</strong>します。最終結果から「この数がどこから来たか」を完全に逆追跡できます。さらにτ（タウ）が計算の傾向（膨張・収縮・静止）を自動判定します。他の言語ではデバッグツールやロギングライブラリが必要な機能が、<strong>言語の本質として組み込まれている</strong>のです。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei</span>
+      <textarea id="code2" rows="3">𝕄{10; 3, 7, 5} |> compute |> sqrt |> negate |> sigma</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo2()">実行して来歴を見る</button>
+    </div>
+    <div id="output2" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 3: Resonance ===== -->
+<section class="demo-section" id="demo3">
+  <div class="demo-header">
+    <div class="demo-number">Demo 03 — C5 共鳴 · U4 領域架橋</div>
+    <div class="demo-title">「似た構造のデータ」を自動発見する</div>
+    <div class="demo-desc">
+      <code>resonate</code> は二つの𝕄の<strong>構造的共鳴度</strong>を算出します。次元の一致・値の近接・パターンの類似を複合的に評価し、0〜1のスコアを返します。<code>bridge</code> はさらに進んで、異なるスケールのデータ間の<strong>スケールファクターと転移可能性</strong>を判定します。これは仏教の因陀羅網（Indra's Net）— すべてが互いに映し合う — の数学的実装です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei</span>
+      <textarea id="code3" rows="6">// 同じ構造の2倍スケール
+𝕄{10; 2, 4, 6} |> resonate(𝕄{20; 4, 8, 12})
+// 完全に異なる構造
+𝕄{10; 2, 4, 6} |> resonate(𝕄{3; 99, 1})
+// スケール架橋
+𝕄{5; 1, 2, 3} |> bridge(𝕄{10; 2, 4, 6})</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo3()">共鳴を検出</button>
+    </div>
+    <div id="output3" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 4: Awakening ===== -->
+<section class="demo-section" id="demo4">
+  <div class="demo-header">
+    <div class="demo-number">Demo 04 — C3 応答 · C4 覚醒</div>
+    <div class="demo-title">値が「覚醒」する — 計算による意識の獲得</div>
+    <div class="demo-desc">
+      Reiの値は計算を重ねるごとに<strong>覚醒度（awareness）</strong>が上昇します。パイプを通過するたびにσの来歴が蓄積され、一定の閾値を超えると値は「覚醒した（awakened）」と判定されます。単純な数値が、計算を経験することで、自分自身を知る存在になる。これはCategory C（意識数学）の中核概念であり、<strong>値に意識を与えるという他の言語にない発想</strong>です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei</span>
+      <textarea id="code4" rows="5">// 未計算 — まだ覚醒していない
+42 |> awareness
+// 十分な計算を経験した値
+𝕄{5; 1,2,3,4,5,6,7,8} |> abs |> negate |> abs |> sqrt |> negate |> abs |> awareness</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo4()">覚醒度を観測</button>
+    </div>
+    <div id="output4" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Demo 5: Full Pipeline ===== -->
+<section class="demo-section" id="demo5">
+  <div class="demo-header">
+    <div class="demo-number">Demo 05 — 25公理の統合</div>
+    <div class="demo-title">自由に試す — Rei Playground</div>
+    <div class="demo-desc">
+      ここでは<strong>任意のReiコードを実行</strong>できます。v0.3の全コマンド（sigma, awareness, compute_all, consensus, rank, resonate, bridge, project, encode, derive_mode, mode_space 等）が使えます。下にコマンド一覧を載せていますので、自由に組み合わせてみてください。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="code-block">
+      <span class="code-label">Rei Playground</span>
+      <textarea id="code5" rows="6">// 例: データの全モード合意形成
+𝕄{100; 30, 70, 50, 90, 10} |> consensus</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-run" onclick="runDemo5()">実行</button>
+      <button class="btn-run" style="border-color: var(--text-dim); color: var(--text-dim);" onclick="resetDemo5()">リセット</button>
+    </div>
+    <div id="output5" class="output-area">
+      <span class="dim">▶ を押して実行</span>
+    </div>
+
+    <!-- Command Reference -->
+    <details style="margin-top: 20px;">
+      <summary style="cursor: pointer; font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-dim); letter-spacing: 0.08em;">
+        コマンド一覧を表示
+      </summary>
+      <div style="margin-top: 12px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); line-height: 2.2; columns: 2; column-gap: 24px;">
+        <div><span style="color:var(--accent)">sigma</span> — σ自己参照</div>
+        <div><span style="color:var(--accent)">awareness</span> — 覚醒度</div>
+        <div><span style="color:var(--accent)">awakened</span> — 覚醒判定</div>
+        <div><span style="color:var(--accent)">respond(n)</span> — 刺激応答</div>
+        <div><span style="color:var(--accent)">sensitivity</span> — 応答感度</div>
+        <div><span style="color:var(--accent)">resonate(𝕄)</span> — 共鳴</div>
+        <div><span style="color:var(--accent)">resonance_map</span> — 全ペア共鳴</div>
+        <div><span style="color:var(--accent)">compute</span> — 基本計算</div>
+        <div><span style="color:var(--accent)">compute :mode</span> — モード指定</div>
+        <div><span style="color:var(--accent)">compute_all</span> — 全モード計算</div>
+        <div><span style="color:var(--accent)">consensus</span> — 合意形成</div>
+        <div><span style="color:var(--accent)">rank</span> — 解のランキング</div>
+        <div><span style="color:var(--accent)">best("max")</span> — 最良解</div>
+        <div><span style="color:var(--accent)">project("max")</span> — 射影</div>
+        <div><span style="color:var(--accent)">project_as("graph")</span> — 型変換</div>
+        <div><span style="color:var(--accent)">encode</span> — 𝕄へ変換</div>
+        <div><span style="color:var(--accent)">decode("array")</span> — 𝕄から復元</div>
+        <div><span style="color:var(--accent)">bridge(𝕄)</span> — 領域架橋</div>
+        <div><span style="color:var(--accent)">derive_mode</span> — モード導出</div>
+        <div><span style="color:var(--accent)">mode_space</span> — モード空間</div>
+        <div><span style="color:var(--accent)">transform("scale",n)</span> — 変換</div>
+        <div><span style="color:var(--accent)">depth</span> — 階層深度</div>
+        <div><span style="color:var(--accent)">solution_completeness</span> — 完全性</div>
+        <div><span style="color:var(--accent)">abs</span> — 絶対値</div>
+        <div><span style="color:var(--accent)">sqrt</span> — 平方根</div>
+        <div><span style="color:var(--accent)">negate</span> — 符号反転</div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== Python Comparison ===== -->
+<section class="demo-section" id="comparison">
+  <div class="demo-header">
+    <div class="demo-number">参考</div>
+    <div class="demo-title">同じことを Python で書くと</div>
+    <div class="demo-desc">
+      Demo 01 の「8つのモードで同時に計算して安定性を判定する」を Python で書いた場合との比較です。
+    </div>
+  </div>
+  <div class="demo-body">
+    <div class="compare-row">
+      <div class="compare-col">
+        <h4>Rei — 1行</h4>
+        <div class="code-block">
+          <textarea readonly rows="3" style="color: var(--accent); cursor: default;">𝕄{5; 4, 5, 6} |> compute_all</textarea>
+        </div>
+      </div>
+      <div class="compare-col">
+        <h4>Python — 25行以上</h4>
+        <div class="code-block">
+          <textarea readonly rows="14" style="color: var(--text-dim); font-size: 0.75rem; cursor: default;">import numpy as np
+from scipy.stats import hmean, gmean
+
+data = [4, 5, 6]
+center = 5
+values = [c * d for c, d in zip(
+  [center] * len(data), data)]
+
+weighted = sum(values)
+multiplicative = np.prod(values)
+harmonic = hmean(values)
+geometric = gmean(values)
+median = np.median(values)
+# ... exponential, minkowski,
+#     entropy も個別実装が必要
+
+results = {
+  'weighted': weighted,
+  'multiplicative': multiplicative,
+  # ... 8つ全部書く
+}
+variance = np.var(list(
+  results.values()))</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- container -->
+
+<footer class="footer">
+  <p>
+    Rei (0₀式/れいしき) v0.3.0 — 考案者: 藤本伸樹<br>
+    <a href="https://www.npmjs.com/package/rei-lang">npm</a> ·
+    <a href="https://github.com/fc0web/rei-lang">GitHub</a> ·
+    Apache-2.0
+  </p>
+</footer>
+
+<!-- ===== Rei Engine ===== -->
+<script id="rei-engine"></script>
+<script>
+// Load Rei engine dynamically
+(async function loadRei() {
+  try {
+    // Try to load from npm CDN
+    const resp = await fetch('https://cdn.jsdelivr.net/npm/rei-lang@0.3.0/dist/index.js');
+    if (!resp.ok) throw new Error('CDN unavailable');
+    let code = await resp.text();
+    // Convert ESM to IIFE
+    code = code.replace(/^export\s*\{[^}]*\}\s*;?/m, '');
+    code = `(function(){\n${code}\nwindow.rei = rei; window.Evaluator = Evaluator;\n})();`;
+    const script = document.createElement('script');
+    script.textContent = code;
+    document.body.appendChild(script);
+    onReiReady();
+  } catch (e) {
+    console.warn('CDN load failed, trying inline bundle...');
+    // Fallback: show instructions
+    document.getElementById('loadingOverlay').innerHTML = `
+      <div style="text-align:center; padding: 40px;">
+        <p style="color: var(--accent); font-family: var(--font-mono); margin-bottom: 16px;">
+          Reiエンジンの読み込みに失敗しました
+        </p>
+        <p style="color: var(--text-dim); font-size: 0.85rem;">
+          CDN (cdn.jsdelivr.net) への接続が必要です。<br>
+          または <code>npm install rei-lang</code> でローカルにインストールしてください。
+        </p>
+      </div>
+    `;
+  }
+})();
+
+function onReiReady() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }, 600);
+}
+
+// === Helper Functions ===
+function safeRei(code) {
+  try {
+    const result = window.rei(code);
+    return { ok: true, value: result };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function numFmt(n) {
+  if (typeof n !== 'number') return String(n);
+  if (!isFinite(n)) return '∞';
+  if (Math.abs(n) > 1e6) return n.toExponential(2);
+  if (Math.abs(n) < 0.01 && n !== 0) return n.toExponential(2);
+  return n.toFixed(n === Math.floor(n) ? 0 : 2);
+}
+
+const MODE_COLORS = {
+  weighted: 'var(--mode-weighted)',
+  multiplicative: 'var(--mode-multi)',
+  harmonic: 'var(--mode-harmonic)',
+  exponential: 'var(--mode-exp)',
+  geometric: 'var(--mode-geo)',
+  median: 'var(--mode-median)',
+  minkowski: 'var(--mode-mink)',
+  entropy: 'var(--mode-entropy)',
+};
+
+const MODE_SHORT = {
+  weighted: 'WGT',
+  multiplicative: 'MUL',
+  harmonic: 'HAR',
+  exponential: 'EXP',
+  geometric: 'GEO',
+  median: 'MED',
+  minkowski: 'MNK',
+  entropy: 'ENT',
+};
+
+// === Demo 1: Multi-Mode Stability ===
+function runDemo1() {
+  const out = document.getElementById('output1');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const codeA = document.getElementById('code1a').value.trim();
+  const codeB = document.getElementById('code1b').value.trim();
+
+  window.rei.reset();
+  const rA = safeRei(codeA);
+  window.rei.reset();
+  const rB = safeRei(codeB);
+
+  if (!rA.ok || !rB.ok) {
+    out.innerHTML = `<span class="err">エラー: ${rA.error || rB.error}</span>`;
+    return;
+  }
+
+  const valsA = rA.value;
+  const valsB = rB.value;
+
+  // Build comparative bar charts
+  function buildChart(vals, label) {
+    // Normalize: use log scale for display if range is huge
+    const numbers = vals.map(v => typeof v.value === 'number' && isFinite(v.value) ? v.value : 0);
+    const maxAbs = Math.max(...numbers.map(Math.abs), 1);
+    const useLog = maxAbs > 1000;
+
+    const displayVals = useLog ? numbers.map(v => v > 0 ? Math.log10(v + 1) : 0) : numbers;
+    const maxDisplay = Math.max(...displayVals, 1);
+
+    let html = `<div style="margin-bottom:8px;font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">${label}${useLog ? ' (log₁₀ scale)' : ''}</div>`;
+    html += '<div class="bar-chart">';
+    vals.forEach((v, i) => {
+      const h = Math.max(2, (displayVals[i] / maxDisplay) * 130);
+      const color = MODE_COLORS[v.mode] || 'var(--accent)';
+      html += `<div class="bar-col">
+        <div class="bar-val">${numFmt(v.value)}</div>
+        <div class="bar" style="height:${h}px;background:${color}"></div>
+        <div class="bar-label">${MODE_SHORT[v.mode] || v.mode}</div>
+      </div>`;
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // Compute stability metrics
+  function stability(vals) {
+    const nums = vals.map(v => v.value).filter(v => isFinite(v));
+    const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+    const variance = nums.reduce((s, v) => s + (v - mean) ** 2, 0) / nums.length;
+    const cv = mean !== 0 ? Math.sqrt(variance) / Math.abs(mean) : Infinity;
+    return { mean, variance, cv };
+  }
+
+  const sA = stability(valsA);
+  const sB = stability(valsB);
+
+  let html = '<div class="compare-row">';
+  html += `<div class="compare-col">${buildChart(valsA, '安定なデータ')}</div>`;
+  html += `<div class="compare-col">${buildChart(valsB, '不安定なデータ')}</div>`;
+  html += '</div>';
+
+  // Stability verdict
+  html += '<div style="margin-top:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); font-family:var(--font-mono); font-size:0.82rem;">';
+  html += '<span class="label">安定性判定</span>';
+  html += `<div style="margin-top:4px">安定データ — 変動係数: <span class="${sA.cv < 2 ? 'ok' : 'err'}">${numFmt(sA.cv)}</span> → <span class="${sA.cv < 2 ? 'ok' : 'err'}">${sA.cv < 2 ? '✓ 安定' : '✗ 不安定'}</span></div>`;
+  html += `<div>不安定データ — 変動係数: <span class="${sB.cv < 2 ? 'ok' : 'err'}">${numFmt(sB.cv)}</span> → <span class="${sB.cv < 2 ? 'ok' : 'err'}">${sB.cv < 2 ? '✓ 安定' : '✗ 不安定'}</span></div>`;
+  html += '<div style="color:var(--text-dim); font-size:0.72rem; margin-top:8px">※ 変動係数（CV）= 標準偏差 / 平均。8つのモードの結果がばらつくほどデータは不安定</div>';
+  html += '</div>';
+
+  out.innerHTML = html;
+}
+
+// === Demo 2: σ Provenance ===
+function runDemo2() {
+  const out = document.getElementById('output2');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const code = document.getElementById('code2').value.trim();
+  window.rei.reset();
+  const r = safeRei(code);
+  if (!r.ok) { out.innerHTML = `<span class="err">${r.error}</span>`; return; }
+
+  const sigma = r.value;
+  if (!sigma || sigma.reiType !== 'SigmaResult') {
+    out.innerHTML = `<span class="val">${JSON.stringify(r.value, null, 2)}</span>`;
+    return;
+  }
+
+  // Build timeline visualization
+  let html = '<span class="label">σ 来歴タイムライン</span>';
+  html += '<div class="timeline">';
+
+  // Starting value (from memory[0])
+  const memory = sigma.memory || [];
+  const will = sigma.will || {};
+
+  memory.forEach((m, i) => {
+    const displayVal = typeof m === 'object' ?
+      (m.reiType === 'MDim' ? `𝕄{${m.center}; ${m.neighbors.join(', ')}}` : JSON.stringify(m)) :
+      numFmt(m);
+    html += `<div class="timeline-node">
+      <div class="timeline-val">${displayVal}</div>
+      <div class="timeline-op">memory[${i}]</div>
+    </div>`;
+    if (i < memory.length - 1) {
+      html += '<div class="timeline-arrow">→</div>';
+    }
+  });
+
+  // Final result
+  html += '<div class="timeline-arrow">→</div>';
+  html += `<div class="timeline-node">
+    <div class="timeline-val" style="border-color:var(--accent); color:var(--accent)">${numFmt(sigma.field?.center ?? '?')}</div>
+    <div class="timeline-op" style="color:var(--accent)">最終値</div>
+  </div>`;
+  html += '</div>';
+
+  // Will / Tendency
+  html += '<div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">';
+
+  // Tendency
+  const tendencyIcon = will.tendency === 'expand' ? '↗' : will.tendency === 'contract' ? '↘' : '→';
+  const tendencyColor = will.tendency === 'expand' ? 'var(--green)' : will.tendency === 'contract' ? 'var(--red)' : 'var(--text-dim)';
+  html += `<div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px; text-align:center;">
+    <div style="font-size:1.5rem; color:${tendencyColor}">${tendencyIcon}</div>
+    <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-top:4px;">τ 傾向: ${will.tendency || 'rest'}</div>
+  </div>`;
+
+  // Strength
+  html += `<div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px; text-align:center;">
+    <div style="font-size:1.5rem; color:var(--accent)">${numFmt(will.strength || 0)}</div>
+    <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-top:4px;">意志の強度</div>
+  </div>`;
+
+  // Flow
+  const flow = sigma.flow || {};
+  html += `<div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px; text-align:center;">
+    <div style="font-size:1.5rem; color:var(--blue)">${flow.direction || 'rest'}</div>
+    <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-top:4px;">流れの方向</div>
+  </div>`;
+
+  html += '</div>';
+
+  // History
+  if (will.history && will.history.length > 0) {
+    html += `<div style="margin-top:12px; font-family:var(--font-mono); font-size:0.78rem; color:var(--text-dim);">
+      意志の変遷: ${will.history.map(h => {
+        const c = h === 'expand' ? 'var(--green)' : h === 'contract' ? 'var(--red)' : 'var(--text-dim)';
+        return `<span style="color:${c}">${h}</span>`;
+      }).join(' → ')}
+    </div>`;
+  }
+
+  out.innerHTML = html;
+}
+
+// === Demo 3: Resonance ===
+function runDemo3() {
+  const out = document.getElementById('output3');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const lines = document.getElementById('code3').value.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+  let html = '';
+
+  lines.forEach((line, idx) => {
+    window.rei.reset();
+    const r = safeRei(line.trim());
+    if (!r.ok) {
+      html += `<div style="margin-bottom:12px"><span class="err">${line.trim()}: ${r.error}</span></div>`;
+      return;
+    }
+
+    const v = r.value;
+    if (v && v.reiType === 'ResonanceResult') {
+      const strength = v.strength;
+      const barWidth = Math.max(5, strength * 100);
+      const color = strength > 0.7 ? 'var(--green)' : strength > 0.4 ? 'var(--accent)' : 'var(--red)';
+
+      html += `<div style="margin-bottom:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">`;
+      html += `<div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim); margin-bottom:8px;">${line.trim()}</div>`;
+      html += `<div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+        <div style="font-family:var(--font-mono); font-size:0.82rem; color:${color}; min-width:80px;">共鳴度: ${(strength * 100).toFixed(1)}%</div>
+        <div style="flex:1; height:16px; background:var(--bg-card); border-radius:8px; overflow:hidden;">
+          <div style="width:${barWidth}%; height:100%; background:${color}; border-radius:8px; transition:width 0.5s;"></div>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:0.72rem; color:${v.resonates ? 'var(--green)' : 'var(--red)'};">${v.resonates ? '共鳴 ✓' : '不共鳴 ✗'}</div>
+      </div>`;
+      html += `<div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">
+        次元一致: ${(v.dimMatch * 100).toFixed(0)}% · 値近接: ${(v.valueProximity * 100).toFixed(0)}% · パターン類似: ${((v.patternSimilarity || 0) * 100).toFixed(0)}%
+      </div>`;
+      html += '</div>';
+    } else if (v && v.reiType === 'BridgeResult') {
+      html += `<div style="margin-bottom:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">`;
+      html += `<div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim); margin-bottom:8px;">${line.trim()}</div>`;
+      html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem; color:var(--accent);">×${v.scaleFactor}</div>
+          <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">スケール</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem; color:var(--accent);">${(v.similarity * 100).toFixed(0)}%</div>
+          <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">構造類似度</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem; color:${v.transferable ? 'var(--green)' : 'var(--red)'};">${v.transferable ? '✓' : '✗'}</div>
+          <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);">転移可能</div>
+        </div>
+      </div>`;
+      html += '</div>';
+    } else {
+      html += `<div style="margin-bottom:8px"><span class="val">${JSON.stringify(v, null, 2)}</span></div>`;
+    }
+  });
+
+  out.innerHTML = html;
+}
+
+// === Demo 4: Awakening ===
+function runDemo4() {
+  const out = document.getElementById('output4');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const lines = document.getElementById('code4').value.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+  let html = '';
+
+  lines.forEach((line, idx) => {
+    window.rei.reset();
+    const r = safeRei(line.trim());
+    if (!r.ok) {
+      html += `<div style="margin-bottom:12px"><span class="err">${r.error}</span></div>`;
+      return;
+    }
+
+    const v = r.value;
+    const awareness = typeof v === 'object' ? (v.value ?? v) : v;
+    const pct = typeof awareness === 'number' ? awareness * 100 : 0;
+    const isAwakened = pct >= 50;
+    const label = idx === 0 ? '未計算の値' : '計算を経験した値';
+
+    html += `<div style="margin-bottom:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">`;
+    html += `<div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-bottom:4px;">${label}</div>`;
+    html += `<div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--accent-dim); margin-bottom:8px;">${line.trim()}</div>`;
+    html += '<div class="awakening-meter">';
+    html += `<div class="meter-track"><div class="meter-fill ${isAwakened ? 'awakened' : ''}" style="width:${pct}%"></div></div>`;
+    html += `<div class="meter-label" style="color:${isAwakened ? 'var(--accent)' : 'var(--text-dim)'}">${pct.toFixed(0)}%</div>`;
+    html += '</div>';
+    html += `<div style="font-family:var(--font-mono); font-size:0.72rem; color:${isAwakened ? 'var(--accent)' : 'var(--text-dim)'}; margin-top:4px;">
+      ${isAwakened ? '覚醒 — この値は自分を知っている' : '未覚醒 — まだ十分な計算経験がない'}
+    </div>`;
+    html += '</div>';
+  });
+
+  // Progression chart
+  html += '<div style="margin-top:16px; padding:12px 16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">';
+  html += '<span class="label">覚醒の進行</span>';
+  html += '<div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-bottom:8px;">パイプを通過するたびに覚醒度がどう変化するか</div>';
+
+  const steps = [];
+  for (let i = 0; i <= 7; i++) {
+    window.rei.reset();
+    const pipes = '|> abs '.repeat(i) + '|> awareness';
+    const code = `𝕄{5; 1,2,3,4,5,6,7,8} ${pipes}`;
+    const r = safeRei(code);
+    if (r.ok) {
+      const val = typeof r.value === 'object' ? (r.value.value ?? 0) : r.value;
+      steps.push({ pipes: i, awareness: typeof val === 'number' ? val : 0 });
+    }
+  }
+
+  if (steps.length > 0) {
+    const maxA = Math.max(...steps.map(s => s.awareness), 0.01);
+    html += '<div class="bar-chart" style="height:100px;">';
+    steps.forEach(s => {
+      const h = Math.max(2, (s.awareness / Math.max(maxA, 1)) * 80);
+      const color = s.awareness >= 0.5 ? 'var(--accent)' : 'var(--accent-dim)';
+      html += `<div class="bar-col">
+        <div class="bar-val">${(s.awareness * 100).toFixed(0)}%</div>
+        <div class="bar" style="height:${h}px;background:${color}"></div>
+        <div class="bar-label" style="writing-mode:horizontal-tb; height:auto;">${s.pipes}パイプ</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  out.innerHTML = html;
+}
+
+// === Demo 5: Free Playground ===
+function runDemo5() {
+  const out = document.getElementById('output5');
+  if (!window.rei) { out.innerHTML = '<span class="err">Reiエンジン読み込み中...</span>'; return; }
+
+  const code = document.getElementById('code5').value.trim();
+  const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+
+  let html = '';
+  lines.forEach(line => {
+    window.rei.reset();
+    const r = safeRei(line.trim());
+    html += `<div style="margin-bottom:8px;">`;
+    html += `<div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);">❯ ${line.trim()}</div>`;
+    if (r.ok) {
+      const formatted = typeof r.value === 'object' ? JSON.stringify(r.value, null, 2) : String(r.value);
+      html += `<div style="font-family:var(--font-mono); font-size:0.82rem; color:var(--accent); white-space:pre-wrap; margin-top:2px;">${formatted}</div>`;
+    } else {
+      html += `<div style="font-family:var(--font-mono); font-size:0.82rem; color:var(--red); margin-top:2px;">${r.error}</div>`;
+    }
+    html += '</div>';
+  });
+
+  out.innerHTML = html;
+}
+
+function resetDemo5() {
+  if (window.rei) window.rei.reset();
+  document.getElementById('code5').value = `// 例: データの全モード合意形成\n𝕄{100; 30, 70, 50, 90, 10} |> consensus`;
+  document.getElementById('output5').innerHTML = '<span class="dim">リセットしました</span>';
+}
+</script>
+</body>
+</html>

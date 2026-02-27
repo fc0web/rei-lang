@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rei (0₀式) Playground — D-FUMT Computational Language</title>
+<meta name="description" content="Try Rei programming language in your browser. 25 consciousness axioms, 8 computation modes, center-periphery pattern.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f12;--bg2:#16161c;--bg3:#1c1c25;--bg4:#25252f;
+  --fg:#c8c5be;--fg2:#9a978f;--fg3:#6b685f;
+  --accent:#b8a47e;--accent2:#8a7a5e;--accent3:#d4c5a0;
+  --code-bg:#12121a;--code-border:#2a2a35;
+  --success:#7eb88a;--error:#c87e7e;--info:#7e9eb8;
+  --radius:6px;
+}
+html{font-size:15px;-webkit-font-smoothing:antialiased}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:'Noto Sans JP','IBM Plex Mono',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;
+}
+
+/* Header */
+header{
+  padding:1.5rem 2rem 1rem;
+  border-bottom:1px solid var(--bg4);
+  display:flex;align-items:baseline;gap:1.5rem;flex-wrap:wrap;
+}
+header h1{
+  font-family:'Noto Serif JP',serif;font-weight:600;font-size:1.4rem;
+  color:var(--accent3);letter-spacing:.05em;
+}
+header h1 span{font-weight:400;color:var(--fg2);font-size:.85rem;margin-left:.5rem}
+header nav{display:flex;gap:.5rem;flex-wrap:wrap}
+header nav a{
+  font-size:.72rem;padding:.35rem .7rem;
+  background:var(--bg3);color:var(--fg2);border:1px solid var(--code-border);
+  border-radius:var(--radius);text-decoration:none;transition:all .2s;
+  font-family:'IBM Plex Mono',monospace;
+}
+header nav a:hover{background:var(--bg4);color:var(--accent3);border-color:var(--accent2)}
+
+/* Main layout */
+main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:0}
+@media(max-width:860px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+
+/* Panels */
+.panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel-header{
+  padding:.6rem 1.2rem;font-size:.7rem;
+  color:var(--fg3);font-family:'IBM Plex Mono',monospace;
+  background:var(--bg2);border-bottom:1px solid var(--code-border);
+  display:flex;justify-content:space-between;align-items:center;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.panel-header .hint{text-transform:none;letter-spacing:0;opacity:.6;font-size:.65rem}
+.input-panel{border-right:1px solid var(--bg4)}
+@media(max-width:860px){.input-panel{border-right:none;border-bottom:1px solid var(--bg4)}}
+
+/* Editor */
+#editor{
+  flex:1;width:100%;resize:none;
+  background:var(--code-bg);color:var(--fg);
+  border:none;outline:none;
+  font-family:'IBM Plex Mono',monospace;font-size:.88rem;line-height:1.7;
+  padding:1.2rem;tab-size:2;
+  overflow-y:auto;
+}
+#editor::placeholder{color:var(--fg3);font-style:italic}
+#editor:focus{background:#13131c}
+
+/* Run button */
+.run-bar{
+  padding:.5rem 1.2rem;background:var(--bg2);
+  border-top:1px solid var(--code-border);
+  display:flex;gap:.6rem;align-items:center;
+}
+#run-btn{
+  background:var(--accent2);color:var(--bg);
+  border:none;padding:.45rem 1.5rem;border-radius:var(--radius);
+  font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;
+  cursor:pointer;transition:all .15s;letter-spacing:.04em;
+}
+#run-btn:hover{background:var(--accent)}
+#run-btn:active{transform:scale(.97)}
+.run-hint{font-size:.65rem;color:var(--fg3);font-family:'IBM Plex Mono',monospace}
+#clear-btn{
+  background:transparent;color:var(--fg3);border:1px solid var(--code-border);
+  padding:.4rem .8rem;border-radius:var(--radius);cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;font-size:.7rem;transition:all .15s;
+}
+#clear-btn:hover{color:var(--fg2);border-color:var(--fg3)}
+
+/* Output */
+#output{
+  flex:1;overflow-y:auto;padding:1.2rem;
+  font-family:'IBM Plex Mono',monospace;font-size:.82rem;line-height:1.7;
+  background:var(--bg);
+}
+.out-line{margin-bottom:.6rem;padding:.5rem .8rem;border-radius:var(--radius);animation:fadeIn .2s ease}
+.out-line.result{background:var(--bg3);border-left:2px solid var(--accent2)}
+.out-line.error{background:#1c1418;border-left:2px solid var(--error);color:var(--error)}
+.out-line.info{color:var(--fg3);font-style:italic;font-size:.75rem}
+.out-line .label{color:var(--fg3);font-size:.65rem;display:block;margin-bottom:.15rem}
+.out-line pre{white-space:pre-wrap;word-break:break-all;margin:0;font-size:.8rem}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* Examples drawer */
+.examples-drawer{
+  background:var(--bg2);border-top:1px solid var(--code-border);
+  max-height:0;overflow:hidden;transition:max-height .35s ease;
+}
+.examples-drawer.open{max-height:600px;overflow-y:auto}
+.examples-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:.5rem;padding:1rem;
+}
+.example-card{
+  background:var(--bg3);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:.7rem .9rem;cursor:pointer;
+  transition:all .2s;
+}
+.example-card:hover{border-color:var(--accent2);background:var(--bg4)}
+.example-card h4{
+  font-size:.72rem;color:var(--accent3);margin-bottom:.3rem;
+  font-family:'Noto Sans JP',sans-serif;font-weight:500;
+}
+.example-card code{
+  font-size:.7rem;color:var(--fg2);display:block;
+  white-space:pre-wrap;line-height:1.5;
+}
+.example-card .tag{
+  display:inline-block;font-size:.55rem;padding:.1rem .4rem;
+  background:var(--bg);border-radius:3px;color:var(--fg3);
+  margin-top:.4rem;
+}
+#toggle-examples{
+  background:transparent;border:1px solid var(--code-border);color:var(--fg3);
+  padding:.35rem .7rem;border-radius:var(--radius);cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;font-size:.68rem;transition:all .15s;
+}
+#toggle-examples:hover{color:var(--accent3);border-color:var(--accent2)}
+
+/* Footer */
+footer{
+  padding:.6rem 2rem;border-top:1px solid var(--bg4);
+  font-size:.62rem;color:var(--fg3);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;
+  font-family:'IBM Plex Mono',monospace;
+}
+footer a{color:var(--accent2);text-decoration:none}
+footer a:hover{color:var(--accent3)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--fg3)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Rei<span>0₀式 Playground</span></h1>
+  <nav>
+    <a href="https://www.npmjs.com/package/rei-lang" target="_blank">npm</a>
+    <a href="https://github.com/fc0web/rei-lang" target="_blank">GitHub</a>
+    <a id="toggle-examples">例を見る ▾</a>
+  </nav>
+</header>
+
+<div class="examples-drawer" id="examples-drawer">
+  <div class="examples-grid" id="examples-grid"></div>
+</div>
+
+<main>
+  <div class="panel input-panel">
+    <div class="panel-header">
+      <span>入力</span>
+      <span class="hint">Rei v0.3 — 25 axioms, 226 tests</span>
+    </div>
+    <textarea id="editor" spellcheck="false" placeholder="𝕄{5; 1, 2, 3, 4} |> compute&#10;&#10;// ↑ ここにReiコードを書いて実行"></textarea>
+    <div class="run-bar">
+      <button id="run-btn">▶ 実行</button>
+      <span class="run-hint">Ctrl+Enter</span>
+      <button id="clear-btn">クリア</button>
+    </div>
+  </div>
+  <div class="panel output-panel">
+    <div class="panel-header">
+      <span>出力</span>
+      <span class="hint" id="exec-time"></span>
+    </div>
+    <div id="output">
+      <div class="out-line info">← コードを入力して実行してください</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Rei (0₀式/れいしき) v0.3 — D-FUMT Computational Language</span>
+  <span>© Nobuki Fujimoto | Apache-2.0 | <a href="https://note.com/fc0web" target="_blank">note.com/fc0web</a></span>
+</footer>
+
+<script>
+// ===== Rei Engine (inlined bundle) =====
+(()=>{var s={NUMBER:"NUMBER",STRING:"STRING",EXT_LIT:"EXT_LIT",SYMBOL_0_0:"SYMBOL_0_0",SYMBOL_DOT_PRIM:"SYMBOL_DOT_PRIM",BOOL_TRUE:"BOOL_TRUE",BOOL_FALSE:"BOOL_FALSE",CONST_PI:"CONST_PI",CONST_E:"CONST_E",CONST_PHI:"CONST_PHI",CONST_I:"CONST_I",CONST_PHI_UP:"CONST_PHI_UP",CONST_PSI_UP:"CONST_PSI_UP",CONST_OMEGA_UP:"CONST_OMEGA_UP",CONST_EMPTY:"CONST_EMPTY",QUAD_TOP:"QUAD_TOP",QUAD_BOT:"QUAD_BOT",QUAD_TOP_PI:"QUAD_TOP_PI",QUAD_BOT_PI:"QUAD_BOT_PI",LET:"LET",MUT:"MUT",COMPRESS:"COMPRESS",WEIGHT:"WEIGHT",GENESIS:"GENESIS",IF:"IF",THEN:"THEN",ELSE:"ELSE",MATCH:"MATCH",CASE:"CASE",WITNESSED:"WITNESSED",BY:"BY",TRUE:"TRUE",FALSE:"FALSE",NULL:"NULL",TEMPORAL:"TEMPORAL",TIMELESS:"TIMELESS",SPACE:"SPACE",LAYER:"LAYER",IDENT:"IDENT",PLUS:"PLUS",MINUS:"MINUS",STAR:"STAR",SLASH:"SLASH",OPLUS:"OPLUS",OTIMES:"OTIMES",CDOT:"CDOT",PIPE_OP:"PIPE_OP",EXTEND:"EXTEND",REDUCE:"REDUCE",ASSIGN:"ASSIGN",DOT:"DOT",ARROW:"ARROW",SEMICOLON:"SEMICOLON",COMMA:"COMMA",COLON:"COLON",LPAREN:"LPAREN",RPAREN:"RPAREN",LBRACE:"LBRACE",RBRACE:"RBRACE",LBRACKET:"LBRACKET",RBRACKET:"RBRACKET",CONVERGE:"CONVERGE",DIVERGE:"DIVERGE",REFLECT:"REFLECT",AND:"AND",OR:"OR",NOT:"NOT",GT_K:"GT_K",LT_K:"LT_K",EQ_K:"EQ_K",GT:"GT",LT:"LT",EQ:"EQ",NEQ:"NEQ",GTE:"GTE",LTE:"LTE",MDIM_OPEN:"MDIM_OPEN",NEWLINE:"NEWLINE",EOF:"EOF"},fe={let:s.LET,mut:s.MUT,compress:s.COMPRESS,weight:s.WEIGHT,genesis:s.GENESIS,if:s.IF,then:s.THEN,else:s.ELSE,match:s.MATCH,case:s.CASE,witnessed:s.WITNESSED,by:s.BY,true:s.TRUE,false:s.FALSE,null:s.NULL,Temporal:s.TEMPORAL,Timeless:s.TIMELESS,space:s.SPACE,layer:s.LAYER},A=new Set("oxzwensbua".split("")),C=class{constructor(e){this.source=e;this.pos=0;this.line=1;this.col=1;this.tokens=[];this.chars=Array.from(e)}tokenize(){for(this.tokens=[];this.pos<this.chars.length&&(this.skipWhitespaceAndComments(),!(this.pos>=this.chars.length));){let e=this.chars[this.pos];if(e===`
+`){this.emit(s.NEWLINE,`
+`),this.advance(),this.line++,this.col=1;continue}if(e==='"'){this.readString();continue}if(e==="0"&&this.peek(1)==="\u2080"){this.emit(s.SYMBOL_0_0,"0\u2080"),this.advance(),this.advance();continue}if(e==="\u{1D544}"&&this.peek(1)==="{"){this.emit(s.MDIM_OPEN,"\u{1D544}{"),this.advance(),this.advance();continue}if(e==="\u7A7A"){this.emit(s.SPACE,"\u7A7A"),this.advance();continue}if(e==="\u5C64"){this.emit(s.LAYER,"\u5C64"),this.advance();continue}if(!(this.isExtStart(e)&&this.readExtLit())){if(this.isDigit(e)||e==="-"&&this.isDigit(this.peek(1)??"")&&this.shouldNegateBePrefix()){this.readNumber();continue}if(!this.readUnicodeToken(e)&&!this.readMultiCharOp(e)&&!this.readSingleCharOp(e)){if(this.isIdentStart(e)){this.readIdentOrKeyword();continue}this.advance()}}}return this.emit(s.EOF,""),this.tokens.filter(e=>e.type!==s.NEWLINE)}skipWhitespaceAndComments(){for(;this.pos<this.chars.length;){let e=this.chars[this.pos];if(e===" "||e==="	"||e==="\r"){this.advance();continue}if(e==="/"&&this.peek(1)==="/"){for(;this.pos<this.chars.length&&this.chars[this.pos]!==`
+`;)this.advance();continue}if(e==="/"&&this.peek(1)==="*"){for(this.advance(),this.advance();this.pos<this.chars.length;){if(this.chars[this.pos]==="*"&&this.peek(1)==="/"){this.advance(),this.advance();break}this.chars[this.pos]===`
+`&&(this.line++,this.col=0),this.advance()}continue}break}}readString(){let e=this.col;this.advance();let t="";for(;this.pos<this.chars.length&&this.chars[this.pos]!=='"';){if(this.chars[this.pos]==="\\"&&this.pos+1<this.chars.length){this.advance();let r=this.chars[this.pos];r==="n"?t+=`
+`:r==="t"?t+="	":r==="\\"?t+="\\":r==='"'?t+='"':t+=r}else t+=this.chars[this.pos];this.advance()}this.pos<this.chars.length&&this.advance(),this.tokens.push({type:s.STRING,value:t,line:this.line,col:e})}isExtStart(e){if(e==="0"&&A.has(this.peek(1)??""))return!0;if(e==="\u03C0"||e==="\u03C6"){let t=this.peek(1);if(t&&A.has(t))return!0}if(e==="e"||e==="i"){let t=this.peek(1);if(!t||!A.has(t))return!1;let r=1;for(;this.peek(r)&&A.has(this.peek(r));)r++;let n=this.peek(r);return!(n&&/[a-zA-Z0-9_]/.test(n))}return!1}readExtLit(){let e=this.col,t=this.chars[this.pos];this.advance();let r="";for(;this.pos<this.chars.length&&A.has(this.chars[this.pos]);)r+=this.chars[this.pos],this.advance();return r.length>0?(this.tokens.push({type:s.EXT_LIT,value:t+r,line:this.line,col:e}),!0):(this.pos--,this.col--,!1)}readNumber(){let e=this.col,t="";for(this.chars[this.pos]==="-"&&(t+="-",this.advance());this.pos<this.chars.length&&this.isDigit(this.chars[this.pos]);)t+=this.chars[this.pos],this.advance();if(this.pos<this.chars.length&&this.chars[this.pos]==="."&&this.isDigit(this.peek(1)??""))for(t+=".",this.advance();this.pos<this.chars.length&&this.isDigit(this.chars[this.pos]);)t+=this.chars[this.pos],this.advance();this.tokens.push({type:s.NUMBER,value:t,line:this.line,col:e})}readUnicodeToken(e){let t=[["\u2295",s.OPLUS],["\u2297",s.OTIMES],["\xB7",s.CDOT],["\u03C0",s.CONST_PI],["\u03C6",s.CONST_PHI],["\u03A6",s.CONST_PHI_UP],["\u03A8",s.CONST_PSI_UP],["\u03A9",s.CONST_OMEGA_UP],["\u2205",s.CONST_EMPTY],["\u22A4",s.QUAD_TOP],["\u22A5",s.QUAD_BOT],["\u290A",s.CONVERGE],["\u290B",s.DIVERGE],["\u25C1",s.REFLECT],["\u2227",s.AND],["\u2228",s.OR],["\xAC",s.NOT],["\u30FB",s.SYMBOL_DOT_PRIM]];if(e==="\u22A4"&&this.peek(1)==="\u03C0")return this.emit(s.QUAD_TOP_PI,"\u22A4\u03C0"),this.advance(),this.advance(),!0;if(e==="\u22A5"&&this.peek(1)==="\u03C0")return this.emit(s.QUAD_BOT_PI,"\u22A5\u03C0"),this.advance(),this.advance(),!0;for(let[r,n]of t)if(e===r)return this.emit(n,r),this.advance(),!0;return!1}readMultiCharOp(e){let t=this.peek(1);return e==="|"&&t===">"?(this.emit(s.PIPE_OP,"|>"),this.advance(),this.advance(),!0):e===">"&&t===">"?(this.emit(s.EXTEND,">>"),this.advance(),this.advance(),!0):e==="<"&&t==="<"?(this.emit(s.REDUCE,"<<"),this.advance(),this.advance(),!0):e==="-"&&t===">"?(this.emit(s.ARROW,"->"),this.advance(),this.advance(),!0):e==="="&&t==="="?(this.emit(s.EQ,"=="),this.advance(),this.advance(),!0):e==="!"&&t==="="?(this.emit(s.NEQ,"!="),this.advance(),this.advance(),!0):e===">"&&t==="="?(this.emit(s.GTE,">="),this.advance(),this.advance(),!0):e==="<"&&t==="="?(this.emit(s.LTE,"<="),this.advance(),this.advance(),!0):e===">"&&t==="\u03BA"?(this.emit(s.GT_K,">\u03BA"),this.advance(),this.advance(),!0):e==="<"&&t==="\u03BA"?(this.emit(s.LT_K,"<\u03BA"),this.advance(),this.advance(),!0):e==="="&&t==="\u03BA"?(this.emit(s.EQ_K,"=\u03BA"),this.advance(),this.advance(),!0):!1}readSingleCharOp(e){let r={"+":s.PLUS,"-":s.MINUS,"*":s.STAR,"/":s.SLASH,"=":s.ASSIGN,".":s.DOT,",":s.COMMA,":":s.COLON,";":s.SEMICOLON,"(":s.LPAREN,")":s.RPAREN,"{":s.LBRACE,"}":s.RBRACE,"[":s.LBRACKET,"]":s.RBRACKET,"|":s.PIPE_OP,">":s.GT,"<":s.LT}[e];return r?(this.emit(r,e),this.advance(),!0):!1}readIdentOrKeyword(){let e=this.col,t="";for(;this.pos<this.chars.length&&this.isIdentPart(this.chars[this.pos]);)t+=this.chars[this.pos],this.advance();if(t.startsWith("compress")&&t.length>8){let n=t.slice(8);if(["\u2070","\xB9","\xB2","\xB3","\u221E"].includes(n)){this.tokens.push({type:s.COMPRESS,value:t,line:this.line,col:e});return}}let r=fe[t];r?this.tokens.push({type:r,value:t,line:this.line,col:e}):this.tokens.push({type:s.IDENT,value:t,line:this.line,col:e})}advance(){this.pos++,this.col++}peek(e){return this.chars[this.pos+e]}emit(e,t){this.tokens.push({type:e,value:t,line:this.line,col:this.col})}isDigit(e){return e>="0"&&e<="9"}isIdentStart(e){return/[a-zA-Z_α-ωΑ-Ω𝕄𝕌]/.test(e)}isIdentPart(e){return/[a-zA-Z0-9_α-ωΑ-Ω⁰¹²³∞𝕄𝕌]/.test(e)}shouldNegateBePrefix(){if(this.tokens.length===0)return!0;let e=this.tokens[this.tokens.length-1];return[s.LPAREN,s.COMMA,s.ASSIGN,s.PLUS,s.MINUS,s.STAR,s.SLASH,s.OPLUS,s.OTIMES,s.PIPE_OP,s.SEMICOLON,s.LBRACKET,s.COLON,s.MDIM_OPEN,s.LBRACE].includes(e.type)}};function m(a,e={}){return{type:a,...e}}var O=class{constructor(e){this.pos=0;this.tokens=e.filter(t=>t.type!==s.NEWLINE)}parseProgram(){let e=[];for(;!this.isAtEnd();){for(;this.check(s.SEMICOLON);)this.advance();if(this.isAtEnd())break;for(e.push(this.parseStatement());this.check(s.SEMICOLON);)this.advance()}return m("Program",{body:e})}parseStatement(){return this.check(s.LET)?this.parseLetStmt():this.check(s.COMPRESS)?this.parseCompressDef():this.parseExpression()}parseLetStmt(){this.expect(s.LET);let e=this.match(s.MUT),t=this.expect(s.IDENT).value,r=null,n=null;this.match(s.COLON)&&(r=this.expect(s.IDENT).value,this.check(s.IDENT)&&this.peek().value.startsWith("@")&&(n=this.advance().value.slice(1))),this.expect(s.ASSIGN);let o=this.parseExpression(),i=null;return this.match(s.WITNESSED)&&(this.expect(s.BY),i=this.expect(s.STRING).value),m(e?"MutStmt":"LetStmt",{name:t,init:o,typeAnnotation:r,phaseGuard:n,witness:i})}parseCompressDef(){let e=this.expect(s.COMPRESS),t=this.parseCompressLevel(e.value),r=this.expect(s.IDENT).value;this.expect(s.LPAREN);let n=[];if(!this.check(s.RPAREN))for(n.push(this.parseParamDecl());this.match(s.COMMA);)n.push(this.parseParamDecl());this.expect(s.RPAREN);let o=null;this.match(s.ARROW)&&(o=this.expect(s.IDENT).value),this.expect(s.ASSIGN);let i=this.parseExpression();return m("CompressDef",{name:r,params:n,body:i,level:t,returnType:o})}parseCompressLevel(e){return e==="compress"?-1:{"compress\u2070":0,"compress\xB9":1,"compress\xB2":2,"compress\xB3":3,"compress\u221E":1/0}[e]??-1}parseParamDecl(){let e;return this.check(s.IDENT)?e=this.advance().value:this.check(s.CONST_E)?e=this.advance().value:this.check(s.CONST_I)?e=this.advance().value:e=this.expect(s.IDENT).value,this.match(s.COLON)&&this.expect(s.IDENT),e}parseExpression(){return this.parsePipe()}parsePipe(){let e=this.parseLogicOr();for(;this.check(s.PIPE_OP)||this.check(s.REFLECT);)if(this.match(s.PIPE_OP)){let t=this.parsePipeCommand();e=m("Pipe",{input:e,command:t})}else if(this.match(s.REFLECT)){let t=this.parseLogicOr();e=m("ReflectOp",{left:e,right:t})}return e}parsePipeCommand(){if(this.check(s.IDENT)||this.check(s.GENESIS)||this.check(s.SPACE)||this.check(s.LAYER)){let e=this.advance().value,t=null,r=[];if(this.match(s.COLON)&&(t=this.expect(s.IDENT).value),this.match(s.LPAREN)){if(!this.check(s.RPAREN))for(r.push(this.parseExpression());this.match(s.COMMA);)r.push(this.parseExpression());this.expect(s.RPAREN)}return m("PipeCmd",{cmd:e,mode:t,args:r})}if(this.match(s.CONVERGE))return m("PipeCmd",{cmd:"\u290A",mode:null,args:[]});if(this.match(s.DIVERGE))return m("PipeCmd",{cmd:"\u290B",mode:null,args:[]});throw this.error("\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9\u304C\u5FC5\u8981")}parseLogicOr(){let e=this.parseLogicAnd();for(;this.match(s.OR);){let t=this.parseLogicAnd();e=m("BinOp",{op:"\u2228",left:e,right:t})}return e}parseLogicAnd(){let e=this.parseComparison();for(;this.match(s.AND);){let t=this.parseComparison();e=m("BinOp",{op:"\u2227",left:e,right:t})}return e}parseComparison(){let e=this.parseAddition(),t=[s.GT_K,s.LT_K,s.EQ_K,s.EQ,s.NEQ,s.GT,s.LT,s.GTE,s.LTE];for(;t.some(r=>this.check(r));){let r=this.advance(),n=this.parseAddition();e=m("BinOp",{op:r.value,left:e,right:n})}return e}parseAddition(){let e=this.parseMultiplication();for(;this.check(s.PLUS)||this.check(s.MINUS)||this.check(s.OPLUS);){let t=this.advance().value,r=this.parseMultiplication();e=m("BinOp",{op:t,left:e,right:r})}return e}parseMultiplication(){let e=this.parseExtendReduce();for(;this.check(s.STAR)||this.check(s.SLASH)||this.check(s.OTIMES)||this.check(s.CDOT);){let t=this.advance().value,r=this.parseExtendReduce();e=m("BinOp",{op:t,left:e,right:r})}return e}parseExtendReduce(){let e=this.parseUnary();for(;;)if(this.match(s.EXTEND))if(this.match(s.COLON)){let t=this.expect(s.IDENT).value;e=m("Extend",{target:e,subscript:t})}else{let t=this.parseUnary();e=m("Extend",{target:e,expr:t})}else if(this.match(s.REDUCE))e=m("Reduce",{target:e});else if(this.match(s.CONVERGE)){let t=this.parseUnary();e=m("ConvergeOp",{left:e,right:t})}else if(this.match(s.DIVERGE)){let t=this.parseUnary();e=m("DivergeOp",{left:e,right:t})}else break;return e}parseUnary(){if(this.match(s.NOT)){let e=this.parseUnary();return m("UnaryOp",{op:"\xAC",operand:e})}if(this.check(s.MINUS)&&this.shouldNegateBePrefix()){this.advance();let e=this.parseUnary();return m("UnaryOp",{op:"-",operand:e})}return this.parsePostfix()}parsePostfix(){let e=this.parsePrimary();for(;;)if(this.match(s.DOT)){if(this.check(s.IDENT)){let t=this.advance().value;this.check(s.DOT)&&this.checkAhead(s.IDENT,1)&&this.tokens[this.pos+1]?.value==="\u03BA"?(this.advance(),this.advance(),e=m("MemberAccess",{object:e,member:t,kappa:!0})):e=m("MemberAccess",{object:e,member:t,kappa:!1})}}else if(this.match(s.LPAREN)){let t=[];if(!this.check(s.RPAREN))for(t.push(this.parseExpression());this.match(s.COMMA);)t.push(this.parseExpression());this.expect(s.RPAREN),e=m("FnCall",{callee:e,args:t})}else if(this.match(s.LBRACKET)){let t=this.parseExpression();this.expect(s.RBRACKET),e=m("IndexAccess",{object:e,index:t})}else break;return e}parsePrimary(){if(this.check(s.NUMBER)){let e=this.advance().value;return m("NumLit",{value:parseFloat(e)})}if(this.check(s.STRING))return m("StrLit",{value:this.advance().value});if(this.match(s.TRUE))return m("BoolLit",{value:!0});if(this.match(s.FALSE))return m("BoolLit",{value:!1});if(this.match(s.NULL))return m("NullLit",{});if(this.check(s.EXT_LIT)){let e=this.advance().value;return m("ExtLit",{raw:e})}if(this.match(s.SYMBOL_0_0))return m("ExtLit",{raw:"0\u2080"});if(this.match(s.SYMBOL_DOT_PRIM))return m("ConstLit",{value:"\u30FB"});if(this.match(s.CONST_PI))return m("NumLit",{value:Math.PI});if(this.match(s.CONST_E))return m("NumLit",{value:Math.E});if(this.match(s.CONST_PHI))return m("NumLit",{value:(1+Math.sqrt(5))/2});if(this.match(s.CONST_I))return m("ConstLit",{value:"i"});if(this.match(s.CONST_EMPTY))return m("ConstLit",{value:"\u2205"});if(this.match(s.CONST_PHI_UP))return m("ConstLit",{value:"\u03A6"});if(this.match(s.CONST_PSI_UP))return m("ConstLit",{value:"\u03A8"});if(this.match(s.CONST_OMEGA_UP))return m("ConstLit",{value:"\u03A9"});if(this.match(s.QUAD_TOP))return m("QuadLit",{value:"top"});if(this.match(s.QUAD_BOT))return m("QuadLit",{value:"bottom"});if(this.match(s.QUAD_TOP_PI))return m("QuadLit",{value:"topPi"});if(this.match(s.QUAD_BOT_PI))return m("QuadLit",{value:"bottomPi"});if(this.match(s.MDIM_OPEN))return this.parseMDimLit();if(this.match(s.LBRACKET)){let e=[];if(!this.check(s.RBRACKET))for(e.push(this.parseExpression());this.match(s.COMMA);)e.push(this.parseExpression());return this.expect(s.RBRACKET),m("ArrayLit",{elements:e})}if(this.match(s.LPAREN)){let e=this.parseExpression();return this.expect(s.RPAREN),e}if(this.check(s.IF))return this.parseIfExpr();if(this.check(s.MATCH))return this.parseMatchExpr();if(this.check(s.GENESIS))return this.advance(),this.match(s.LPAREN)&&this.expect(s.RPAREN),m("FnCall",{callee:m("Ident",{name:"genesis"}),args:[]});if(this.check(s.SPACE))return this.parseSpaceLit();if(this.check(s.IDENT)){let e=this.advance().value;return m("Ident",{name:e})}throw this.error(`\u4E88\u671F\u3057\u306A\u3044\u30C8\u30FC\u30AF\u30F3: ${this.peek().value} (${this.peek().type})`)}parseMDimLit(){let e=this.parseExpression();this.expect(s.SEMICOLON);let t=[];for(t.push(this.parseExpression());this.match(s.COMMA)&&!(this.check(s.RBRACE)||this.check(s.WEIGHT));)t.push(this.parseExpression());let r=null;this.match(s.WEIGHT)&&(r=this.parseExpression());let n="weighted";return this.match(s.COLON)&&this.check(s.IDENT)&&(n=this.advance().value),this.expect(s.RBRACE),m("MDimLit",{center:e,neighbors:t,weight:r,mode:n})}parseSpaceLit(){this.expect(s.SPACE),this.expect(s.LBRACE);let e=[],t="flat";for(this.check(s.IDENT)&&this.peek().value==="topology"&&(this.advance(),this.expect(s.COLON),this.check(s.IDENT)&&(t=this.advance().value),this.match(s.COMMA));!this.check(s.RBRACE)&&!this.isAtEnd();){if(!this.check(s.LAYER))throw this.error(`\u5C64\u306E\u5B9A\u7FA9\u304C\u5FC5\u8981\u3067\u3059\u3002\u5B9F\u969B: ${this.peek().type} ("${this.peek().value}")`);this.expect(s.LAYER);let r=this.parseExpression();this.expect(s.COLON);let n=[];for(n.push(this.parseExpression());this.match(s.COMMA)&&!(this.check(s.LAYER)||this.check(s.RBRACE));)n.push(this.parseExpression());e.push({index:r,nodes:n})}return this.expect(s.RBRACE),m("SpaceLit",{layers:e,topology:t})}parseIfExpr(){this.expect(s.IF);let e=this.parseExpression();this.expect(s.THEN);let t=this.parseExpression();this.expect(s.ELSE);let r=this.parseExpression();return m("IfExpr",{cond:e,then:t,else:r})}parseMatchExpr(){this.expect(s.MATCH);let e=this.parseExpression();this.expect(s.LBRACE);let t=[];for(;!this.check(s.RBRACE)&&!this.isAtEnd();){this.expect(s.CASE);let r=this.parsePrimary();this.expect(s.ARROW);let n=this.parseExpression();t.push({pattern:r,body:n}),this.match(s.COMMA)}return this.expect(s.RBRACE),m("MatchExpr",{target:e,cases:t})}peek(){return this.tokens[this.pos]||{type:s.EOF,value:"",line:0,col:0}}isAtEnd(){return this.peek().type===s.EOF}check(e){return this.peek().type===e}checkAhead(e,t){let r=this.pos+t;return r<this.tokens.length&&this.tokens[r].type===e}advance(){let e=this.tokens[this.pos];return this.pos++,e}match(e){return this.check(e)?(this.advance(),!0):!1}expect(e){if(this.check(e))return this.advance();let t=this.peek();throw this.error(`\u671F\u5F85: ${e}, \u5B9F\u969B: ${t.type} ("${t.value}")`)}error(e){let t=this.peek();return new Error(`[\u884C ${t.line}:${t.col}] \u69CB\u6587\u30A8\u30E9\u30FC: ${e}`)}shouldNegateBePrefix(){if(this.pos===0)return!0;let e=this.tokens[this.pos-1];return[s.LPAREN,s.COMMA,s.ASSIGN,s.PLUS,s.MINUS,s.STAR,s.SLASH,s.OPLUS,s.OTIMES,s.PIPE_OP,s.SEMICOLON,s.LBRACKET,s.COLON,s.MDIM_OPEN,s.LBRACE].includes(e.type)}};function Y(a="flat"){return{reiType:"Space",topology:a,layers:new Map,globalStage:0}}function _(a,e,t,r,n,o){a.layers.has(e)||a.layers.set(e,{index:e,nodes:[],frozen:!1});let i=a.layers.get(e),u={reiType:"DNode",center:t,neighbors:[...r],mode:n||"weighted",weights:o,layerIndex:e,nodeIndex:i.nodes.length,stage:0,momentum:0,history:[t],frozen:!1};return i.nodes.push(u),u}function L(a){let{center:e,neighbors:t,mode:r}=a;if(t.length===0)return e;switch(r){case"weighted":default:{let n=t.reduce((o,i)=>o+i,0)/t.length;return e+n}case"geometric":{let n=t.reduce((o,i)=>o*Math.abs(i),1);return e*Math.pow(n,1/t.length)}case"harmonic":{let n=t.length/t.reduce((o,i)=>o+1/(Math.abs(i)||1),0);return e+n}}}function k(a){if(a.frozen)return;let e=L(a);a.history.push(e);let t=e,r=t-a.center;a.momentum=r,a.center=t,a.stage++}function B(a,e){for(let[t,r]of a.layers)if(!(e!==void 0&&t!==e)&&!r.frozen)for(let n of r.nodes)k(n);a.globalStage++}function q(a,e,t,r="weighted"){let n=e.type==="steps"?e.max:100,o=e.type==="epsilon"?e.threshold:1e-6;for(let i=0;i<n;i++){let u=[];for(let[,c]of a.layers)for(let h of c.nodes)u.push(h.center);if(B(a,t),e.type==="converged"||e.type==="epsilon"){let c=0,h=0;for(let[,l]of a.layers)for(let p of l.nodes)h=Math.max(h,Math.abs(p.center-u[c++]));if(h<o)break}if(e.type==="fixed")break}return a}function X(a){return{direction:a.momentum>0?"expand":a.momentum<0?"contract":"rest",momentum:a.momentum,stage:a.stage}}function Z(a){return[...a.history]}function J(a){return{tendency:a.momentum>0?"expand":a.momentum<0?"contract":"rest",strength:Math.abs(a.momentum)}}function U(a){let e=0,t=0,r=0,n=0;for(let[,o]of a.layers)for(let i of o.nodes)e++,i.frozen||t++,Math.abs(i.momentum)<1e-6&&r++,i.momentum>0&&n++;return{reiType:"SigmaResult",field:{layers:a.layers.size,total_nodes:e,active_nodes:t,topology:a.topology},flow:{global_stage:a.globalStage,converged_nodes:r,expanding_nodes:n},memory:[],layer:0,will:{tendency:"rest",strength:0},relation:[]}}function ee(a,e=.5){let t=[],r=[];for(let[,n]of a.layers)for(let o of n.nodes)r.push(o);for(let n=0;n<r.length;n++)for(let o=n+1;o<r.length;o++){let i=r[n],u=r[o],c=Math.abs(i.center-u.center),h=Math.max(Math.abs(i.center),Math.abs(u.center),1),l=1-c/h;l>=e&&t.push({nodeA:{layer:i.layerIndex,index:i.nodeIndex},nodeB:{layer:u.layerIndex,index:u.nodeIndex},strength:l})}return t}function de(){return{memory:[],tendency:"rest",pipeCount:0}}function ye(a,e,t){let r=f(a),n=f(e),o=t?{...t,memory:[...t.memory,n],pipeCount:t.pipeCount+1}:{memory:[n],tendency:"rest",pipeCount:1};return o.tendency=ge(o.memory,r),r===null||typeof r!="object"?{reiType:"ReiVal",value:r,__sigma__:o}:(r.__sigma__=o,r)}function ge(a,e){if(a.length<2)return"rest";let t=a.slice(-5).map(D),r=D(e),n=0,o=0,i=0;for(let u=0;u<t.length;u++){let c=u===0?t[0]:t[u-1],h=u===t.length-1?r:t[u+1];h>c?n++:h<c&&o++,u>0&&h>c!=t[u]>t[u-1]&&i++}return i>=t.length-1?"spiral":n>o?"expand":o>n?"contract":"rest"}function D(a){if(typeof a=="number")return a;if(a==null)return 0;if(typeof a=="boolean")return a?1:0;if(typeof a=="object"&&a.reiType==="ReiVal")return D(a.value);if(typeof a=="object"&&a.reiType==="Ext")return a.valStar();if(typeof a=="object"&&a.reiType==="MDim"){let{center:e,neighbors:t,mode:r}=a,n=a.weights??t.map(()=>1);if(t.length===0)return e;let i=n.reduce((c,h)=>c+h,0),u=t.reduce((c,h,l)=>c+(n[l]??1)*h,0)/(i||1);return e+u}return 0}function f(a){return a!==null&&typeof a=="object"&&a.reiType==="ReiVal"?a.value:a}function P(a){return a!==null&&typeof a=="object"&&(a.reiType==="ReiVal"||a.__sigma__)?a.__sigma__:de()}function te(a,e){let t=f(a),r,n=0,o={direction:e.tendency==="rest"?"rest":e.tendency,momentum:e.pipeCount,velocity:0};t!==null&&typeof t=="object"?t.reiType==="MDim"?r={center:t.center,neighbors:[...t.neighbors],mode:t.mode,dim:t.neighbors.length}:t.reiType==="Ext"?(r={base:t.base,order:t.order,subscripts:t.subscripts},n=t.order):t.reiType==="State"?(r={state:t.state,omega:t.omega},o={direction:"forward",momentum:t.history.length-1,velocity:1}):t.reiType==="Quad"?r={value:t.value}:t.reiType==="DNode"?(r={center:t.center,neighbors:[...t.neighbors],layer:t.layerIndex,index:t.nodeIndex},n=t.layerIndex,o={stage:t.stage,directions:t.neighbors.length,momentum:t.momentum,velocity:0},t.diffusionHistory.length>=2&&(o.velocity=Math.abs(t.diffusionHistory[t.diffusionHistory.length-1].result-t.diffusionHistory[t.diffusionHistory.length-2].result))):t.reiType==="Space"?r={type:"space"}:Array.isArray(t)?r={length:t.length,first:t[0]??null,last:t[t.length-1]??null}:r={type:typeof t}:typeof t=="number"?r={center:t,neighbors:[]}:typeof t=="string"?r={value:t,length:t.length}:typeof t=="boolean"?r={value:t}:r={value:null};let i=[...e.memory];if(t!==null&&typeof t=="object"&&t.reiType==="State"&&t.history&&i.length===0&&t.history.length>1)for(let c=0;c<t.history.length-1;c++)i.push(t.history[c]);let u={tendency:e.tendency,strength:e.pipeCount>0?Math.min(e.pipeCount/5,1):0,history:e.memory.map((c,h)=>{if(h===0)return"rest";let l=D(e.memory[h-1]),p=D(e.memory[h]);return p>l?"expand":p<l?"contract":"rest"})};return{reiType:"SigmaResult",field:r,flow:o,memory:i,layer:n,will:u,relation:[]}}var I=class{constructor(e=null){this.bindings=new Map;this.parent=e}define(e,t,r=!1){this.bindings.set(e,{value:t,mutable:r})}get(e){let t=this.bindings.get(e);if(t)return t.value;if(this.parent)return this.parent.get(e);throw new Error(`\u672A\u5B9A\u7FA9\u306E\u5909\u6570: ${e}`)}set(e,t){let r=this.bindings.get(e);if(r){if(!r.mutable)throw new Error(`\u4E0D\u5909\u306E\u5909\u6570\u306B\u4EE3\u5165: ${e}`);r.value=t;return}if(this.parent){this.parent.set(e,t);return}throw new Error(`\u672A\u5B9A\u7FA9\u306E\u5909\u6570: ${e}`)}has(e){return this.bindings.has(e)?!0:this.parent?this.parent.has(e):!1}getBinding(e){let t=this.bindings.get(e);return t||(this.parent?this.parent.getBinding(e):null)}allBindings(){let e=new Map;if(this.parent)for(let[t,r]of this.parent.allBindings())e.set(t,r);for(let[t,r]of this.bindings)e.set(t,r);return e}};function R(a,e){let t=e.length;return{reiType:"Ext",base:a,order:t,subscripts:e,valStar(){return a===0?Math.pow(.1,t):a*Math.pow(.1,t)}}}function be(a){if(a==="0\u2080")return R(0,"o");let e=a[0],t=a.slice(1),r={0:0,\u03C0:Math.PI,e:Math.E,\u03C6:(1+Math.sqrt(5))/2,i:NaN};return R(r[e]??0,t)}var w=["weighted","multiplicative","harmonic","exponential","geometric","median","minkowski","entropy"];function b(a){let{center:e,neighbors:t,mode:r}=a,n=a.weights??t.map(()=>1),o=t.length;if(o===0)return e;if(typeof r=="string"&&r.startsWith("blend("))return ve(a,r);switch(r){case"weighted":{let i=n.reduce((c,h)=>c+h,0),u=t.reduce((c,h,l)=>c+(n[l]??1)*h,0)/(i||1);return e+u}case"multiplicative":{let i=t.reduce((u,c)=>u*(1+c),1);return e*i}case"harmonic":{let i=t.reduce((u,c)=>u+1/(Math.abs(c)||1),0);return e+o/i}case"exponential":{let i=t.reduce((u,c)=>u+Math.exp(c),0);return e*(i/o)}case"geometric":{let i=t.reduce((u,c)=>u*Math.abs(c||1),1);return e*Math.pow(i,1/o)}case"median":{let i=[...t].sort((h,l)=>h-l),u=Math.floor(o/2),c=o%2===0?(i[u-1]+i[u])/2:i[u];return e+c}case"minkowski":{let i=a.minkowskiP??2,u=t.reduce((c,h)=>c+Math.pow(Math.abs(h),i),0);return e+Math.pow(u/o,1/i)}case"entropy":{let i=t.reduce((h,l)=>h+Math.abs(l),0)||1,c=-t.map(h=>Math.abs(h)/i).reduce((h,l)=>h+(l>0?l*Math.log2(l):0),0);return e*(1+c)}default:return e}}function ve(a,e){let r=e.slice(6,-1).split(",").map(i=>i.trim()),n=0,o=0;for(let i of r){let[u,c]=i.split(":").map(p=>p.trim()),h=parseFloat(c)||0,l=b({...a,mode:u});o+=h*l,n+=h}return n>0?o/n:a.center}function E(a,e,t){let r;if(Array.isArray(a))r=[...a];else if(typeof a=="string")r=Array.from(a).map(u=>u.charCodeAt(0));else if(typeof a=="number")r=Math.abs(a).toString().split("").map(Number);else if(a!==null&&typeof a=="object"&&a.reiType==="MDim")r=[a.center,...a.neighbors];else return{reiType:"MDim",center:a??0,neighbors:[],mode:"weighted"};if(r.length===0)return{reiType:"MDim",center:0,neighbors:[],mode:"weighted"};let n=0;if(e===":max"||e==="max")n=r.indexOf(Math.max(...r.map(Number)));else if(e===":min"||e==="min")n=r.indexOf(Math.min(...r.map(Number)));else if(e===":first"||e==="first")n=0;else if(e===":last"||e==="last")n=r.length-1;else if(e===":middle"||e==="middle")n=Math.floor(r.length/2);else if(typeof e=="number"){let u=r.indexOf(e);n=u>=0?u:0}let o=r[n],i=r.filter((u,c)=>c!==n);return{reiType:"MDim",center:o,neighbors:i,mode:"weighted"}}function V(a){let e;if(Array.isArray(a))e=[...a];else if(typeof a=="string")e=Array.from(a).map(t=>t.charCodeAt(0));else if(typeof a=="number")e=Math.abs(a).toString().split("").map(Number);else if(a!==null&&typeof a=="object"&&a.reiType==="MDim")e=[a.center,...a.neighbors];else return[{reiType:"MDim",center:a??0,neighbors:[],mode:"weighted"}];return e.length===0?[]:e.map((t,r)=>{let n=e[r],o=e.filter((i,u)=>u!==r);return{reiType:"MDim",center:n,neighbors:o,mode:"weighted"}})}function T(a){return!a||a.reiType!=="MDim"?[]:w.map(e=>({mode:e,value:b({...a,mode:e})}))}function Ee(a,e,t){if(!a||a.reiType!=="MDim")return null;let r=b({...a,mode:e}),n=b({...a,mode:t});return{reiType:"CompareResult",mode1:{mode:e,value:r},mode2:{mode:t,value:n},diff:Math.abs(r-n),ratio:n!==0?r/n:1/0}}function Me(a){return V(a).map((t,r)=>{let n=w.map(o=>({mode:o,value:b({...t,mode:o})}));return{projectionIndex:r,center:t.center,neighbors:t.neighbors,results:n}})}function G(a){let e=a.reiType==="MDim"?a.center!==null&&typeof a.center=="object"&&a.center.reiType==="MDim"?G(a.center):typeof a.center=="number"?a.center:0:typeof a=="number"?a:0,t=(a.neighbors??[]).map(r=>r!==null&&typeof r=="object"&&r.reiType==="MDim"?G(r):typeof r=="number"?r:0);return b({...a,center:e,neighbors:t})}function K(a,e,t="absorb"){if(a!==null&&typeof a=="object"&&a.reiType==="MDim"){let r=a;switch(t){case"absorb":{let n=e/(Math.abs(r.center)+Math.abs(e)||1),o=r.center+e*n;return{...r,center:o}}case"distribute":{let n=e/(r.neighbors.length||1),o=r.neighbors.map(i=>i+n);return{...r,neighbors:o}}case"reflect":{let n=r.neighbors.map(o=>o-e/(r.neighbors.length||1));return{...r,neighbors:n}}case"resonate":{let n=r.center*(1+Math.sin(e)),o=r.neighbors.map((i,u)=>i*(1+Math.sin(e+(u+1)*Math.PI/r.neighbors.length)));return{...r,center:n,neighbors:o}}default:return K(a,e,"absorb")}}return typeof a=="number"?a+e:a}function Te(a){if(a!==null&&typeof a=="object"&&a.reiType==="MDim"){let e=b(a),t=.001,r=K(a,t,"absorb"),n=b(r);return Math.abs(n-e)/t}return typeof a=="number"?1:0}function Q(a,e){let t=0,r=5;t+=Math.min(e.memory.length/5,1),e.tendency!=="rest"&&(t+=1),t+=Math.min(e.pipeCount/5,1);let n=f(a);if(n!==null&&typeof n=="object"&&(n.reiType==="MDim"&&n.neighbors?t+=Math.min(n.neighbors.length/8,1):n.reiType==="Space"?t+=1:n.reiType==="State"&&n.history&&(t+=Math.min(n.history.length/5,1))),e.memory.length>=2){let o=new Set(e.memory.map(i=>JSON.stringify(i)));t+=Math.min(o.size/e.memory.length,1)}return Math.min(t/r,1)}var oe=.6;function Se(a,e,t){let r=f(a);if(r!==null&&typeof r=="object"&&r.reiType==="MDim"){let n=r;switch(e){case"scale":return{...n,center:n.center*t,neighbors:n.neighbors.map(o=>o*t)};case"shift":return{...n,center:n.center+t,neighbors:n.neighbors.map(o=>o+t)};case"rotate":{let o=n.neighbors.length;if(o===0)return n;let i=(t%o+o)%o,u=[...n.neighbors.slice(i),...n.neighbors.slice(0,i)];return{...n,neighbors:u}}case"invert":return{...n,neighbors:n.neighbors.map(o=>2*n.center-o)};case"normalize_to":{let o=Math.abs(n.center)+n.neighbors.reduce((u,c)=>u+Math.abs(c),0)||1,i=t/o;return{...n,center:n.center*i,neighbors:n.neighbors.map(u=>u*i)}}default:throw new Error(`\u672A\u77E5\u306E\u5909\u63DB: ${e}`)}}if(typeof r=="number")switch(e){case"scale":return r*t;case"shift":return r+t;case"invert":return-r;default:return r}return r}function we(a,e,t){if(!a||a.reiType!=="MDim")return{equivalent:!1,reason:"non-MDim input"};let r=b({...a,mode:e}),n=b({...a,mode:t});return{reiType:"ModeEquivResult",mode1:e,mode2:t,type_equivalent:typeof r==typeof n,value1:r,value2:n,relative_diff:Math.abs(n)>0?Math.abs(r-n)/Math.abs(n):r===n?0:1/0}}function ce(a,e){let t=f(a),r=f(e),n=typeof t=="number"?t:t?.center??0,o=typeof r=="number"?r:r?.center??0,i=t?.neighbors?.length??0,u=r?.neighbors?.length??0,c=i===0&&u===0?1:1-Math.abs(i-u)/Math.max(i,u,1),h=Math.max(Math.abs(n),Math.abs(o),1),l=1-Math.abs(n-o)/h,p=0;if(i>0&&u>0){let g=Math.min(i,u),d=t.neighbors.slice(0,g),v=r.neighbors.slice(0,g),S=d.reduce((x,M,me)=>x+M*v[me],0),le=Math.sqrt(d.reduce((x,M)=>x+M*M,0))||1,pe=Math.sqrt(v.reduce((x,M)=>x+M*M,0))||1;p=S/(le*pe)}let y=c*.3+Math.max(l,0)*.3+(p+1)/2*.4;return{reiType:"ResonanceResult",strength:Math.max(0,Math.min(1,y)),dimMatch:c,valueProximity:Math.max(0,l),patternSimilarity:p,resonates:y>=.5}}function Ne(a,e){let t=f(a),r=Q(a,e)>=oe;return{reiType:"ResonanceField",awakened:r,range:r?"non-local":"local",capacity:r?1:.3,signature:t?.neighbors?.length??0}}function xe(a){let e=f(a);if(!Array.isArray(e))return e?.reiType==="MDim"?e.neighbors.map((r,n)=>({pair:[e.center,r],index:n,strength:1-Math.abs(e.center-r)/Math.max(Math.abs(e.center),Math.abs(r),1)})):[];let t=[];for(let r=0;r<e.length;r++)for(let n=r+1;n<e.length;n++){let o=ce(e[r],e[n]);t.push({pair:[r,n],...o})}return t}function Ae(a){let e=f(a);if(!e||e.reiType!=="MDim")return{reiType:"ResonanceChain",chain:[],depth:0};let t=[],r=new Set;function n(o,i){if(!(r.has(o)||i>5)){r.add(o),t.push({value:o,depth:i});for(let u of e.neighbors)r.has(u)||1-Math.abs(o-u)/Math.max(Math.abs(o),Math.abs(u),1)>.3&&n(u,i+1)}}return n(e.center,0),{reiType:"ResonanceChain",chain:t,depth:t.length}}function Ce(a,e){let t=f(a),r;if(t?.reiType==="MDim")r=t;else if(Array.isArray(t))r=E(t,"first",[]);else if(typeof t=="number"){let n=String(Math.abs(Math.floor(t))).split("").map(Number);r={reiType:"MDim",center:n[0],neighbors:n.slice(1),mode:"weighted"}}else r={reiType:"MDim",center:0,neighbors:[],mode:"weighted"};switch(e){case"graph":{let n=r.neighbors.map((o,i)=>({from:r.center,to:o,weight:Math.abs(r.center-o)}));return{reiType:"GraphProjection",hub:r.center,nodes:[r.center,...r.neighbors],edges:n,degree:r.neighbors.length}}case"series":{let n=[r.center,...r.neighbors],o=[];for(let i=1;i<n.length;i++)o.push(n[i]-n[i-1]);return{reiType:"SeriesProjection",values:n,deltas:o,trend:o.length>0?o.reduce((i,u)=>i+u,0)/o.length>0?"up":"down":"flat",length:n.length}}case"matrix":{let n=r.neighbors.length+1;return{reiType:"MatrixProjection",row:[r.center,...r.neighbors],size:n,diagonal:r.center,trace:r.center}}case"tree":{let n=r.neighbors.map((o,i)=>({value:o,depth:1,index:i,leaf:!0}));return{reiType:"TreeProjection",root:r.center,children:n,height:r.neighbors.length>0?1:0,leaves:r.neighbors.length}}default:throw new Error(`\u672A\u77E5\u306E\u5C04\u5F71\u578B: ${e}`)}}function Oe(a){let e=f(a);if(!Array.isArray(e)){if(e?.reiType==="MDim"){let i=V(e).map(c=>b(c));return{reiType:"MDim",center:i.reduce((c,h)=>c+h,0)/i.length,neighbors:i,mode:"weighted"}}return e}let r=e.map(o=>o?.reiType==="MDim"?o:E(typeof o=="number"?[o]:o,"first",[])).map(o=>o.center);return{reiType:"MDim",center:r.reduce((o,i)=>o+i,0)/r.length,neighbors:r,mode:"weighted"}}function Re(a){let e=f(a),t={reiType:"RepresentableResult",representable:!0,reason:"",lossless:!0};return e==null?(t.representable=!0,t.reason="null \u2192 \u{1D544}{0;}",t.lossless=!0):typeof e=="number"?(t.representable=!0,t.reason="number \u2192 \u{1D544}{n;}",t.lossless=!0):typeof e=="string"?(t.representable=!0,t.reason="string \u2192 \u{1D544}{charCode(center); charCodes(rest)}",t.lossless=!0):typeof e=="boolean"?(t.representable=!0,t.reason="boolean \u2192 \u{1D544}{0|1;}",t.lossless=!0):Array.isArray(e)?(t.representable=!0,t.reason=`array[${e.length}] \u2192 \u{1D544}{first; rest}`,t.lossless=!0):e?.reiType==="MDim"?(t.representable=!0,t.reason="already \u{1D544}",t.lossless=!0):e?.reiType==="Space"?(t.representable=!0,t.reason="Space \u2192 nested \u{1D544} (U3 hierarchical)",t.lossless=!0):e?.reiType?(t.representable=!0,t.reason=`${e.reiType} \u2192 \u{1D544} via structural projection`,t.lossless=!1):typeof e=="object"?(t.representable=!0,t.reason="object \u2192 \u{1D544}{keys; values}",t.lossless=!1):(t.representable=!1,t.reason=`unknown type: ${typeof e}`,t.lossless=!1),t}function De(a,e,t){if(!a||a.reiType!=="MDim")throw new Error("derive_mode: \u{1D544}\u578B\u304C\u5FC5\u8981\u3067\u3059");let r=e.map(i=>b({...a,mode:i})),n=0,o=0;for(let i=0;i<r.length;i++){let u=t[i]??1;n+=r[i]*u,o+=u}return n=o>0?n/o:0,{reiType:"DerivedModeResult",value:n,baseModes:e,weights:t,formula:e.map((i,u)=>`${t[u]??1}\xD7${i}`).join(" + ")}}function _e(a){if(!a||a.reiType!=="MDim")return{reiType:"ModeSpace",modes:w.length,values:[],coverage:0};let e=w.map(i=>({mode:i,value:b({...a,mode:i})})),t=[];for(let i=0;i<e.length;i++){t[i]=[];for(let u=0;u<e.length;u++)t[i][u]=Math.abs(e[i].value-e[u].value)}let r=e.map(i=>i.value),n=r.reduce((i,u)=>i+u,0)/r.length,o=r.reduce((i,u)=>i+(u-n)**2,0)/r.length;return{reiType:"ModeSpace",modes:w.length,values:e,variance:o,diversity:Math.sqrt(o),coverage:1}}function H(a){let e=f(a);if(!e||e.reiType!=="MDim")return 0;let t=0;if(e.center!==null&&typeof e.center=="object"&&e.center.reiType==="MDim"&&(t=Math.max(t,1+H(e.center))),e.neighbors)for(let r of e.neighbors)r!==null&&typeof r=="object"&&r.reiType==="MDim"&&(t=Math.max(t,1+H(r)));return t}function W(a,e=1){let t=f(a);if(!t||t.reiType!=="MDim"){let n={reiType:"MDim",center:typeof t=="number"?t:0,neighbors:[],mode:"weighted"};return e<=1?n:W(n,e-1)}if(e<=0)return t;let r={reiType:"MDim",center:t,neighbors:[],mode:"weighted"};return e<=1?r:W(r,e-1)}function $(a){let e=f(a);if(typeof e=="number")return e;if(!e||e.reiType!=="MDim")return 0;let t=e.center?.reiType==="MDim"?$(e.center):typeof e.center=="number"?e.center:0,r=(e.neighbors||[]).map(n=>n?.reiType==="MDim"?$(n):typeof n=="number"?n:0);return b({reiType:"MDim",center:t,neighbors:r,mode:e.mode||"weighted"})}function he(a,e){let t=f(a),r=f(e),n=t?.neighbors?.length??0,o=r?.neighbors?.length??0,i=n===0&&o===0?1:1-Math.abs(n-o)/Math.max(n,o,1),u=typeof t=="number"?t:t?.center??0,c=typeof r=="number"?r:r?.center??0,h=(t?.neighbors??[]).map(d=>u!==0?d/u:d),l=(r?.neighbors??[]).map(d=>c!==0?d/c:d),p=0;if(h.length>0&&l.length>0){let d=Math.min(h.length,l.length),v=0;for(let S=0;S<d;S++)v+=Math.abs(h[S]-l[S]);p=1/(1+v/d)}else h.length===0&&l.length===0&&(p=1);let y=(t?.mode??"weighted")===(r?.mode??"weighted")?1:.5,g=i*.4+p*.4+y*.2;return{reiType:"SimilarityResult",similarity:g,dimSimilarity:i,ratioSimilarity:p,modeSimilarity:y,isomorphic:g>.9}}function Le(a,e){let t=he(a,e),r=f(a),n=f(e),o=typeof r=="number"?r:r?.center??0,i=typeof n=="number"?n:n?.center??0,u=o!==0?i/o:1;return{reiType:"BridgeResult",similarity:t.similarity,scaleFactor:u,mapping:{centerA:o,centerB:i,dimA:r?.neighbors?.length??0,dimB:n?.neighbors?.length??0},transferable:t.similarity>.5}}function ue(a){let e=f(a);if(e?.reiType==="MDim")return e;if(typeof e=="number")return{reiType:"MDim",center:e,neighbors:[],mode:"weighted"};if(typeof e=="string"){let t=Array.from(e).map(r=>r.charCodeAt(0));return t.length===0?{reiType:"MDim",center:0,neighbors:[],mode:"weighted"}:{reiType:"MDim",center:t[0],neighbors:t.slice(1),mode:"weighted"}}if(typeof e=="boolean")return{reiType:"MDim",center:e?1:0,neighbors:[],mode:"weighted"};if(e==null)return{reiType:"MDim",center:0,neighbors:[],mode:"weighted"};if(Array.isArray(e)){let t=e.map(r=>typeof r=="number"?r:0);return{reiType:"MDim",center:t[0]??0,neighbors:t.slice(1),mode:"weighted"}}if(typeof e=="object"){let t=Object.values(e).filter(r=>typeof r=="number");return{reiType:"MDim",center:t[0]??0,neighbors:t.slice(1),mode:"weighted"}}return{reiType:"MDim",center:0,neighbors:[],mode:"weighted"}}function Pe(a,e){let t=f(a),r=t?.reiType==="MDim"?t:ue(t);switch(e){case"number":return b(r);case"array":return[r.center,...r.neighbors];case"string":return String.fromCharCode(r.center,...r.neighbors);case"object":let n={center:r.center};return r.neighbors.forEach((o,i)=>{n[`n${i}`]=o}),n;default:return[r.center,...r.neighbors]}}function re(a,e,t=1){let r=T(a);return r.map(n=>{let o;switch(e){case"scale":o=n.value*t;break;case"shift":o=n.value+t;break;case"normalize":{let i=Math.max(...r.map(u=>Math.abs(u.value)),1);o=n.value/i;break}case"rank_normalize":{o=([...r].sort((c,h)=>c.value-h.value).findIndex(c=>c.mode===n.mode)+1)/r.length;break}default:o=n.value}return{...n,original:n.value,value:o,transform:e}})}function ne(a){let e=T(a),t=e.map(h=>h.value),r=[...t].sort((h,l)=>h-l),n=r.length%2===0?(r[r.length/2-1]+r[r.length/2])/2:r[Math.floor(r.length/2)],o=t.reduce((h,l)=>h+l,0)/t.length,i=t.reduce((h,l)=>h+(l-o)**2,0)/t.length,u=Math.sqrt(i),c=1/(1+u/(Math.abs(o)||1));return{reiType:"ConsensusResult",median:n,mean:o,stddev:u,agreement:c,solutions:e.length,range:{min:r[0],max:r[r.length-1]}}}function se(a,e="median_closest"){let t=T(a),r=t.map(n=>n.value);switch(e){case"max":return t.reduce((n,o)=>o.value>n.value?o:n);case"min":return t.reduce((n,o)=>o.value<n.value?o:n);default:{let n=[...r].sort((i,u)=>i-u),o=n.length%2===0?(n[n.length/2-1]+n[n.length/2])/2:n[Math.floor(n.length/2)];return t.reduce((i,u)=>Math.abs(u.value-o)<Math.abs(i.value-o)?u:i)}}}function ie(a,e="value"){return[...T(a)].sort((n,o)=>{switch(e){case"value":return o.value-n.value;case"abs":return Math.abs(o.value)-Math.abs(n.value);default:return o.value-n.value}}).map((n,o)=>({...n,rank:o+1}))}function ae(a){let e=T(a),t=e.map(d=>d.value),r=new Set(t.map(d=>Math.round(d*1e6)/1e6)),n=r.size/t.length,o=[...t].sort((d,v)=>d-v),i=o[o.length-1]-o[0],u=4,c=i/u||1,h=new Array(u).fill(0);for(let d of t){let v=Math.min(Math.floor((d-o[0])/c),u-1);h[v]++}let l=t.length,p=0;for(let d of h)if(d>0){let v=d/l;p-=v*Math.log2(v)}let y=Math.log2(u),g=y>0?p/y:1;return{reiType:"CompletenessResult",totalModes:e.length,uniqueSolutions:r.size,uniqueRatio:n,range:i,uniformity:g,completeness:n*.5+g*.5,isComplete:n>.5&&g>.3}}function Ie(a){switch(a){case"top":return"bottom";case"bottom":return"top";case"topPi":return"bottomPi";case"bottomPi":return"topPi";default:return a}}function ke(a,e){return a==="bottom"||e==="bottom"?"bottom":a==="top"&&e==="top"?"top":"bottomPi"}function Be(a,e){return a==="top"||e==="top"?"top":a==="bottom"&&e==="bottom"?"bottom":"topPi"}var j=["void","dot","line","surface","solid","omega"];function F(){return{reiType:"State",state:"void",omega:0,history:["void"]}}function Ue(a){let e=j.indexOf(a.state);e<j.length-1&&(a.state=j[e+1],a.history.push(a.state),a.state==="omega"&&(a.omega=1))}var N=class{constructor(e){this.env=new I(e??null),this.registerBuiltins()}registerBuiltins(){this.env.define("e",Math.E),this.env.define("PI",Math.PI),this.env.define("genesis",{reiType:"Function",name:"genesis",params:[],body:null,closure:this.env});let e=["abs","sqrt","sin","cos","log","exp","floor","ceil","round","min","max","len","print"];for(let t of e)this.env.define(t,{reiType:"Function",name:t,params:["x"],body:null,closure:this.env})}eval(e){switch(e.type){case"Program":return this.evalProgram(e);case"NumLit":return e.value;case"StrLit":return e.value;case"BoolLit":return e.value;case"NullLit":return null;case"ExtLit":return be(e.raw);case"ConstLit":return this.evalConstLit(e);case"QuadLit":return{reiType:"Quad",value:e.value};case"MDimLit":return this.evalMDimLit(e);case"ArrayLit":return e.elements.map(t=>this.eval(t));case"Ident":return this.env.get(e.name);case"LetStmt":return this.evalLetStmt(e);case"MutStmt":return this.evalMutStmt(e);case"CompressDef":return this.evalCompressDef(e);case"BinOp":return this.evalBinOp(e);case"UnaryOp":return this.evalUnaryOp(e);case"Pipe":return this.evalPipe(e);case"FnCall":return this.evalFnCall(e);case"MemberAccess":return this.evalMemberAccess(e);case"IndexAccess":return this.evalIndexAccess(e);case"Extend":return this.evalExtend(e);case"Reduce":return this.evalReduce(e);case"ConvergeOp":return this.evalConverge(e);case"DivergeOp":return this.evalDiverge(e);case"ReflectOp":return this.evalReflect(e);case"IfExpr":return this.evalIfExpr(e);case"MatchExpr":return this.evalMatchExpr(e);case"SpaceLit":return this.evalSpaceLit(e);default:throw new Error(`\u672A\u5B9F\u88C5\u306E\u30CE\u30FC\u30C9\u578B: ${e.type}`)}}evalProgram(e){let t=null;for(let r of e.body)t=this.eval(r);return t}evalConstLit(e){switch(e.value){case"\u30FB":return F();case"\u2205":return null;case"i":return{reiType:"Ext",base:NaN,order:0,subscripts:"",valStar:()=>NaN};case"\u03A6":return"\u03A6";case"\u03A8":return"\u03A8";case"\u03A9":return"\u03A9";default:return null}}evalMDimLit(e){let t=this.toNumber(this.eval(e.center)),r=e.neighbors.map(i=>this.toNumber(this.eval(i))),n=e.weight?[this.toNumber(this.eval(e.weight))]:void 0,o=e.mode||"weighted";return{reiType:"MDim",center:t,neighbors:r,mode:o,weights:n}}evalSpaceLit(e){let t=Y(e.topology||"flat");for(let r of e.layers){let n=typeof r.index=="object"?this.toNumber(this.eval(r.index)):r.index;for(let o of r.nodes){let i=this.eval(o);this.isMDim(i)?_(t,n,i.center,i.neighbors,i.mode,i.weights):typeof i=="number"&&_(t,n,i,[])}}return t}evalLetStmt(e){let t=this.eval(e.init);return this.env.define(e.name,t,!1),t}evalMutStmt(e){let t=this.eval(e.init);return this.env.define(e.name,t,!0),t}evalCompressDef(e){let t={reiType:"Function",name:e.name,params:e.params,body:e.body,closure:this.env};return this.env.define(e.name,t),t}evalBinOp(e){let t=this.eval(e.left),r=this.eval(e.right);if(this.isQuad(t)&&this.isQuad(r))switch(e.op){case"\u2227":return{reiType:"Quad",value:ke(t.value,r.value)};case"\u2228":return{reiType:"Quad",value:Be(t.value,r.value)}}let n=this.toNumber(t),o=this.toNumber(r);switch(e.op){case"+":return n+o;case"-":return n-o;case"*":return n*o;case"/":return o!==0?n/o:NaN;case"\u2295":return n+o;case"\u2297":return n*o;case"\xB7":return n*o;case"==":return n===o;case"!=":return n!==o;case">":return n>o;case"<":return n<o;case">=":return n>=o;case"<=":return n<=o;case">\u03BA":return n>o;case"<\u03BA":return n<o;case"=\u03BA":return n===o;case"\u2227":return n!==0&&o!==0;case"\u2228":return n!==0||o!==0;default:throw new Error(`\u672A\u77E5\u306E\u6F14\u7B97\u5B50: ${e.op}`)}}evalUnaryOp(e){let t=this.eval(e.operand);switch(e.op){case"-":return-this.toNumber(t);case"\xAC":return this.isQuad(t)?{reiType:"Quad",value:Ie(t.value)}:!t;default:throw new Error(`\u672A\u77E5\u306E\u5358\u9805\u6F14\u7B97\u5B50: ${e.op}`)}}evalPipe(e){let t=this.eval(e.input),r=e.command;if(r.type==="PipeCmd"){if(r.cmd==="sigma")return this.execPipeCmd(t,r);let n=this.execPipeCmd(t,r),o=P(t);return ye(n,t,o.pipeCount>0?o:void 0)}throw new Error("\u7121\u52B9\u306A\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9")}execPipeCmd(e,t){let{cmd:r,mode:n,args:o}=t,i=o.map(h=>this.eval(h)),u=P(e),c=f(e);if(r==="sigma"){if(this.isSpace(c))return U(c);if(this.isDNode(c)){let h=c;return{reiType:"SigmaResult",flow:X(h),memory:[...Z(h),...u.memory],layer:h.layerIndex,will:J(h),field:{center:h.center,neighbors:[...h.neighbors],layer:h.layerIndex,index:h.nodeIndex},relation:[]}}return te(c,u)}if(this.isSpace(c)){let h=c;switch(r){case"step":{let l=i.length>0?this.toNumber(i[0]):void 0;return B(h,l),h}case"diffuse":{let l={type:"converged"},p,y="weighted";if(i.length>=1){let g=i[0];if(typeof g=="number")l={type:"steps",max:g};else if(typeof g=="string")switch(g){case"converged":l={type:"converged"};break;case"fixed":l={type:"fixed"};break;default:let d=parseFloat(g);isNaN(d)||(l={type:"epsilon",threshold:d})}}return i.length>=2&&typeof i[1]=="number"&&(p=i[1]),i.length>=3&&typeof i[2]=="string"&&(y=i[2]),q(h,l,p,y)}case"node":{let l=i.length>=1?this.toNumber(i[0]):0,p=i.length>=2?this.toNumber(i[1]):0,y=h.layers.get(l);if(y&&y.nodes[p])return y.nodes[p];throw new Error(`\u30CE\u30FC\u30C9\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093: \u5C64${l}, index ${p}`)}case"sigma":return U(h);case"resonances":{let l=i.length>=1?this.toNumber(i[0]):.5;return ee(h,l)}case"freeze":{let l=this.toNumber(i[0]??0),p=h.layers.get(l);return p&&(p.frozen=!0),h}case"thaw":{let l=this.toNumber(i[0]??0),p=h.layers.get(l);return p&&(p.frozen=!1),h}case"spawn":{let l=i[0],p=i.length>=2?this.toNumber(i[1]):0;return this.isMDim(l)&&_(h,p,l.center,l.neighbors,l.mode,l.weights),h}case"result":{let l=i.length>=1?this.toNumber(i[0]):void 0,p=[];for(let[y,g]of h.layers)if(!(l!==void 0&&y!==l))for(let d of g.nodes)p.push(L(d));return p.length===1?p[0]:p}}}if(this.isDNode(c)){let h=c;switch(r){case"sigma":return te(h,u);case"compute":return L(h);case"center":return h.center;case"neighbors":return h.neighbors;case"dim":return h.neighbors.length;case"stage":return h.stage;case"step":return k(h),h;case"extract":return{reiType:"MDim",center:h.center,neighbors:h.neighbors,mode:h.mode,weights:h.weights}}}if(this.isObj(c)&&c.reiType==="SigmaResult")switch(r){case"flow":return c.flow;case"memory":return c.memory;case"layer":case"\u5C64":return c.layer;case"will":return c.will;case"field":return c.field;case"relation":return c.relation??[]}if(r==="project"){let h=i.length>0?i[0]:":first";return E(c,h,i)}if(r==="reproject"){if(this.isMDim(c)&&i.length>0){let h=i[0],l=[c.center,...c.neighbors],p=typeof h=="number"?l.indexOf(h):0;if(p<0)throw new Error(`reproject: \u4E2D\u5FC3\u5024 ${h} \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093`);let y=l[p],g=l.filter((d,v)=>v!==p);return{reiType:"MDim",center:y,neighbors:g,mode:c.mode}}return E(c,i[0]??":first",i)}if(r==="modes")return[...w];if(r==="blend"){if(!this.isMDim(c))throw new Error("blend: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");let h=0,l=0;for(let p=0;p<i.length-1;p+=2){let y=String(i[p]),g=typeof i[p+1]=="number"?i[p+1]:0,d=b({...c,mode:y});h+=g*d,l+=g}return l>0?h/l:b(c)}if(r==="project_all")return V(c);if(r==="compute_all"){if(this.isMDim(c))return T(c);if(Array.isArray(c)){let h=E(c,"first",[]);return T(h)}return[]}if(r==="compare"){if(!this.isMDim(c))throw new Error("compare: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");let h=i.length>=1?String(i[0]):"weighted",l=i.length>=2?String(i[1]):"geometric";return Ee(c,h,l)}if(r==="perspectives")return Me(c);if(r==="flatten_nested")return this.isMDim(c)?G(c):c;if(r==="respond"){let h=i.length>=1?this.toNumber(i[0]):0,l=i.length>=2?String(i[1]):"absorb";return K(c,h,l)}if(r==="sensitivity")return Te(c);if(r==="awareness")return Q(c,u);if(r==="awakened")return Q(c,u)>=oe;if(r==="transform"){let h=i.length>=1?String(i[0]):"scale",l=i.length>=2?this.toNumber(i[1]):1;return Se(c,h,l)}if(r==="mode_equiv"){if(!this.isMDim(c))throw new Error("mode_equiv: \u{1D544}\u578B\u306E\u5024\u304C\u5FC5\u8981\u3067\u3059");let h=i.length>=1?String(i[0]):"weighted",l=i.length>=2?String(i[1]):"geometric";return we(c,h,l)}if(r==="resonate"){if(i.length<1)throw new Error("resonate: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");return ce(c,i[0])}if(r==="resonance_field")return Ne(c,u);if(r==="resonance_map")return xe(c);if(r==="resonance_chain")return Ae(c);if(r==="project_as"){let h=i.length>=1?String(i[0]):"graph";return Ce(c,h)}if(r==="compose_projections")return Oe(c);if(r==="representable")return Re(c);if(r==="derive_mode"){if(!this.isMDim(c))throw new Error("derive_mode: \u{1D544}\u578B\u304C\u5FC5\u8981\u3067\u3059");let h=i.filter(p=>typeof p=="string"),l=i.filter(p=>typeof p=="number");return h.length===0&&h.push("weighted","geometric"),l.length===0&&l.push(.5,.5),De(c,h,l)}if(r==="mode_space")return _e(c);if(r==="depth")return H(c);if(r==="nest"){let h=i.length>=1?this.toNumber(i[0]):1;return W(c,h)}if(r==="recursive_compute")return $(c);if(r==="bridge"){if(i.length<1)throw new Error("bridge: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");return Le(c,i[0])}if(r==="structural_similarity"){if(i.length<1)throw new Error("structural_similarity: \u6BD4\u8F03\u5BFE\u8C61\u304C\u5FC5\u8981\u3067\u3059");return he(c,i[0])}if(r==="encode")return ue(c);if(r==="decode"){let h=i.length>=1?String(i[0]):"array";return Pe(c,h)}if(r==="map_solutions"){if(!this.isMDim(c)){if(Array.isArray(c)){let h=E(c,"first",[]);return re(h,i.length>=1?String(i[0]):"scale",i.length>=2?this.toNumber(i[1]):1)}throw new Error("map_solutions: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return re(c,i.length>=1?String(i[0]):"scale",i.length>=2?this.toNumber(i[1]):1)}if(r==="consensus"){if(!this.isMDim(c)){if(Array.isArray(c))return ne(E(c,"first",[]));throw new Error("consensus: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return ne(c)}if(r==="best"){if(!this.isMDim(c)){if(Array.isArray(c))return se(E(c,"first",[]),i.length>=1?String(i[0]):"median_closest");throw new Error("best: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return se(c,i.length>=1?String(i[0]):"median_closest")}if(r==="rank"){if(!this.isMDim(c)){if(Array.isArray(c))return ie(E(c,"first",[]),i.length>=1?String(i[0]):"value");throw new Error("rank: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return ie(c,i.length>=1?String(i[0]):"value")}if(r==="solution_completeness"){if(!this.isMDim(c)){if(Array.isArray(c))return ae(E(c,"first",[]));throw new Error("solution_completeness: \u{1D544}\u578B\u307E\u305F\u306F\u914D\u5217\u304C\u5FC5\u8981\u3067\u3059")}return ae(c)}if(this.isMDim(c)){let h=c;switch(r){case"compute":{let l=n||h.mode;return b({...h,mode:l})}case"center":return h.center;case"neighbors":return h.neighbors;case"dim":return h.neighbors.length;case"normalize":{let l=h.neighbors.reduce((p,y)=>p+Math.abs(y),0)||1;return{reiType:"MDim",center:h.center,neighbors:h.neighbors.map(p=>p/l),mode:h.mode}}case"flatten":return b(h);case"map":{if(i.length>0&&this.isFunction(i[0])){let l=i[0],p=h.neighbors.map(y=>this.toNumber(this.callFunction(l,[y])));return{...h,neighbors:p}}return h}}}if(this.isExt(c)){let h=c;switch(r){case"order":return h.order;case"base":return h.base;case"valStar":case"val":return h.valStar();case"subscripts":return h.subscripts}}if(this.isGenesis(c)){let h=c;switch(r){case"forward":return Ue(h),h;case"phase":return h.state;case"history":return h.history;case"omega":return h.omega}}if(Array.isArray(c))switch(r){case"len":return c.length;case"sum":return c.reduce((h,l)=>h+this.toNumber(l),0);case"avg":return c.length===0?0:c.reduce((h,l)=>h+this.toNumber(l),0)/c.length;case"first":return c[0]??null;case"last":return c[c.length-1]??null;case"reverse":return[...c].reverse();case"sort":return[...c].sort((h,l)=>this.toNumber(h)-this.toNumber(l));case"map":return i.length>0&&this.isFunction(i[0])?c.map(h=>this.callFunction(i[0],[h])):c;case"filter":return i.length>0&&this.isFunction(i[0])?c.filter(h=>!!this.callFunction(i[0],[h])):c;case"reduce":return i.length>=2&&this.isFunction(i[0])?c.reduce((h,l)=>this.callFunction(i[0],[h,l]),i[1]):c}if(typeof c=="number")switch(r){case"abs":return Math.abs(c);case"sqrt":return Math.sqrt(c);case"round":return Math.round(c);case"floor":return Math.floor(c);case"ceil":return Math.ceil(c);case"negate":return-c}if(typeof c=="string")switch(r){case"len":return c.length;case"upper":return c.toUpperCase();case"lower":return c.toLowerCase();case"trim":return c.trim();case"split":return c.split(i[0]??"");case"reverse":return Array.from(c).reverse().join("")}if(r==="\u290A"||r==="converge")return this.isMDim(c)?b(c):c;if(r==="\u290B"||r==="diverge")return typeof c=="number"?{reiType:"MDim",center:c,neighbors:[c,c,c,c],mode:"weighted"}:c;if(this.env.has(r)){let h=this.env.get(r);if(this.isFunction(h))return this.callFunction(h,[c,...i])}throw new Error(`\u672A\u77E5\u306E\u30D1\u30A4\u30D7\u30B3\u30DE\u30F3\u30C9: ${r}`)}evalFnCall(e){let t=this.eval(e.callee),r=e.args.map(n=>this.eval(n));if(e.callee.type==="Ident"&&e.callee.name==="genesis")return F();if(this.isFunction(t))return this.callFunction(t,r);throw new Error(`\u547C\u3073\u51FA\u3057\u4E0D\u53EF\u80FD: ${JSON.stringify(t)}`)}callFunction(e,t){if(e.body===null||e.body===void 0)return this.callBuiltin(e.name,t);let r=new I(e.closure);for(let i=0;i<e.params.length;i++)r.define(e.params[i],t[i]??null);let n=this.env;this.env=r;let o=this.eval(e.body);return this.env=n,o}callBuiltin(e,t){if(e==="genesis")return F();let r=t[0]!==void 0?this.toNumber(t[0]):0,n=t[1]!==void 0?this.toNumber(t[1]):0;switch(e){case"abs":return Math.abs(r);case"sqrt":return Math.sqrt(r);case"sin":return Math.sin(r);case"cos":return Math.cos(r);case"log":return Math.log(r);case"exp":return Math.exp(r);case"floor":return Math.floor(r);case"ceil":return Math.ceil(r);case"round":return Math.round(r);case"min":return Math.min(r,n);case"max":return Math.max(r,n);case"len":return Array.isArray(t[0])||typeof t[0]=="string"?t[0].length:0;case"print":return t[0]??null;default:throw new Error(`\u672A\u77E5\u306E\u7D44\u8FBC\u307F\u95A2\u6570: ${e}`)}}evalMemberAccess(e){let t=this.eval(e.object),r=f(t);if(e.member==="__sigma__")return P(t);if(this.isObj(r)&&r.reiType==="SigmaResult")switch(e.member){case"flow":return r.flow;case"memory":return r.memory;case"layer":return r.layer;case"will":return r.will;case"field":return r.field;case"relation":return r.relation??[]}if(this.isObj(r)&&r.stage!==void 0&&r.momentum!==void 0&&r.directions!==void 0)switch(e.member){case"stage":return r.stage;case"directions":return r.directions;case"momentum":return r.momentum;case"velocity":return r.velocity}if(this.isObj(r)&&r.tendency!==void 0&&r.strength!==void 0)switch(e.member){case"tendency":return r.tendency;case"strength":return r.strength;case"history":return r.history}if(this.isObj(r)&&r.layers!==void 0&&r.total_nodes!==void 0)switch(e.member){case"layers":return r.layers;case"total_nodes":return r.total_nodes;case"active_nodes":return r.active_nodes;case"topology":return r.topology}if(this.isObj(r)&&r.global_stage!==void 0&&r.converged_nodes!==void 0)switch(e.member){case"global_stage":return r.global_stage;case"converged_nodes":return r.converged_nodes;case"expanding_nodes":return r.expanding_nodes}if(this.isDNode(r)){let n=r;switch(e.member){case"center":return n.center;case"neighbors":return n.neighbors;case"stage":return n.stage;case"momentum":return n.momentum;case"mode":return n.mode;case"dim":return n.neighbors.length}}if(this.isMDim(r))switch(e.member){case"center":return r.center;case"neighbors":return r.neighbors;case"mode":return r.mode;case"dim":return r.neighbors.length}if(this.isExt(r))switch(e.member){case"order":return r.order;case"base":return r.base;case"subscripts":return r.subscripts;case"valStar":return r.valStar()}if(this.isGenesis(r))switch(e.member){case"state":case"phase":return r.state;case"omega":return r.omega;case"history":return r.history}if(Array.isArray(r))switch(e.member){case"length":return r.length;case"first":return r[0]??null;case"last":return r[r.length-1]??null}throw new Error(`\u30E1\u30F3\u30D0\u30FC ${e.member} \u306B\u30A2\u30AF\u30BB\u30B9\u3067\u304D\u307E\u305B\u3093`)}evalIndexAccess(e){let t=this.eval(e.object),r=this.toNumber(this.eval(e.index));if(Array.isArray(t)||typeof t=="string")return t[r]??null;if(this.isMDim(t))return t.neighbors[r]??null;throw new Error("\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u30A2\u30AF\u30BB\u30B9\u4E0D\u53EF")}evalExtend(e){let t=this.eval(e.target);if(this.isExt(t))return e.subscript?R(t.base,t.subscripts+e.subscript):R(t.base,t.subscripts+"o");throw new Error("\u62E1\u5F35\u306F\u62E1\u5F35\u6570\u306B\u306E\u307F\u9069\u7528\u53EF\u80FD")}evalReduce(e){let t=this.eval(e.target);if(this.isExt(t))return t.order<=1?t.base:R(t.base,t.subscripts.slice(0,-1));throw new Error("\u7E2E\u7D04\u306F\u62E1\u5F35\u6570\u306B\u306E\u307F\u9069\u7528\u53EF\u80FD")}evalConverge(e){let t=this.eval(e.left),r=this.eval(e.right);return this.isMDim(t)&&this.isMDim(r)?{reiType:"MDim",center:(t.center+r.center)/2,neighbors:[...t.neighbors,...r.neighbors],mode:t.mode}:this.toNumber(t)+this.toNumber(r)}evalDiverge(e){let t=this.eval(e.left),r=this.eval(e.right);if(this.isMDim(t)){this.toNumber(r);let n=Math.floor(t.neighbors.length/2);return[{reiType:"MDim",center:t.center,neighbors:t.neighbors.slice(0,n),mode:t.mode},{reiType:"MDim",center:t.center,neighbors:t.neighbors.slice(n),mode:t.mode}]}return this.toNumber(t)-this.toNumber(r)}evalReflect(e){let t=this.eval(e.left);return this.eval(e.right),this.isMDim(t)?{reiType:"MDim",center:t.center,neighbors:[...t.neighbors].reverse(),mode:t.mode}:this.toNumber(t)}evalIfExpr(e){let t=this.eval(e.cond);return this.isTruthy(t)?this.eval(e.then):this.eval(e.else)}evalMatchExpr(e){let t=this.eval(e.target);for(let{pattern:r,body:n}of e.cases){let o=this.eval(r);if(this.matches(t,o))return this.eval(n)}throw new Error("\u30DE\u30C3\u30C1\u3059\u308B\u5206\u5C90\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093")}toNumber(e){return e!==null&&typeof e=="object"&&e.reiType==="ReiVal"?this.toNumber(e.value):typeof e=="number"?e:typeof e=="boolean"?e?1:0:e===null?0:this.isExt(e)?e.valStar():this.isMDim(e)?b(e):typeof e=="string"&&parseFloat(e)||0}isTruthy(e){let t=f(e);return t===null||t===!1||t===0?!1:this.isQuad(t)?t.value==="top"||t.value==="topPi":!0}matches(e,t){return typeof e==typeof t&&e===t?!0:this.isQuad(e)&&this.isQuad(t)?e.value===t.value:!1}isObj(e){let t=f(e);return t!==null&&typeof t=="object"&&!Array.isArray(t)}isMDim(e){let t=f(e);return t!==null&&typeof t=="object"&&t.reiType==="MDim"}isExt(e){let t=f(e);return t!==null&&typeof t=="object"&&t.reiType==="Ext"}isGenesis(e){let t=f(e);return t!==null&&typeof t=="object"&&t.reiType==="State"}isFunction(e){let t=f(e);return t!==null&&typeof t=="object"&&t.reiType==="Function"}isQuad(e){let t=f(e);return t!==null&&typeof t=="object"&&t.reiType==="Quad"}isSpace(e){let t=f(e);return t!==null&&typeof t=="object"&&t.reiType==="Space"}isDNode(e){let t=f(e);return t!==null&&typeof t=="object"&&t.reiType==="DNode"}isReiVal(e){return e!==null&&typeof e=="object"&&e.reiType==="ReiVal"}getSigmaMetadata(e){return P(e)}unwrap(e){return f(e)}};var je=new N;function z(a){let t=new C(a).tokenize(),n=new O(t).parseProgram();return je.eval(n)}z.reset=function(){window.__reiEvaluator=new N};window.rei=z;window.Rei={Lexer:C,Parser:O,Evaluator:N,rei:z};})();
+
+// ===== End Rei Engine =====
+
+const examples = [
+  {
+    title: "𝕄 基本計算",
+    code: '𝕄{5; 1, 2, 3, 4} |> compute',
+    tag: "基本"
+  },
+  {
+    title: "8つの計算モード",
+    code: '𝕄{5; 1, 2, 3, 4} |> compute :weighted\n𝕄{5; 1, 2, 3, 4} |> compute :geometric\n𝕄{5; 1, 2, 3, 4} |> compute :entropy',
+    tag: "M1"
+  },
+  {
+    title: "σ 自己参照 (C1)",
+    code: '42 |> sigma',
+    tag: "C1"
+  },
+  {
+    title: "τ 傾向性追跡 (C2)",
+    code: '100 |> sqrt |> sqrt |> sqrt |> sigma',
+    tag: "C2"
+  },
+  {
+    title: "覚醒 (C4)",
+    code: '𝕄{5; 1,2,3,4,5,6,7,8} |> abs |> negate |> abs |> negate |> abs |> awareness\n𝕄{5; 1,2,3,4,5,6,7,8} |> abs |> negate |> abs |> negate |> abs |> awakened',
+    tag: "C4"
+  },
+  {
+    title: "共鳴 (C5 因陀羅網)",
+    code: '𝕄{5; 1, 2, 3} |> resonate(𝕄{5; 1, 2, 3})\n𝕄{5; 1, 2, 3} |> resonate(𝕄{100; 50, 60})',
+    tag: "C5"
+  },
+  {
+    title: "射影 (N1)",
+    code: '[10, 5, 8, 3] |> project("max")\n[10, 5, 8, 3] |> project("max") |> compute',
+    tag: "N1"
+  },
+  {
+    title: "型変換射影 (N3)",
+    code: '𝕄{5; 1, 2, 3} |> project_as("graph")\n𝕄{5; 1, 2, 3} |> project_as("tree")',
+    tag: "N3"
+  },
+  {
+    title: "エンコード/デコード (U5)",
+    code: '"hello" |> encode\n[1, 2, 3] |> encode\n𝕄{5; 1, 2, 3} |> decode("array")',
+    tag: "U5"
+  },
+  {
+    title: "全解計算 (A1)",
+    code: '𝕄{5; 1, 2, 3, 4} |> compute_all',
+    tag: "A1"
+  },
+  {
+    title: "コンセンサス (A3)",
+    code: '𝕄{5; 1, 2, 3, 4} |> consensus',
+    tag: "A3"
+  },
+  {
+    title: "最良解とランキング (A4)",
+    code: '𝕄{5; 1, 2, 3, 4} |> best("max")\n𝕄{5; 1, 2, 3, 4} |> rank',
+    tag: "A4"
+  },
+  {
+    title: "構造的共鳴マップ",
+    code: '𝕄{5; 4, 6, 3} |> resonance_map',
+    tag: "C5"
+  },
+  {
+    title: "領域架橋 (U4)",
+    code: '𝕄{5; 1, 2, 3} |> bridge(𝕄{10; 2, 4, 6})',
+    tag: "U4"
+  },
+  {
+    title: "階層再帰 (U3)",
+    code: '𝕄{5; 1, 2, 3} |> nest(2) |> depth\n𝕄{5; 1, 2, 3} |> nest(1) |> recursive_compute',
+    tag: "U3"
+  },
+  {
+    title: "Genesis 状態遷移",
+    code: 'let g = genesis(); g |> forward |> forward |> forward |> phase',
+    tag: "Genesis"
+  },
+  {
+    title: "0拡張数",
+    code: 'let x = 0₀; x >> o >> o\n0₀ |> valStar',
+    tag: "0拡張"
+  },
+  {
+    title: "モード導出 (M4)",
+    code: '𝕄{5; 1, 2, 3, 4} |> derive_mode("weighted", 0.7, "geometric", 0.3)',
+    tag: "M4"
+  },
+  {
+    title: "解の完全性 (A5)",
+    code: '𝕄{5; 1, 2, 3, 4} |> solution_completeness',
+    tag: "A5"
+  },
+  {
+    title: "刺激応答 (C3)",
+    code: '𝕄{5; 1, 2, 3} |> respond(10, "absorb")\n𝕄{5; 1, 2, 3} |> respond(10, "resonate")',
+    tag: "C3"
+  },
+];
+
+// Render examples
+const grid = document.getElementById('examples-grid');
+examples.forEach(ex => {
+  const card = document.createElement('div');
+  card.className = 'example-card';
+  card.innerHTML = `<h4>${ex.title}</h4><code>${escapeHtml(ex.code)}</code><span class="tag">${ex.tag}</span>`;
+  card.addEventListener('click', () => {
+    document.getElementById('editor').value = ex.code;
+    document.getElementById('examples-drawer').classList.remove('open');
+  });
+  grid.appendChild(card);
+});
+
+// Toggle examples
+document.getElementById('toggle-examples').addEventListener('click', () => {
+  const drawer = document.getElementById('examples-drawer');
+  drawer.classList.toggle('open');
+  const btn = document.getElementById('toggle-examples');
+  btn.textContent = drawer.classList.contains('open') ? '例を閉じる ▴' : '例を見る ▾';
+});
+
+// Run
+function runCode() {
+  const code = document.getElementById('editor').value.trim();
+  const output = document.getElementById('output');
+  output.innerHTML = '';
+
+  if (!code) {
+    output.innerHTML = '<div class="out-line info">← コードを入力してください</div>';
+    return;
+  }
+
+  const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+  const t0 = performance.now();
+
+  // Reset evaluator for multi-line
+  if (typeof window.Rei !== 'undefined') {
+    window.__reiEv = new window.Rei.Evaluator();
+  }
+
+  for (const line of lines) {
+    const lineEl = document.createElement('div');
+    try {
+      let result;
+      if (window.__reiEv) {
+        const tokens = new window.Rei.Lexer(line).tokenize();
+        const ast = new window.Rei.Parser(tokens).parseProgram();
+        result = window.__reiEv.eval(ast);
+      } else {
+        result = window.rei(line);
+      }
+
+      lineEl.className = 'out-line result';
+      const formatted = formatResult(result);
+      lineEl.innerHTML = `<span class="label">${escapeHtml(line)}</span><pre>${escapeHtml(formatted)}</pre>`;
+    } catch (e) {
+      lineEl.className = 'out-line error';
+      lineEl.innerHTML = `<span class="label">${escapeHtml(line)}</span><pre>${escapeHtml(e.message)}</pre>`;
+    }
+    output.appendChild(lineEl);
+  }
+
+  const elapsed = (performance.now() - t0).toFixed(1);
+  document.getElementById('exec-time').textContent = `${elapsed}ms`;
+}
+
+function formatResult(val) {
+  if (val === null || val === undefined) return 'null';
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val, (key, v) => {
+        if (key === '__sigma__') return undefined; // hide sigma noise for readability
+        if (typeof v === 'number') return Math.round(v * 1e6) / 1e6;
+        return v;
+      }, 2);
+    } catch { return String(val); }
+  }
+  if (typeof val === 'number') return String(Math.round(val * 1e6) / 1e6);
+  return String(val);
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Event listeners
+document.getElementById('run-btn').addEventListener('click', runCode);
+document.getElementById('clear-btn').addEventListener('click', () => {
+  document.getElementById('editor').value = '';
+  document.getElementById('output').innerHTML = '<div class="out-line info">← コードを入力してください</div>';
+  document.getElementById('exec-time').textContent = '';
+});
+document.getElementById('editor').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); runCode(); }
+  // Tab support
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const ta = e.target;
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + '  ' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 2;
+  }
+});
+
+// Load first example
+document.getElementById('editor').value = examples[0].code;
+</script>
+</body>
+</html>
