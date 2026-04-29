@@ -47,6 +47,8 @@
 % Title
 % ============================================================
 \title{%
+  \begin{CJK}{UTF8}{min}\textbf{Rei (零): 計算的存在論の四公理基盤}\\[0.3em]
+  \large 最小公理・独立性・1,689 テストによる経験的検証\end{CJK}\\[0.7em]
   \textbf{\Rei{}: A Four-Axiom Foundation for\\
   Computational Existence Theory}\\[0.5em]
   \large Minimal Axioms, Independence, and Empirical Validation\\
@@ -54,9 +56,20 @@
 }
 
 \author{
-  Nobuki Fujimoto%
-  \thanks{Independent researcher. Email: \texttt{fc0web@gmail.com}. GitHub: \url{https://github.com/fc0web/rei-lang}.}\\
-  {\small \begin{CJK}{UTF8}{min}藤本 伸樹\end{CJK}}
+  {\begin{CJK}{UTF8}{min}藤本 伸樹\end{CJK}} \ / \ Nobuki Fujimoto%
+  \thanks{%
+    \begin{CJK}{UTF8}{min}独立研究者 (Independent researcher).\end{CJK}%
+    \ Email: \texttt{fc2webb@gmail.com}.%
+    \ ORCID: \url{https://orcid.org/0009-0004-6019-9258}.%
+    \ GitHub: \url{https://github.com/fc0web/rei-lang} (rei-lang),
+    \url{https://github.com/fc0web/rei-aios} (Rei-AIOS).%
+    \ Site: \url{https://rei-aios.pages.dev}.%
+    \ note.com: \url{https://note.com/nifty_godwit2635}.%
+    \ Zenodo author: \url{https://zenodo.org/communities/rei-aios}.%
+    \ Companion archives: Internet Archive, Harvard Dataverse (\texttt{doi:10.7910/DVN/KC56RY}),
+    PhilPapers, Mastodon (\url{https://mathstodon.xyz/@Fujimoto}),
+    HackMD, dev.to, Hatena Blog, livedoor Blog, Notion, Scrapbox, Zenn.%
+  }
 }
 
 \date{February 2026\\{\small Preprint --- not yet peer-reviewed}}
@@ -68,6 +81,11 @@
 % Abstract
 % ============================================================
 \begin{abstract}
+\noindent\begin{CJK}{UTF8}{min}\textbf{要旨}\quad
+本論文は計算的存在論を支える四つの公理 (A1: 中心--周辺構造, A2: 延長--還元, A3: シグマ累積, A4: 起源相転移) を最小基盤とする計算系 Rei ($0_0$式) を提案する. 各公理について残り三公理を満たし当該公理のみを破る反例モデルを構成することで四公理の相互独立性を証明し, 計算多様性, データ圧縮, 自律エージェント, 領域横断 bridge にまたがる 15 の核心定理が公理の組合せから追加仮定なしに導出されることを示す. 系は open-source 言語 \texttt{rei-lang} v0.5.5 として実装され, 45 テストファイルに分散する 1{,}689 件の通過テストはそれぞれ最小公理依存性に分類されている. 構造データタスクのベンチマークでは従来手法に対し平均 74\% のコード削減と 3--4$\times$ の性能向上を確認した. 著者の知る範囲で Rei は, 計算と価値の存在論的起源を統一最小基盤上で公理的に取り扱う最初の計算枠組みである.\end{CJK}
+
+\medskip
+\noindent\textbf{Abstract.}\quad
 We present \Rei{} (\begin{CJK}{UTF8}{min}$0_0$式\end{CJK}), a computational system founded on exactly four axioms: \emph{Center--Periphery} (A1), \emph{Extension--Reduction} (A2), \emph{Sigma Accumulation} (A3), and \emph{Genesis Phase Transition} (A4). We prove that these four axioms are mutually independent by constructing, for each axiom, a model that satisfies the remaining three but violates the target axiom. We then demonstrate that fifteen core theorems---spanning computational plurality, data compression, autonomous agents, and cross-domain bridges---are derivable from combinations of these axioms without additional assumptions. The system is implemented as an open-source language (\texttt{rei-lang} v0.5.5) with 1,689 passing tests across 45 test files, each classified by its minimal axiom dependency. Benchmarks show a 74\% average code reduction and 3--4$\times$ performance improvements on structured-data tasks compared to conventional approaches. \Rei{} is, to our knowledge, the first computational framework that axiomatically addresses both computation and the ontological genesis of values within a unified, minimal foundation.
 \end{abstract}
 
@@ -75,7 +93,7 @@ We present \Rei{} (\begin{CJK}{UTF8}{min}$0_0$式\end{CJK}), a computational sys
 \noindent\textbf{Keywords:} axiomatic foundations, programming language theory, center--periphery computation, sigma accumulation, computational ontology, independence proofs
 
 % ============================================================
-\section{Introduction}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}序論\end{CJK} / Introduction}{Introduction}}
 \label{sec:intro}
 % ============================================================
 
@@ -94,7 +112,7 @@ Most programming languages treat values as atomic, structureless points. A varia
 \paragraph{Paper organization.} \Cref{sec:axioms} presents the four axioms. \Cref{sec:independence} proves their independence. \Cref{sec:derivations} derives core theorems. \Cref{sec:empirical} describes the implementation and test--axiom mapping. \Cref{sec:related} discusses related work. \Cref{sec:conclusion} concludes.
 
 % ============================================================
-\section{The Rei Axiom System}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}Rei 公理系\end{CJK} / The Rei Axiom System}{The Rei Axiom System}}
 \label{sec:axioms}
 % ============================================================
 
@@ -184,7 +202,7 @@ A4 & Existence & Ontological genesis & ``How did it begin?'' \\
 \end{center}
 
 % ============================================================
-\section{Independence Proofs}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}独立性証明\end{CJK} / Independence Proofs}{Independence Proofs}}
 \label{sec:independence}
 % ============================================================
 
@@ -281,7 +299,7 @@ This suggests that each axiom captures a capability absent from a major class of
 \end{remark}
 
 % ============================================================
-\section{Derivation of Core Theorems}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}核心定理の導出\end{CJK} / Derivation of Core Theorems}{Derivation of Core Theorems}}
 \label{sec:derivations}
 % ============================================================
 
@@ -368,7 +386,7 @@ A1's center--periphery structure is domain-agnostic: physics particles, musical 
 \end{proof}
 
 % ============================================================
-\section{Implementation and Empirical Validation}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}実装と経験的検証\end{CJK} / Implementation and Empirical Validation}{Implementation and Empirical Validation}}
 \label{sec:empirical}
 % ============================================================
 
@@ -429,7 +447,7 @@ Average code size & 100\% & 26\% & 74\% reduction \\
 \noindent The center--periphery pattern (A1) provides the bulk of these improvements by replacing imperative loops with declarative mode-based computation.
 
 % ============================================================
-\section{Related Work}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}関連研究\end{CJK} / Related Work}{Related Work}}
 \label{sec:related}
 % ============================================================
 
@@ -449,7 +467,7 @@ Haskell and other functional languages use category-theoretic abstractions (func
 Surreal numbers~\cite{conway1976}, hyperreal numbers, and $p$-adic numbers extend the reals in various directions. \Rei{}'s extended zero ($\zext, \zextt, \ldots$) via A2 provides a different kind of extension---depth-wise rather than algebraic---motivated by computational rather than purely mathematical concerns.
 
 % ============================================================
-\section{Conclusion}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}結論\end{CJK} / Conclusion}{Conclusion}}
 \label{sec:conclusion}
 % ============================================================
 
@@ -507,7 +525,7 @@ E.~Zermelo.
 % Appendix
 % ============================================================
 \appendix
-\section{Derivation Map (Complete)}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}導出マップ (完全版)\end{CJK} / Derivation Map (Complete)}{Derivation Map (Complete)}}
 \label{app:derivations}
 
 The full derivation structure, showing which axioms each theorem depends on:
@@ -586,7 +604,7 @@ The full derivation structure, showing which axioms each theorem depends on:
 \end{tikzpicture}
 \end{center}
 
-\section{Comparison with Existing Foundational Systems}
+\section{\texorpdfstring{\begin{CJK}{UTF8}{min}既存基盤体系との比較\end{CJK} / Comparison with Existing Foundational Systems}{Comparison with Existing Foundational Systems}}
 \label{app:comparison}
 
 \begin{center}
