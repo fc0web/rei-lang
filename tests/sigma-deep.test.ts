@@ -248,6 +248,54 @@ describe('層 (layer) 深化', () => {
     expect(result.layer.structure).toBe('fractal');
   });
 
+  // ============================================================
+  // fractal しきい値の境界固定
+  //
+  // 実装の分岐（sigma-deep.ts）:
+  //   if (structure === 'recursive' && depth > 3) structure = 'fractal'
+  // つまり「深さ 4 以上で fractal」となる。
+  // この境界を変えずに固定するためのテスト。
+  // 記事の例 0₀₀₀₀₀ (order=5) が fractal に落ちることは
+  // 既存の 'fractal: 非常に深い Ext は fractal' で担保されており、
+  // ここでは境界の両側 (order=3, 4, 5) を明示的に押さえる。
+  // ============================================================
+  it('fractal 境界: order=3 は recursive (fractal ではない)', () => {
+    const ext = {
+      reiType: 'Ext',
+      base: 0,
+      order: 3,
+      subscripts: ['o', 'o', 'o'],
+    };
+    const meta = createDeepSigmaMeta();
+    const result = buildDeepSigmaResult(ext, meta);
+    expect(result.layer.structure).toBe('recursive');
+  });
+
+  it('fractal 境界: order=4 で fractal に遷移する', () => {
+    const ext = {
+      reiType: 'Ext',
+      base: 0,
+      order: 4,
+      subscripts: ['o', 'o', 'o', 'o'],
+    };
+    const meta = createDeepSigmaMeta();
+    const result = buildDeepSigmaResult(ext, meta);
+    expect(result.layer.structure).toBe('fractal');
+  });
+
+  it('fractal 境界: order=5 も引き続き fractal', () => {
+    // 記事に例示される 0₀₀₀₀₀ がちょうどこの形。
+    const ext = {
+      reiType: 'Ext',
+      base: 0,
+      order: 5,
+      subscripts: ['o', 'o', 'o', 'o', 'o'],
+    };
+    const meta = createDeepSigmaMeta();
+    const result = buildDeepSigmaResult(ext, meta);
+    expect(result.layer.structure).toBe('fractal');
+  });
+
   it('State: Genesis段階に応じた深さ', () => {
     const state = {
       reiType: 'State',
