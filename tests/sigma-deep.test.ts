@@ -403,6 +403,106 @@ describe('6属性統合', () => {
     expect(result).toHaveProperty('will');
   });
 
+  // ============================================================
+  // 不整合修正: prediction が intrinsic を見る
+  // ============================================================
+  describe('prediction が intrinsic に条件づけられる', () => {
+    it('素数 (irreducible) → 次の素数を返す', () => {
+      // [1,2,3,4,5] の最終値は素数 5 → 次の素数 7
+      const { result } = simulatePipeChain([1, 2, 3, 4, 5]);
+      expect(result.will.intrinsic).toBe('irreducible');
+      expect(result.will.prediction).toBe(7);
+    });
+
+    it('素数 7 → 次の素数 11', () => {
+      const meta = createDeepSigmaMeta();
+      const result = buildDeepSigmaResult(7, meta);
+      expect(result.will.prediction).toBe(11);
+    });
+
+    it('完全数 (harmonic) → 自身に留まる', () => {
+      // 6 は完全数（1+2+3=6）
+      const meta = createDeepSigmaMeta();
+      const result = buildDeepSigmaResult(6, meta);
+      expect(result.will.intrinsic).toBe('harmonic');
+      expect(result.will.prediction).toBe(6);
+    });
+
+    it('ゼロ (genesis) → 1', () => {
+      const meta = createDeepSigmaMeta();
+      const result = buildDeepSigmaResult(0, meta);
+      expect(result.will.intrinsic).toBe('genesis');
+      expect(result.will.prediction).toBe(1);
+    });
+
+    it('それ以外の整数 → 線形回帰にフォールバック', () => {
+      // 38 は素数でも完全数でもない → 線形外挿
+      const { result } = simulatePipeChain([30, 32, 34, 36, 38]);
+      expect(result.will.intrinsic).toBe('stable');
+      // 等差 2 の数列 → 次は 40 付近
+      expect(result.will.prediction).toBeGreaterThan(38);
+    });
+  });
+
+  // ============================================================
+  // 不整合修正: flow.phases が区間ごとの配列を返す
+  // ============================================================
+  describe('flow.phases が区間ごとの位相を返す', () => {
+    it('0 → 10 → 30 → 35: 加速と減速が同一チェーンに共存する', () => {
+      // 速度: 10, 20, 5
+      // 区間遷移: 10→20 (acc=+10, 加速), 20→5 (acc=-15, 減速)
+      const { result } = simulatePipeChain([0, 10, 30, 35]);
+      expect(result.flow.phases).toEqual(['accelerating', 'decelerating']);
+    });
+
+    it('phases.length == max(0, velocityHistory.length - 1)', () => {
+      const { result } = simulatePipeChain([0, 10, 30]);
+      // 速度 2 区間 → 位相 1 つ
+      expect(result.flow.phases.length).toBe(1);
+    });
+
+    it('速度履歴が足りなければ空配列', () => {
+      const meta = createDeepSigmaMeta();
+      const result = buildDeepSigmaResult(5, meta);
+      expect(result.flow.phases).toEqual([]);
+    });
+
+    it('反転を含むチェーンは reversing を区間に含む', () => {
+      // [0, 10, 20, 15]: 速度 10, 10, -5
+      // 区間遷移: 10→10 (steady), 10→-5 (reversing)
+      const { result } = simulatePipeChain([0, 10, 20, 15]);
+      expect(result.flow.phases).toContain('reversing');
+    });
+
+    it('phase (単一値) は後方互換のため残っている', () => {
+      const { result } = simulatePipeChain([0, 10, 20, 15]);
+      expect(result.flow).toHaveProperty('phase');
+      expect(typeof result.flow.phase).toBe('string');
+    });
+  });
+
+  // ============================================================
+  // 不整合修正: trajectory の oscillating / chaotic が有界性で分かれる
+  // ============================================================
+  describe('trajectory: oscillating と chaotic の境界', () => {
+    it('振幅減衰する振動は oscillating（符号反転かつ有界）', () => {
+      // [0, 10, -8, 6, -4, 2, -1]: 符号反転多数, 振幅は減衰（有界）
+      const { result } = simulatePipeChain([0, 10, -8, 6, -4, 2, -1]);
+      expect(result.memory.trajectory).toBe('oscillating');
+    });
+
+    it('発散する振動は chaotic（符号反転あるが値域が有界でない）', () => {
+      // 振幅がどんどん大きくなる → 累積移動量に対して振幅も大きい → chaotic
+      const { result } = simulatePipeChain([0, 1, -2, 4, -8, 16, -32, 64]);
+      expect(result.memory.trajectory).toBe('chaotic');
+    });
+
+    it('単調増加は oscillating 判定に落ちない（符号反転が < 2）', () => {
+      const { result } = simulatePipeChain([1, 2, 4, 8, 16, 32]);
+      expect(result.memory.trajectory).toBe('expanding');
+    });
+  });
+
   it('長いパイプチェーンで全属性が正しく蓄積される', () => {
     const values = Array.from({ length: 20 }, (_, i) => i * 2);
     const ops = Array.from({ length: 19 }, () => 'compute');
