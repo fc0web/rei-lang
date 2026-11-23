@@ -54,7 +54,7 @@ import {
   // Death
   checkDeath,
   simulateDeath,
-} from './life-entity';
+} from '../../src/lang/life/life-entity';
 
 // ============================================================
 // §1 型整合性テスト (10 tests)

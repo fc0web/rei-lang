@@ -31,7 +31,7 @@ import {
   runMetabolismCycles,
   getStrategy,
   getAllStrategies,
-} from '../src/lang/life/metabolism';
+} from '../../src/lang/life/metabolism';
 
 // ============================================================
 // テスト用ヘルパー

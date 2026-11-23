@@ -33,7 +33,7 @@ import {
   applyTransitionToEntity,
   getLadderSummary,
   analyzeLadder,
-} from '../src/lang/life/genesis-ladder';
+} from '../../src/lang/life/genesis-ladder';
 
 // テスト用ヘルパー
 function createTestEntity(overrides: any = {}): any {

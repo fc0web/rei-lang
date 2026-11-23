@@ -28,7 +28,7 @@ import {
   colonialEmergence,
   computeColonyStats,
   computeDiversity,
-} from '../src/lang/life/colony-life';
+} from '../../src/lang/life/colony-life';
 
 // テスト用ヘルパー
 function createTestEntity(id: string, overrides: any = {}): any {
