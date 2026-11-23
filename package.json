@@ -1,6 +1,6 @@
 {
   "name": "rei-lang",
-  "version": "0.5.5",
+  "version": "0.6.0",
   "description": "Rei (0₀式 / れいしき) — A mathematical computation language based on D-FUMT. Center-periphery patterns as language primitives achieve 74% average code reduction. v0.5.5: 7-domain fully connected network — Math(A), Natural Science(B), Info Engineering(C), Humanities(D), Art(E), Music(F), Economics(G), Linguistics(H). 36-direction cross-domain bridges. 1533 tests.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
