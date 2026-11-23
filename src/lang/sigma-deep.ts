@@ -90,7 +90,8 @@ export interface DeepSigmaResult {
     momentum: number;        // パイプ深度
     velocity: number;        // 値の変化速度
     acceleration: number;    // 速度の変化率（新規）
-    phase: FlowPhase;        // 流れの位相（新規）
+    phase: FlowPhase;        // 流れの位相（後方互換: 直近区間の単一値）
+    phases: FlowPhase[];     // 区間ごとの位相配列（新規）
   };
 
   // ── 記憶 (memory) — 深化 ──
@@ -339,10 +340,59 @@ function buildDeepFlow(val: any, meta: DeepSigmaMeta): DeepSigmaResult['flow'] {
     acceleration = vh[vh.length - 1] - vh[vh.length - 2];
   }
 
-  // phase: 流れの位相判定
+  // phase: 流れの位相判定（後方互換の単一値）
   const phase = determineFlowPhase(velocity, acceleration, meta);
 
-  return { direction, momentum, velocity, acceleration, phase };
+  // phases: 区間ごとの位相配列
+  // 0→10→30→35 のように加速と減速が同一チェーン内で混在する場合、
+  // 単一値では加速か減速のどちらか一方しか表せない。
+  // 区間ごとに1つの位相を割り当てて配列として返すことで、
+  // 「10 まで加速、その後減速」という流れを正確に表現できる。
+  const phases = determineFlowPhases(meta);
+
+  return { direction, momentum, velocity, acceleration, phase, phases };
+}
+
+/**
+ * 速度履歴から区間ごとの位相を算出する
+ *
+ * velocityHistory[i] は i 番目の区間（値 i-1 → i）の速度。
+ * 区間 i と i+1 を比べて acceleration を得る。
+ * phases[i] は区間 i+1 の位相（区間 i を基準にした相対的な変化）。
+ *
+ * - phases.length == max(0, velocityHistory.length - 1)
+ * - reversing: 速度の符号反転
+ * - accelerating / decelerating: 加速度の正負
+ * - steady: 加速度ほぼ0
+ * - rest: 両速度とも0
+ */
+function determineFlowPhases(meta: DeepSigmaMeta): FlowPhase[] {
+  const vh = meta.velocityHistory;
+  const phases: FlowPhase[] = [];
+  if (vh.length < 2) return phases;
+
+  for (let i = 1; i < vh.length; i++) {
+    const prev = vh[i - 1];
+    const curr = vh[i];
+
+    if (prev === 0 && curr === 0) {
+      phases.push('rest');
+      continue;
+    }
+
+    // 符号反転（方向反転）
+    if ((prev > 0 && curr < 0) || (prev < 0 && curr > 0)) {
+      phases.push('reversing');
+      continue;
+    }
+
+    const acc = curr - prev;
+    if (Math.abs(acc) < 0.01) phases.push('steady');
+    else if (acc > 0) phases.push('accelerating');
+    else phases.push('decelerating');
+  }
+
+  return phases;
 }
 
 /**
@@ -422,6 +472,25 @@ function buildDeepMemory(val: any, meta: DeepSigmaMeta): DeepSigmaResult['memory
 
 /**
  * 値の軌跡パターンを分析する
+ *
+ * 分類ルール:
+ *   oscillating: 符号反転が 2 回以上 かつ 値域が有界
+ *   chaotic:     符号反転は 2 回以上 だが 値域が有界でない（発散する振動）
+ *   expanding:   拡張が縮約の 2 倍超
+ *   contracting: 縮約が拡張の 2 倍超
+ *   stable:      上記いずれにも該当しない
+ *
+ * 「有界」の判定:
+ *   累積移動量 Σ|Δ| に対する振幅 (max − min) の比が 0.5 未満を有界とする。
+ *   振動は往復により累積移動量に比べて振幅が小さくなる。
+ *   逆に単調に発散する系列では振幅 ≈ 累積移動量 となり有界ではない。
+ *   決定性は要求しない — 非決定的でも有界なら軌跡は必ず再訪する。
+ *
+ * 分類器の限界:
+ *   この分類で確実に拾えるのは oscillating（符号反転があり値域が有界）だけ。
+ *   状態が単調増加する系列はすべて expanding に分類されるため、
+ *   漸近（1, 1.5, 1.75, … → 2）と発散（1, 2, 3, 4, … → ∞）は区別できない。
+ *   contracting / stable も含め、他のラベルは強い保証を持たない記号の借用に近い。
  */
 function analyzeTrajectory(meta: DeepSigmaMeta): MemoryTrajectory {
   if (meta.memory.length < 2) return 'stable';
@@ -449,16 +518,15 @@ function analyzeTrajectory(meta: DeepSigmaMeta): MemoryTrajectory {
   const total = values.length - 1;
   if (total < 2) return 'stable';
 
-  // 振動判定: 交互に方向が変わり、かつ振幅が比較的規則的
-  if (signChanges > total * 0.4) {
-    // 規則性チェック: 振幅の分散が小さければ oscillating、大きければ chaotic
-    const absDiffs = diffs.map(Math.abs);
-    const avgDiff = absDiffs.reduce((a, b) => a + b, 0) / absDiffs.length;
-    const variance = absDiffs.reduce((s, d) => s + (d - avgDiff) ** 2, 0) / absDiffs.length;
-    const cv = avgDiff > 0 ? Math.sqrt(variance) / avgDiff : 0; // 変動係数
-
-    if (cv > 0.8 && total >= 4) return 'chaotic';  // 不規則な振動
-    return 'oscillating';  // 規則的な振動
+  // 符号反転が 2 回以上 → oscillating か chaotic（有界性で判別）
+  if (signChanges >= 2) {
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+    const amplitude = max - min;
+    const totalMove = diffs.reduce((s, d) => s + Math.abs(d), 0);
+    // 有界: 振幅が累積移動量に比べて小さい（往復している）
+    const bounded = totalMove > 0 && amplitude / totalMove < 0.5;
+    return bounded ? 'oscillating' : 'chaotic';
   }
 
   // 拡張/縮約判定
@@ -704,10 +772,34 @@ function computeTendencyConfidence(meta: DeepSigmaMeta): number {
 
 /**
  * 傾向に基づいて次の値を予測する
- * 
- * 線形外挿 + 傾向性による補正
+ *
+ * 内在傾向（intrinsic）に条件づけた予測:
+ *   irreducible (素数) → 次の素数（5 → 7）
+ *   harmonic (完全数) → 自身に留まる（6 → 6）
+ *   genesis (0)       → 1（最初の一歩）
+ *   それ以外          → 来歴の線形外挿
+ *
+ * これにより、intrinsic と prediction が互いを見るようになる。
+ * 例: 5 を素数として扱うなら、次の値も素数の系列（5 → 7）であるべき。
+ * 線形回帰のままでは [1,2,3,4,5] から 6 を返してしまい、
+ * 「素数の矜持」が機構に反映されない。
  */
 function predictNextValue(val: any, meta: DeepSigmaMeta): any {
+  // 数値の内在傾向による予測は記憶なしでも成立する
+  if (typeof val === 'number') {
+    const intrinsic = computeIntrinsicTendency(val);
+    if (intrinsic === 'irreducible') {
+      return nextPrime(val);
+    }
+    if (intrinsic === 'harmonic') {
+      return val;
+    }
+    if (intrinsic === 'genesis') {
+      return 1;
+    }
+  }
+
+  // それ以外は従来通り線形外挿
   if (meta.memory.length < 2) return null;
 
   const values = meta.memory.slice(-5).map(toNumSafe);
@@ -740,6 +832,15 @@ function predictNextValue(val: any, meta: DeepSigmaMeta): any {
   }
 
   return Math.round(predicted * 1000) / 1000; // 精度制限
+}
+
+/** val より大きい最小の素数を返す */
+function nextPrime(val: number): number {
+  if (!Number.isFinite(val)) return val;
+  let candidate = Math.floor(val) + 1;
+  if (candidate < 2) candidate = 2;
+  while (!isPrime(candidate)) candidate++;
+  return candidate;
 }
 
 
