@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.6.0] — 2026-11-24
+
+### Changed — sigma-deep 6属性深化の挙動変更 (PR #1)
+
+note 記事「数に『記憶』と『意志』を与えた話 — Rei言語の6属性深化」の
+記述と実装の間にあった 3 つの不整合を解消した。返り値の shape が変わる
+ため、patch ではなく minor bump とする。
+
+- `will.prediction` を `will.intrinsic` に条件づけた。素数 → 次の素数
+  (5 → 7)、完全数 → 自身 (6 → 6)、ゼロ → 1、それ以外 → 従来の線形回帰。
+  これにより `intrinsic` と `prediction` が機構として呼応する。
+  従来は線形回帰のみで、[1,2,3,4,5] から 6（非素数）を返していた。
+- `flow.phases: FlowPhase[]` を新規追加。加速と減速が同一パイプチェーン
+  内に共存する場合、区間ごとに 1 位相を割り当てて配列として返す。
+  従来の `flow.phase`（単一値）は後方互換のため維持。
+- `memory.trajectory` の `oscillating` / `chaotic` の境界を再定義。
+  「符号反転 ≥ 2 かつ 値域が有界」を `oscillating`、有界でなければ
+  `chaotic`。有界性は `(max − min) / Σ|Δ| < 0.5` で判定する（振動は
+  往復するため累積移動量に比べ振幅が小さい）。docstring に分類器の
+  限界も明記（単調増加系列はすべて `expanding` に落ちるため、
+  漸近と発散は区別できない）。
+
+### Added — fractal しきい値の境界テスト (PR #2)
+
+`layer.fractal` の判定しきい値（`depth > 3`、すなわち深さ 4 以上）
+を変えずに、今の動きを regression として固定するテストを 3 本追加。
+
+- `order=3` → `recursive`
+- `order=4` → `fractal`（遷移点）
+- `order=5` → `fractal`（記事例 0₀₀₀₀₀ がちょうどこの形）
+
+### Unchanged — 明示
+
+- `layer.fractal` しきい値: `depth > 3`（深さ 4 以上）のまま。
+- `layer.fractal` が自己相似性ではなく深度を代理変数として用いた
+  ヒューリスティックであること、`relation.entanglement` の閾値
+  0.5 が設計上の割り当てであることも、従来と同じ。
+
+### テスト
+
+- 0.5.5 時点: 2549 passed / 4 skipped
+- 0.6.0 時点: 2565 passed / 4 skipped（+16: PR #1 で +13、PR #2 で +3）
+- Zero regressions
+
+---
+
 ## [0.5.5] — 2026-02-15
 
 ### 🌐 Phase 6: 4新ドメイン拡張 (E/F/G/H)
