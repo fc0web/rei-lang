@@ -68,16 +68,57 @@ export interface MinimalLifeCriteria {
 }
 
 /**
+ * self.center / periphery の構造版（多次元数相当）
+ * life-metrics / metabolism / colony-life で使用
+ */
+export interface LifeSelfElement {
+  center: number;
+  neighbors: number[];
+  weights?: number[];
+  mode?: ComputationMode;
+}
+
+/**
+ * σ の flow（構造版）
+ */
+export interface LifeFlow {
+  velocity: number;
+  direction: 'expand' | 'contract' | 'rest';
+}
+
+/**
+ * σ の layer（構造版）
+ */
+export interface LifeLayer {
+  depth: number;
+}
+
+/**
+ * σ の will（構造版）
+ */
+export interface LifeWill {
+  tendency: 'expand' | 'contract' | 'harmonize' | 'rest';
+  strength: number;
+}
+
+/**
+ * σ の memory 要素
+ * 元は number[]。colony-life / life-metrics / metabolism が履歴メタ情報を {type, ...} で載せるため広げる
+ */
+export type LifeMemoryEntry = number | { type: string; [key: string]: unknown };
+
+/**
  * σメタデータ（A3: 簡略化版）
+ * 元の構造版と、colony-life / life-metrics / metabolism が使う数値版の両方を受け入れる
  */
 export interface LifeSigma {
-  field: string;                  // 場
-  flow: { velocity: number; direction: 'expand' | 'contract' | 'rest' };
-  memory: number[];               // 記憶（過去の中心値）
-  layer: { depth: number };       // 層の深さ
-  relation: string[];             // 関係先ID
-  will: { tendency: 'expand' | 'contract' | 'harmonize' | 'rest'; strength: number };
-  transformCount: number;         // 変換回数
+  field: string | number;
+  flow: LifeFlow | number;
+  memory: LifeMemoryEntry[];
+  layer: LifeLayer | number;
+  relation: string[];
+  will: LifeWill | number;
+  transformCount: number;
 }
 
 /**
@@ -100,9 +141,11 @@ export interface LifeEntity {
   lineage: string[];              // 系譜（親のID列）
 
   // A1: Center-Periphery（自己と環境）
+  // 元は center: number / periphery: number[]。life-metrics / metabolism / colony-life が
+  // {center, neighbors} の構造も使うため両方を受け入れる
   self: {
-    center: number;               // 中心 = 自己の核
-    periphery: number[];          // 周囲 = 環境との接点
+    center: number | LifeSelfElement;
+    periphery: Array<number | LifeSelfElement>;
     weights: number[];            // 重み = 膜の透過性
     mode: ComputationMode;        // 計算モード = 代謝経路
   };
@@ -204,7 +247,7 @@ export function hasMemory(entity: LifeEntity): boolean {
  * 「大きく逸脱した後、ベースラインに近づく」パターンを探す
  */
 export function hasSelfRepair(entity: LifeEntity): boolean {
-  const mem = entity.sigma.memory;
+  const mem = entity.sigma.memory as number[];
   if (mem.length < 3) return false;
 
   // ベースライン: 最初の2値の平均（逸脱前の「正常状態」）
@@ -236,7 +279,7 @@ export function hasAutopoiesis(entity: LifeEntity): boolean {
  */
 export function hasEmergence(entity: LifeEntity): boolean {
   return entity.sigma.relation.length >= 2 &&
-         entity.sigma.layer.depth >= 1;
+         (entity.sigma.layer as LifeLayer).depth >= 1;
 }
 
 /**
@@ -394,13 +437,14 @@ export function metabolize(
   entity: LifeEntity,
   environment?: number[]
 ): MetabolismResult {
-  // 環境が指定されればperipheryを更新
-  const periphery = environment || entity.self.periphery;
-  const previousCenter = entity.self.center;
+  // この関数は number 形の self を前提にしている（LifeEntity.self.center は union だが
+  // createLifeEntity 経由の経路では number のみ）
+  const periphery = (environment || entity.self.periphery) as number[];
+  const previousCenter = entity.self.center as number;
 
   // A1: compute
   const newCenter = compute(
-    entity.self.center,
+    previousCenter,
     periphery,
     entity.self.mode,
     entity.self.weights
@@ -409,7 +453,7 @@ export function metabolize(
   // A3: σ更新
   const newSigma: LifeSigma = {
     ...entity.sigma,
-    memory: [...entity.sigma.memory, previousCenter],
+    memory: [...(entity.sigma.memory as number[]), previousCenter],
     transformCount: entity.sigma.transformCount + 1,
     flow: {
       velocity: Math.abs(newCenter - previousCenter),
@@ -421,7 +465,7 @@ export function metabolize(
 
   // 傾向性の更新（σ.memory から学習）
   if (newSigma.memory.length >= 3) {
-    const recent = newSigma.memory.slice(-3);
+    const recent = newSigma.memory.slice(-3) as number[];
     const diffs = [recent[1] - recent[0], recent[2] - recent[1]];
     const avgDiff = (diffs[0] + diffs[1]) / 2;
     newSigma.will = {
@@ -623,7 +667,7 @@ export function split(entity: LifeEntity): { parent: LifeEntity; child: LifeEnti
   if (!entity.genesis.canGenerate) return null;
 
   const childId = generateLifeId('child');
-  const halfCenter = entity.self.center / 2;
+  const halfCenter = (entity.self.center as number) / 2;
 
   const birthEvent: BirthEvent = {
     type: 'split',
@@ -634,7 +678,7 @@ export function split(entity: LifeEntity): { parent: LifeEntity; child: LifeEnti
 
   const child = createLifeEntity({
     center: halfCenter,
-    periphery: [...entity.self.periphery],
+    periphery: [...(entity.self.periphery as number[])],
     weights: [...entity.self.weights],
     mode: entity.self.mode,
     id: childId,
@@ -822,7 +866,7 @@ export function checkDeath(entity: LifeEntity): {
   }
 
   // 構造崩壊: 中心値がNaNまたはInfinity
-  if (!isFinite(entity.self.center)) {
+  if (!isFinite(entity.self.center as number)) {
     conditions.push({
       type: 'structural',
       severity: 1.0,

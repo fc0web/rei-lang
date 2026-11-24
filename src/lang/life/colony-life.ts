@@ -208,9 +208,9 @@ function createCollectiveSigma(members: LifeEntity[]): CollectiveSigma {
   }
 
   const avgField = members.reduce((s, m) =>
-    s + (m.sigma.field ?? 0), 0) / members.length;
+    s + ((m.sigma.field as number) ?? 0), 0) / members.length;
   const avgFlow = members.reduce((s, m) =>
-    s + (m.sigma.flow ?? 0), 0) / members.length;
+    s + ((m.sigma.flow as number) ?? 0), 0) / members.length;
 
   return {
     fieldStrength: avgField,
@@ -350,7 +350,7 @@ export function mutate(
   switch (mutationType) {
     case 'periphery-add': {
       // A2 ⊕: 周囲の追加
-      const newValue = entity.self.center.center * (0.5 + random() * 1.0);
+      const newValue = (entity.self.center as MultiDimNumber).center * (0.5 + random() * 1.0);
       const newMD: MultiDimNumber = { center: newValue, neighbors: [newValue * 0.5] };
       mutated = {
         ...entity,
@@ -414,18 +414,19 @@ export function mutate(
     case 'center-drift':
     default: {
       // 中心値のドリフト
-      const drift = (random() - 0.5) * entity.self.center.center * 0.2;
+      const centerMD = entity.self.center as MultiDimNumber;
+      const drift = (random() - 0.5) * centerMD.center * 0.2;
       mutated = {
         ...entity,
         self: {
           ...entity.self,
           center: {
-            ...entity.self.center,
-            center: entity.self.center.center + drift,
+            ...centerMD,
+            center: centerMD.center + drift,
           },
         },
       };
-      magnitude = Math.abs(drift) / (Math.abs(entity.self.center.center) + 1);
+      magnitude = Math.abs(drift) / (Math.abs(centerMD.center) + 1);
       description = `中心ドリフト: ${drift >= 0 ? '+' : ''}${drift.toFixed(3)}`;
       break;
     }
@@ -510,7 +511,7 @@ export function crossover(
   const childId = `life-${++entityIdCounter}`;
 
   // 中心値は2親の平均
-  const centerValue = (parent1.self.center.center + parent2.self.center.center) / 2;
+  const centerValue = ((parent1.self.center as MultiDimNumber).center + (parent2.self.center as MultiDimNumber).center) / 2;
 
   // 周囲はランダムに選択
   const periphery = parent1.self.periphery.map((p, i) => {
@@ -736,7 +737,7 @@ export function detectSpeciesFromMembers(
 
     // 種のシグネチャ = 中心値と周囲数のベクトル
     const signature = [
-      group.reduce((s, m) => s + m.self.center.center, 0) / group.length,
+      group.reduce((s, m) => s + (m.self.center as MultiDimNumber).center, 0) / group.length,
       group.reduce((s, m) => s + m.self.periphery.length, 0) / group.length,
     ];
 
@@ -806,7 +807,7 @@ export function colonialEmergence(
   }
 
   // 全個体の中心値の統合（A1の再帰適用）
-  const centers = colony.members.map(m => m.self.center.center);
+  const centers = colony.members.map(m => (m.self.center as MultiDimNumber).center);
   const emergentCenter = centers.reduce((a, b) => a + b, 0) / centers.length;
 
   // 創発的性質 = 個体の平均を超える集合的パターン

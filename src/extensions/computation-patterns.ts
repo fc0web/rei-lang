@@ -417,7 +417,9 @@ export function permeation(params: PermeationParams): PermeationResult {
     totalFlux += stepFlux;
 
     // A3: 浸透履歴による透過率の適応
-    currentPermeability = permeability + adaptationRate * totalFlux / step;
+    // 累積フラックスを使う（元は step で割って平均化していたため、stepFlux が逓減するにつれ
+    // 透過率が時間とともに下がってしまっていた。累積量を使うと単調非減少になる）
+    currentPermeability = permeability + adaptationRate * totalFlux;
     // 上限を設ける
     currentPermeability = Math.min(currentPermeability, 0.95);
     permeabilityHistory.push(currentPermeability);
