@@ -27,8 +27,8 @@ keywords:
   - programming language
   - notation equivalence
 license: Apache-2.0
-version: "1.0.0"
-date-released: "2026-02-08"
+version: "0.6.0"
+date-released: "2026-11-25"
 repository-code: "https://github.com/fc0web/rei-lang"
 references:
   - type: article
