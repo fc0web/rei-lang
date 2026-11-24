@@ -35,7 +35,7 @@ import {
   goldenSpiral,
   logarithmicSpiral,
   type SpiralNumber,
-} from '../extensions/spiral-number';
+} from '../src/extensions/spiral-number';
 
 // ============ テストランナー ============
 

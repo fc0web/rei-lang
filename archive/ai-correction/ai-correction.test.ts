@@ -38,7 +38,7 @@ import {
   type HallucinationDetection,
   type CorrectionResult,
   type CorrectionMetrics,
-} from '../src/extensions/ai-correction';
+} from './ai-correction';
 
 // ================================================================
 // Section 1: Core Types & Claim Creation

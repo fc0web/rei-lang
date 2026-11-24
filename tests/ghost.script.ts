@@ -24,7 +24,7 @@ import {
   isGhostEnsemble,
   type Ghost,
   type GhostEnsemble,
-} from '../extensions/ghost';
+} from '../src/extensions/ghost';
 
 // ============ テストランナー ============
 

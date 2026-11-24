@@ -29,7 +29,7 @@ import {
   isDead,
   simulateDeath,
   generateLifeReport,
-} from '../src/lang/life/life-metrics';
+} from '../../src/lang/life/life-metrics';
 
 // ============================================================
 // テスト用ヘルパー

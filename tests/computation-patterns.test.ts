@@ -4,6 +4,7 @@
 // @author Nobuki Fujimoto (D-FUMT)
 // ============================================================
 
+import { describe, test, expect } from 'vitest';
 import {
   fractal, flattenFractal, estimateFractalDimension,
   ripple,
