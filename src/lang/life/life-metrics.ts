@@ -485,7 +485,7 @@ export function measureLife(entity: LifeEntity): LifeMetrics {
   const classification: LifeClassification =
     mlcCount >= 6 ? 'full-life' :
       mlcCount >= 4 ? 'partial-life' :
-        mlcCount >= 2 ? 'proto-life' :
+        mlcCount >= 3 ? 'proto-life' :
           'non-life';
 
   // 生命段階の推定

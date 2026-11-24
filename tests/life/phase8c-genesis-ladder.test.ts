@@ -29,7 +29,7 @@ import {
   runFullGenesis,
   runGenesisTo,
   runFullDeath,
-  determinEntityStage,
+  determineEntityStage,
   applyTransitionToEntity,
   getLadderSummary,
   analyzeLadder,
@@ -559,7 +559,7 @@ describe('§7 生命体統合', () => {
       vitality: { alive: true, age: 5, health: 0.8,
         mlc: { boundary: true, metabolism: true, memory: true, selfRepair: true, autopoiesis: true, emergence: true } },
     });
-    expect(determinEntityStage(entity)).toBe('full-life');
+    expect(determineEntityStage(entity)).toBe('full-life');
   });
 
   it('7.2 MLC5つでemergent', () => {
@@ -567,7 +567,7 @@ describe('§7 生命体統合', () => {
       vitality: { alive: true, age: 5, health: 0.8,
         mlc: { boundary: true, metabolism: true, memory: true, selfRepair: true, autopoiesis: true, emergence: false } },
     });
-    expect(determinEntityStage(entity)).toBe('emergent');
+    expect(determineEntityStage(entity)).toBe('emergent');
   });
 
   it('7.3 MLC4つでautopoietic', () => {
@@ -575,12 +575,12 @@ describe('§7 生命体統合', () => {
       vitality: { alive: true, age: 5, health: 0.8,
         mlc: { boundary: true, metabolism: true, memory: true, selfRepair: true, autopoiesis: false, emergence: false } },
     });
-    expect(determinEntityStage(entity)).toBe('autopoietic');
+    expect(determineEntityStage(entity)).toBe('autopoietic');
   });
 
   it('7.4 死亡状態でnumberまたはzero', () => {
     const entity = createTestEntity({ vitality: { alive: false, age: 5, health: 0, mlc: { boundary: true, metabolism: false, memory: false, selfRepair: false, autopoiesis: false, emergence: false } } });
-    const stage = determinEntityStage(entity);
+    const stage = determineEntityStage(entity);
     expect(['number', 'zero']).toContain(stage);
   });
 
@@ -596,7 +596,7 @@ describe('§7 生命体統合', () => {
       vitality: { alive: true, age: 5, health: 0.8,
         mlc: { boundary: true, metabolism: true, memory: false, selfRepair: false, autopoiesis: false, emergence: false } },
     });
-    expect(determinEntityStage(entity)).toBe('memory-bearing');
+    expect(determineEntityStage(entity)).toBe('memory-bearing');
   });
 
   it('7.7 metabolismのみでmetabolic', () => {
@@ -604,7 +604,7 @@ describe('§7 生命体統合', () => {
       vitality: { alive: true, age: 5, health: 0.8,
         mlc: { boundary: false, metabolism: true, memory: false, selfRepair: false, autopoiesis: false, emergence: false } },
     });
-    expect(determinEntityStage(entity)).toBe('metabolic');
+    expect(determineEntityStage(entity)).toBe('metabolic');
   });
 
   it('7.8 boundaryのみでresponsive', () => {
@@ -612,7 +612,7 @@ describe('§7 生命体統合', () => {
       vitality: { alive: true, age: 5, health: 0.8,
         mlc: { boundary: true, metabolism: false, memory: false, selfRepair: false, autopoiesis: false, emergence: false } },
     });
-    expect(determinEntityStage(entity)).toBe('responsive');
+    expect(determineEntityStage(entity)).toBe('responsive');
   });
 
   it('7.9 上昇遷移でbirthEvent typeがemergent', () => {
