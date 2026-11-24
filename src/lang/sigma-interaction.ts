@@ -184,7 +184,7 @@ export function reactMemoryToWill(
     // 方向性分析
     const nums = mem.filter((v: any) => typeof v === 'number') as number[];
     if (nums.length >= 3) {
-      const diffs = [];
+      const diffs: number[] = [];
       for (let i = 1; i < nums.length; i++) {
         diffs.push(nums[i] - nums[i - 1]);
       }
