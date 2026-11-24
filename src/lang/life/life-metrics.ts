@@ -22,6 +22,7 @@ import type {
   LifeEntity,
   ComputationMode,
   MinimalLifeCriteria,
+  LifeSelfElement,
 } from './life-entity';
 import type { LadderStage } from './genesis-ladder';
 
@@ -342,8 +343,9 @@ export function scoreBoundary(entity: LifeEntity): number {
   if (entity.self.periphery.length === 0) return 0;
 
   // 中心と周囲の差が大きいほど境界が明確
-  const centerValue = entity.self.center.center;
-  const avgPeriphery = entity.self.periphery.reduce((s, p) =>
+  // この経路の entity は modelKnownEntity などが構築する MultiDimNumber 形
+  const centerValue = (entity.self.center as LifeSelfElement).center;
+  const avgPeriphery = entity.self.periphery.reduce<number>((s, p) =>
     s + (typeof p === 'number' ? p : p.center), 0
   ) / entity.self.periphery.length;
 
@@ -384,7 +386,7 @@ export function scoreMemory(entity: LifeEntity): number {
   // 記憶の量
   const depthFactor = Math.min(1, memory.length / 20);
   // σのfield値（場の記憶）
-  const fieldFactor = Math.min(1, Math.abs(entity.sigma.field ?? 0) / 5);
+  const fieldFactor = Math.min(1, Math.abs((entity.sigma.field as number) ?? 0) / 5);
 
   return Math.min(1, depthFactor * 0.6 + fieldFactor * 0.4);
 }
@@ -563,6 +565,7 @@ export function modelKnownEntity(type: KnownEntityType): LifeEntity {
         ? Array.from({ length: Math.ceil(scores.emergence * 5) }, () => 'ext')
         : [],
       will: scores.autopoiesis,
+      transformCount: 0,
     },
     genesis: {
       phase: profile.mlc.autopoiesis ? 'number' : 'zero',

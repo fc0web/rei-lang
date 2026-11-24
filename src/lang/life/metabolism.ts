@@ -430,20 +430,23 @@ export function metabolize(
   // 8. エンティティ更新
   const newPeriphery = [...entity.self.periphery];
   // 出力で自己状態を更新（中心-周囲を書き換え）
+  // metabolism が受け取る entity は MultiDimNumber 形の self を持つ（phase8b の createTestEntity 等）
+  const centerMD = entity.self.center as MultiDimNumber;
   const updatedSelf = {
     ...entity.self,
     center: {
-      ...entity.self.center,
-      center: entity.self.center.center * 0.8 + output.center * 0.2,
+      ...centerMD,
+      center: centerMD.center * 0.8 + output.center * 0.2,
     },
     periphery: newPeriphery,
   };
 
   // 9. σ更新（記憶に代謝履歴を追加）
+  // この経路では sigma.field / flow は number で載っている（phase8b の createTestEntity）
   const updatedSigma = {
     ...entity.sigma,
-    field: (entity.sigma.field ?? 0) + sigmaUpdate.field,
-    flow: (entity.sigma.flow ?? 0) + sigmaUpdate.flow,
+    field: ((entity.sigma.field as number) ?? 0) + sigmaUpdate.field,
+    flow: ((entity.sigma.flow as number) ?? 0) + sigmaUpdate.flow,
     memory: [...(entity.sigma.memory ?? []), {
       type: 'metabolism',
       cycle: cycle.cycleNumber,

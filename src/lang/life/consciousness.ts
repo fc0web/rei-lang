@@ -27,7 +27,7 @@
 // @theory SAC (Structural Axiomatics of Consciousness)
 // ============================================================
 
-import type { LifeEntity, MinimalLifeCriteria } from './life-entity';
+import type { LifeEntity, MinimalLifeCriteria, LifeWill } from './life-entity';
 
 // ============================================================
 // §1 型定義 — 意識候補システム C := (S, E, Θ, Φ)
@@ -1438,8 +1438,8 @@ export function fromLifeEntity(entity: LifeEntity): ConsciousnessCandidate {
     id: entity.id,
     type: 'rei-phase8',
     currentState: {
-      value: entity.self.center,
-      periphery: entity.self.periphery,
+      value: entity.self.center as number,
+      periphery: entity.self.periphery as number[],
       meta: {
         phase: entity.genesis.phase,
         alive: isAlive,
@@ -1458,15 +1458,15 @@ export function fromLifeEntity(entity: LifeEntity): ConsciousnessCandidate {
       generation: entity.sigma.transformCount,
     },
     selfModel: {
-      selfRepresentation: entity.self.center,
+      selfRepresentation: entity.self.center as number,
       rulesRepresentation: entity.self.mode,
       accuracy: health,
       causallyEffective: hasSigmaMemory && entity.sigma.transformCount > 0,
     },
     history: {
       states: entity.sigma.memory.map(v => ({
-        value: v,
-        periphery: entity.self.periphery,
+        value: v as number,
+        periphery: entity.self.periphery as number[],
         meta: {},
       })),
       inputs: [],
@@ -1487,7 +1487,7 @@ export function fromLifeEntity(entity: LifeEntity): ConsciousnessCandidate {
     valuation: {
       utility: health,
       intrinsic: true,
-      influencesBehavior: entity.sigma.will.strength > 0,
+      influencesBehavior: (entity.sigma.will as LifeWill).strength > 0,
     },
     cyclicStructure: entity.genesis.canGenerate
       ? {
@@ -1501,7 +1501,7 @@ export function fromLifeEntity(entity: LifeEntity): ConsciousnessCandidate {
       ? {
           subsystemCount: 6,          // σの6属性
           interconnectedness: Math.min(1.0, entity.sigma.relation.length * 0.2),
-          selfModelIntegrates: entity.sigma.will.strength > 0.3,
+          selfModelIntegrates: (entity.sigma.will as LifeWill).strength > 0.3,
           irreducible: entity.vitality.mlc.emergence,
           phi: Math.min(1.0, entity.sigma.transformCount * 0.05),
         }
