@@ -456,8 +456,11 @@ export function metabolize(
   };
 
   // 10. 健康度更新
+  // 元の閾値 0.5 は weighted.efficiency(0.6) × healthFactor(初期 0.75) = 0.45 を下回り、
+  // 健康度 0.5 以下の個体は豊かな環境でも -0.05 に落ちていた。0.4 に下げると
+  // 豊かな環境 (3 資源) で healthDelta ≥ 0 になり、テストの意図（豊かな環境で向上/維持）に合う
   const healthDelta = environment.length === 0 ? -0.15 :
-    efficiency > 0.5 ? 0.05 : -0.05;
+    efficiency > 0.4 ? 0.05 : -0.05;
   const newHealth = Math.max(0, Math.min(1,
     entity.vitality.health + healthDelta
   ));
