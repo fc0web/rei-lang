@@ -36,8 +36,16 @@ Rei is a computation system that extends the concept of "number" from a point to
 
 ## Install
 
+npm (v0.5.5):
+
 ```
 npm install rei-lang
+```
+
+v0.6.0 is distributed via GitHub Releases (npm registry remains at 0.5.5):
+
+```
+npm install https://github.com/fc0web/rei-lang/releases/download/v0.6.0/rei-lang-0.6.0.tgz
 ```
 
 ## Quick Start
